@@ -24,9 +24,10 @@ public class Main {
      */        
     private static Options constructOptions() {
         Options opts    = new Options();               
-        opts.addOption(Option.builder("i").longOpt("json-file").desc("Input json file").hasArgs().build());        
+        
         opts.addOption("h", "help",     false, "Print this help information");
         opts.addOption("v", "version",  false, "Print tool version information");                
+        opts.addOption(Option.builder("i").longOpt("json-file").desc("Input json file").hasArgs().build());        
         return opts;
     }
     
