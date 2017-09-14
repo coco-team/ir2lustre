@@ -24,10 +24,10 @@ public class Main {
      */        
     private static Options constructOptions() {
         Options opts    = new Options();               
-        
+                
         opts.addOption("h", "help",     false, "Print this help information");
         opts.addOption("v", "version",  false, "Print tool version information");                
-        opts.addOption(Option.builder("i").longOpt("json-file").desc("Input json file").hasArgs().build());        
+        opts.addOption(Option.builder("i").longOpt("json-file").desc("Input json file").hasArgs().build());
         return opts;
     }
     
@@ -46,11 +46,11 @@ public class Main {
             CommandLine cl  = parser.parse(opts, args);
             
             if(cl.hasOption('h')) {
-                hf.printHelp(" ", opts);
+                hf.printHelp("CocoSim_IR_Compiler", opts, true);
                 return;
             }
             if(cl.hasOption('v')) {
-                System.out.println("CocoSim_IR_Compiler 0.1");
+                System.out.println("CocoSim_IR_Compiler v0.1");
                 return;
             }
             if(cl.hasOption('i')) {
@@ -60,9 +60,7 @@ public class Main {
                 
             } else {
                 System.out.println("Please provide an input json file!\n");
-                hf.printHelp("CocoSim_IR_Compiler", opts, true);
             }
-
         } catch (ParseException ex) {
             System.err.println( "Parsing failed.  Reason: " + ex.getMessage() );
         }
