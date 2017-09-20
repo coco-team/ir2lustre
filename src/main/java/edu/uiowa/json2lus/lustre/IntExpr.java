@@ -5,10 +5,16 @@
  */
 package edu.uiowa.json2lus.lustre;
 
+import java.math.BigInteger;
+
 /**
  *
  * @author Paul Meng
  */
 public class IntExpr extends LustreExpr {
+    public final BigInteger value;
     
+    public IntExpr(BigInteger value) {
+        this.value = value;
+    }
 }

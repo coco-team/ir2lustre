@@ -9,10 +9,6 @@ package edu.uiowa.json2lus.lustre;
  *
  * @author Paul Meng
  */
-public class BooleanExpr extends LustreExpr {
-    public final boolean value;
+public class LustreProgram extends LustreAst {
     
-    public BooleanExpr(boolean value) {
-        this.value = value;
-    }
 }

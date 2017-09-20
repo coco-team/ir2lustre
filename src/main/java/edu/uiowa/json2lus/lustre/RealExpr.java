@@ -5,10 +5,16 @@
  */
 package edu.uiowa.json2lus.lustre;
 
+import java.math.BigDecimal;
+
 /**
  *
  * @author Paul Meng
  */
 public class RealExpr extends LustreExpr {
+    public final BigDecimal value;
     
+    public RealExpr(BigDecimal value) {
+        this.value = value;
+    }
 }

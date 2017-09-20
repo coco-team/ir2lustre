@@ -10,5 +10,45 @@ package edu.uiowa.json2lus.lustre;
  * @author Paul Meng
  */
 public class BinaryExpr extends LustreExpr {
+    public final Op         op;
+    public final LustreExpr left;    
+    public final LustreExpr right;
     
+    public BinaryExpr(LustreExpr left, Op op, LustreExpr right) {
+        this.op     = op;
+        this.left   = left;
+        this.right  = right;
+    }
+    
+    public enum Op {
+        
+        OR ("or"),
+        AND ("and"),
+        XOR ("xor"),    
+        IMPLIES ("=>"),        
+        PLUS ("+"),
+        MINUS ("-"),
+        MULTIPLY ("*"),
+        DIVIDE ("/"),
+        INT_DIVIDE ("div"),
+        MOD ("mod"),
+        EQ ("="),
+        NEQ ("<>"),
+        GTE (">="),
+        LTE ("<="),
+        GT (">"),
+        LT ("<"),        
+        ARROW ("->");    
+
+        private String opStr;
+
+        private Op(String op) {
+            this.opStr = op;
+        }
+
+        @Override
+        public String toString() {
+            return this.opStr;
+        }        
+    }
 }
