@@ -40,7 +40,7 @@ public class BinaryExpr extends LustreExpr {
         LT ("<"),        
         ARROW ("->");    
 
-        private String opStr;
+        private final String opStr;
 
         private Op(String op) {
             this.opStr = op;

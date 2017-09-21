@@ -10,5 +10,11 @@ package edu.uiowa.json2lus.lustre;
  * @author Paul Meng
  */
 public class LustreVar extends LustreAst {
+    public final String     name;
+    public final LustreType type;
     
+    public LustreVar(String name, LustreType type) {
+        this.name = name;
+        this.type = type;
+    }
 }

@@ -57,7 +57,8 @@ public class Main {
                 jsonFile = cl.getOptionValue('i');
             }          
             if(jsonFile != null) {
-                
+                J2LTranslator translator = new J2LTranslator(jsonFile);
+                translator.execute();
             } else {
                 System.out.println("Please provide an input json file!\n");
             }

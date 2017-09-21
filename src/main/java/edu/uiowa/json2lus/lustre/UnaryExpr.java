@@ -24,7 +24,7 @@ public class UnaryExpr extends LustreExpr {
         PRE ("pre"),
         NEG("-");
 
-        private String opStr;
+        private final String opStr;
 
         private Op(String str) {
             this.opStr = str;
