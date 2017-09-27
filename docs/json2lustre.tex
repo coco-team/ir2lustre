@@ -1,0 +1,376 @@
+% This is LLNCS.DOC the documentation file of
+% the LaTeX2e class from Springer-Verlag
+% for Lecture Notes in Computer Science, version 2.4
+\documentclass{llncs}
+\usepackage{llncsdoc}
+\usepackage{cite}
+\usepackage{listings}
+\usepackage{amssymb}
+\usepackage{mathpartir}
+\usepackage{amsmath}    
+\usepackage{algpseudocode}
+
+\usepackage{xcolor}
+
+\lstset{
+    string=[s]{"}{"},
+    stringstyle=\color{blue},
+    comment=[l]{:},
+    commentstyle=\color{black},
+}
+
+
+\begin{document}
+\title{Translation from the JSON Format of CoCoSim models to Lustre Programs}
+
+\author{Baoluo Meng}
+\institute{The University of Iowa, Iowa City, IA 52242, USA}
+
+\maketitle
+
+This is to document the translation process from the JSON format of CocoSim model to its equivalent representation in Lustre.
+
+
+\section{CoCoSim Blocks in JSON}
+
+CocoSim only support a sub-set of the blocks provided by the Simulink(c) toolset. Below is a list of the supported blocks and the limitations on their semantics if it applies. In the JSON representation of a CocoSim model, a block information is stored in a name -- value pair. The name attribute is the name of the block, and the value stores the actual information about the block. A name ``BlockType" inside value block can be used to distinguish different types of blocks. Another useful piece of data is the ``Handle" of a block, which is the unique identifier for that block and also used to be referred by other blocks. For example,  Figure~\ref{jsoninport} shows a snippet of an inport block definition in JSON, where ``In1" is the name of the block, ``Inport" is the type of block ``In1", and the unique identifier for ``In1" is ``4.0069580078125". Data type information is stored in the attribute ``Output" of ``CompiledPortDataTypes". Connectivity information can be found in ``PortConnectivity" attribute, where ``SrcBlock" shows the handle of an source block, whereas ``DstBlock" stores the handle of the destination block. 
+
+\begin{figure}[ht]
+\begin{lstlisting}
+      "In1": {
+        "BlockType": "Inport",
+        "Handle": 4.0069580078125,
+        "PortConnectivity": {
+          "DstBlock": 6.0001220703125,
+          ...
+        }
+        "CompiledPortDataTypes": {
+          "Outport": "double"
+          ...
+        },
+        ...        
+      }
+\end{lstlisting}        
+\caption{A snippet of JSON representation of an inport block}
+\label{jsoninport}
+\end{figure}
+
+\subsection{A mapping from basic CocoSim blocks to Lustre}
+Figure~\ref{basicmapping} shows a mapping form basic CoCoSim blocks to their equivalent representation in Lustre.
+
+
+\begin{figure}[t]
+\centering
+{
+\begin{tabular}{lp{5cm}}
+\hline
+\textbf{CocoSim} & \textbf{Lustre}  \\
+\hline
+SubSystem & 
+Node
+\\
+Inport &
+Input
+\\
+Outport &
+Output
+\\
+Gain &
+Multiply input by constant ($\times$)
+\\
+
+Abs (in) &
+Use library node Abs(in)
+\\
+
+AND, OR, NAND, NOR, XOR, NOT
+&
+and, or, not and, not or, xor, not
+\\
+
+Minmax &
+{Dynamically create minimum or maximum nodes}
+\\
+
+Switch &
+{Switch output between first input and third input based on value of second input}
+\\
+
+SwitchCase &
+{if ... then ... else if ... }
+\\
+
+Sum &
+$+$
+\\
+
+Saturate &
+The Saturation block imposes upper and lower limits on an input signal ($<=, <$)
+\\
+
+RelationalOperator &
+$==, <>, <, <=, >, >=$
+\\
+
+UnitDelay &
+pre
+\\
+
+If &
+if ... then ... else ...
+\\
+
+Memory &
+Output input from previous time step (pre)
+\\
+
+Compare To Zero/Constant  &
+$==, <>, <, <=, >, >=$
+\\
+
+Math(mod, square, substract, divide, negative) &
+mod, $\times, -, /, - $, 
+\\
+
+Constant &
+constant
+\\
+
+\hline
+\end{tabular}
+}
+\caption{A mapping from basic CocoSim blocks to Lustre constructs}
+\label{basicmapping}
+\end{figure}
+
+\subsection{Semantics of complex CoCoSim blocks}
+
+\begin{figure}[t]
+\centering
+{
+\begin{tabular}{lp{5cm}}
+\hline
+\textbf{CocoSim} & \textbf{Semantics}  \\
+\hline
+
+Mux &
+Combine several input signals into vector
+\\
+
+
+Demux &
+Extract and output elements of vector signal
+\\
+
+Trigonometry &
+Not Support
+\\
+
+DiscreteStateSpace &
+Gain
+\\
+
+Goto/From &
+Pass block input to From blocks/Accept input from Goto block
+\\
+
+Bias &
+The Bias block adds a bias, or offset, to the input signal ($Y = U + bias$), where U is the block input and Y is the output.
+\\
+
+Concatenate &
+?? Concatenate input signals of same data type to create contiguous output signal
+\\
+
+MultiPortSwitch &
+Choose between multiple block inputs. Can be translated to if-then-else
+\\
+
+Reshape &
+Change dimensionality of signal
+\\
+
+DiscreteIntegrator &
+Perform discrete-time integration or accumulation of signal
+\\
+
+Saturation Dynamic &
+The Saturation Dynamic block bounds the range of an input signal to upper and lower saturation values. The input below the lower limit is set to the lower limit. The input above the upper limit is set to the upper limit.
+\\
+
+Zero Pole &
+The Zero-Pole block models a system that you define with the zeros, poles, and gain of a Laplace-domain transfer function. 
+\\
+
+\hline
+\end{tabular}
+}
+\caption{A mapping from CocoSim to Lustre}
+\label{mapping}
+\end{figure}
+
+
+
+\begin{figure}[t]
+\centering
+%\scriptsize
+{
+\begin{tabular}{lp{6cm}}
+\hline
+\textbf{CocoSim} & \textbf{Semantics}  \\
+\hline
+
+Detect Change &
+The Detect Change block determines if an input does not equal its previous value.
+\\
+
+Detect Increase &
+The Detect Increase block determines if an input is strictly greater than its previous value.
+\\
+
+Detect Decrease &
+The Detect Decrease block determines if an input is strictly less than its previous value.
+\\
+
+Detect Rise Positive &
+The Detect Rise Positive block determines if the input is strictly positive, and its previous value was nonpositive.
+\\
+
+Detect Rise Nonnegative &
+The Detect Rise Nonnegative block determines if the input is greater than or equal to zero, and its previous value was less than zero.
+\\
+
+Detect Fall Negative &
+The Detect Fall Negative block determines if the input is less than zero, and its previous value was greater than or equal to zero.
+\\
+
+Detect Fall Nonpositive &
+The Detect Fall Nonpositive block determines if the input is less than or equal to zero, and its previous value was greater than zero.
+\\
+
+
+Fcn &
+Apply specified expression to input
+\\
+
+Matlab function &
+Gain
+\\
+
+ActionPort &
+Implement Action subsystems used in if and switch control flow statements
+\\
+
+TriggerPort &
+Adding a Trigger block to a model or subsystem allows an external signal to trigger its execution.
+\\
+
+EnablePort &
+Gain
+\\
+
+\hline
+\end{tabular}
+}
+\caption{A mapping from CocoSim to Lustre}
+\label{mapping}
+\end{figure}
+
+
+\begin{figure}[t]
+\centering
+%\scriptsize
+{
+\begin{tabular}{lp{6cm}}
+\hline
+\textbf{CocoSim} & \textbf{Semantics}  \\
+\hline
+
+Assignment &
+Gain
+\\
+
+Selector &
+Select input elements from vector, matrix, or multidimensional signal
+\\
+
+DataTypeConversion &
+Convert input signal to specified data type
+\\
+
+ForIterator &
+Repeatedly execute contents of subsystem at current time step until iteration variable exceeds specified iteration limit
+\\
+
+DiscreteFilter &
+Model Infinite Impulse Response (IIR) filters
+\\
+
+Polyval &
+The Polynomial Evaluation block applies a polynomial function to the real or complex input at the In port.
+\\
+
+LookupNDDirect &
+Index into N-dimensional table to retrieve element, column, or 2-D matrix
+\\
+
+SignalSpecification &
+Specify desired dimensions, sample time, data type, numeric type, and other attributes of signal
+\\
+
+BusCreator &
+Create signal bus
+\\
+
+BusSelector &
+Select signals from incoming bus
+\\
+
+BusAssignment &
+Replace specified bus elements
+\\
+
+Bitwise (AND, OR, NAND, NOR, XOR, NOT) &
+AND, OR, NAND, NOR, XOR, NOT
+\\
+
+DotProduct &
+Generate dot product of two vectors
+\\
+
+Signum &
+Y = sign(x) returns an array Y the same size as x according to some rules.
+\\
+
+CrossProduct &
+Calculate cross product of two vectors
+\\
+
+Merge &
+Combine multiple signals into single signal
+\\
+
+\hline
+\end{tabular}
+}
+\caption{A mapping from CocoSim to Lustre}
+\label{mapping}
+\end{figure}
+
+\end{document}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
