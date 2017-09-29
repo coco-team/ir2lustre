@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package edu.uiowa.json2lus.lustre;
+package edu.uiowa.json2lus.lustreAst;
 
 import java.util.List;
 

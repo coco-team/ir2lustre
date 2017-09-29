@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package edu.uiowa.json2lus.lustre;
+package edu.uiowa.json2lus.lustreAst;
 
 /**
  *
@@ -30,7 +30,6 @@ public class BinaryExpr extends LustreExpr {
         MINUS ("-"),
         MULTIPLY ("*"),
         DIVIDE ("/"),
-        INT_DIVIDE ("div"),
         MOD ("mod"),
         EQ ("="),
         NEQ ("<>"),

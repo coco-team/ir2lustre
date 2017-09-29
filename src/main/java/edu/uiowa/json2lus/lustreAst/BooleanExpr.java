@@ -3,12 +3,16 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package edu.uiowa.json2lus.lustre;
+package edu.uiowa.json2lus.lustreAst;
 
 /**
  *
  * @author Paul Meng
  */
-public abstract class LustreType {
+public class BooleanExpr extends LustreExpr {
+    public final boolean value;
     
+    public BooleanExpr(boolean value) {
+        this.value = value;
+    }
 }

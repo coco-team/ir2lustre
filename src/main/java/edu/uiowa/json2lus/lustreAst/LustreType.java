@@ -3,18 +3,12 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package edu.uiowa.json2lus.lustre;
-
-import java.math.BigDecimal;
+package edu.uiowa.json2lus.lustreAst;
 
 /**
  *
  * @author Paul Meng
  */
-public class RealExpr extends LustreExpr {
-    public final BigDecimal value;
+public abstract class LustreType {
     
-    public RealExpr(BigDecimal value) {
-        this.value = value;
-    }
 }
