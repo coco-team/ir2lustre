@@ -19,4 +19,9 @@ public class IteExpr extends LustreExpr {
             this.thenExpr   = thenExpr;
             this.elseExpr   = elseExpr;
         }
+
+    @Override
+    public void accept(LustreAstVisitor visitor) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
 }

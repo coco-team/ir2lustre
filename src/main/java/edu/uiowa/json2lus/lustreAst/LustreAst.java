@@ -11,5 +11,5 @@ package edu.uiowa.json2lus.lustreAst;
  * @author Paul Meng
  */
 public abstract class LustreAst {
-    
+    public abstract void accept(LustreAstVisitor visitor);
 }

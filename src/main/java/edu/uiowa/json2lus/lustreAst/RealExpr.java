@@ -17,4 +17,9 @@ public class RealExpr extends LustreExpr {
     public RealExpr(BigDecimal value) {
         this.value = value;
     }
+
+    @Override
+    public void accept(LustreAstVisitor visitor) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
 }

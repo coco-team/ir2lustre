@@ -19,6 +19,11 @@ public class BinaryExpr extends LustreExpr {
         this.left   = left;
         this.right  = right;
     }
+
+    @Override
+    public void accept(LustreAstVisitor visitor) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
     
     public enum Op {
         

@@ -25,4 +25,9 @@ public class LustreNode extends LustreAst {
             this.localVars  = locals;
             this.bodyExprs  = bodyExprs;
         }
+
+    @Override
+    public void accept(LustreAstVisitor visitor) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
 }

@@ -10,5 +10,10 @@ package edu.uiowa.json2lus.lustreAst;
  * @author Paul Meng
  */
 public class LustreContract extends LustreAst {
+
+    @Override
+    public void accept(LustreAstVisitor visitor) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
     
 }
