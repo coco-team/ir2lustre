@@ -5,8 +5,10 @@
  */
 package edu.uiowa.json2lus;
 
-import com.fasterxml.jackson.core.PrettyPrinter;
 import edu.uiowa.json2lus.lustreAst.LustrePrettyPrinter;
+import java.io.File;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
@@ -22,24 +24,13 @@ import org.apache.commons.cli.ParseException;
 public class Main {
     
     /**
-     * Construct program options menu
-     */        
-    private static Options constructOptions() {
-        Options opts    = new Options();               
-                
-        opts.addOption("h", "help",     false, "Print this help information");
-        opts.addOption("v", "version",  false, "Print tool version information");                
-        opts.addOption(Option.builder("i").longOpt("json-file").desc("Input json file").hasArgs().build());
-        return opts;
-    }
-    
-    /**
      * This is the entry point of the program
      * 
      * @param args input parameters
      */
     public static void main(String[] args) {                  
-        String              jsonFile    = null;   
+        String              jsonFilePath    = null; 
+        String              lusFilePath     = null; 
         Options             opts        = constructOptions();               
         HelpFormatter       hf          = new HelpFormatter();        
         CommandLineParser   parser      = new DefaultParser();           
@@ -56,19 +47,60 @@ public class Main {
                 return;
             }
             if(cl.hasOption('i')) {
-                jsonFile = cl.getOptionValue('i');
-            }          
-            if(jsonFile != null) {
-                J2LTranslator       translator  = new J2LTranslator(jsonFile);                
+                jsonFilePath = cl.getOptionValue('i');
+            } 
+            if(cl.hasOption('o')) {
+                lusFilePath = cl.getOptionValue('o');
+            }             
+            if(validateInput(jsonFilePath, lusFilePath)) {
+                J2LTranslator       translator  = new J2LTranslator(jsonFilePath);                
                 LustrePrettyPrinter ppv         = new LustrePrettyPrinter();
                 
                 ppv.visit(translator.execute());
-                ppv.outputToFile("/Users/baoluomeng/Desktop/lus/model.lus");
+                ppv.printLustreProgramToFile((lusFilePath != null && lusFilePath.endsWith(".lus"))?lusFilePath:jsonFilePath+".lus");
             } else {
                 System.out.println("Please provide an input json file!\n");
             }
         } catch (ParseException ex) {
             System.err.println( "Parsing failed.  Reason: " + ex.getMessage() );
         }
-    }     
+    }
+    
+    /**
+     * Construct program options menu
+     */        
+    private static Options constructOptions() {
+        Options opts    = new Options();               
+                
+        opts.addOption("h", "help",     false, "Print this help information");
+        opts.addOption("v", "version",  false, "Print tool version information");                
+        opts.addOption(Option.builder("i").longOpt("json-file").desc("Input json file path").hasArgs().build());
+        opts.addOption(Option.builder("o").longOpt("lustre-file").desc("Output lustre file path").hasArgs().build());
+        return opts;
+    }
+
+    private static boolean validateInput(String jsonFilePath, String lusFilePath) {
+        if(jsonFilePath == null) {
+            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, "Input JSON file cannot be null!");
+            return false;
+        } else {
+            File jsonFile = new File(jsonFilePath);
+            
+            if(!jsonFile.exists()) {
+                Logger.getLogger(Main.class.getName()).log(Level.SEVERE, "The input JSON file does not exist!");
+                return false;
+            }
+            if(!jsonFile.canRead()) {
+                Logger.getLogger(Main.class.getName()).log(Level.SEVERE, "The input JSON file cannot be read!");
+                return false;                
+            }
+            if(lusFilePath != null) {
+                if(!lusFilePath.endsWith(".lus")) {
+                    Logger.getLogger(Main.class.getName()).log(Level.WARNING, "The output Lustre file does not end with .lus, "
+                            + "thus the Lustre program will be genereated at {0}!", jsonFilePath+".lus");
+                }
+            }
+        }
+        return true;
+    }
 }

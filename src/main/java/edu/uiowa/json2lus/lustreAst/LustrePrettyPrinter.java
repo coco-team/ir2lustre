@@ -19,10 +19,13 @@ import java.util.logging.Logger;
  */
 public class LustrePrettyPrinter implements LustreAstVisitor{
     private static final String NL = System.getProperty("line.separator");    
+    
     StringBuilder sb = new StringBuilder();
     
-    public void outputToFile(String path) {
-        System.out.println(sb.toString());
+    public void printLustreProgramToFile(String path) {
+        Logger.getLogger(LustrePrettyPrinter.class.getName()).log(Level.INFO, "****************************************************");
+        Logger.getLogger(LustrePrettyPrinter.class.getName()).log(Level.INFO, "\n {0}", sb.toString());
+        Logger.getLogger(LustrePrettyPrinter.class.getName()).log(Level.INFO, "****************************************************");
         try {
             File output = new File(path);
             if(!output.exists()) {
@@ -34,6 +37,7 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
             BufferedWriter bw = new BufferedWriter(new FileWriter(path));
             bw.write(sb.toString());
             bw.close();
+            Logger.getLogger(LustrePrettyPrinter.class.getName()).log(Level.INFO, "A Lustre program was generated at: {0}", path);
         } catch (IOException e) {
             Logger.getLogger(LustrePrettyPrinter.class.getName()).log(Level.SEVERE, "Dumping to lustre file fails!");
         }        
@@ -63,7 +67,7 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
         }
         
         sb.append("let").append(NL);        
-        node.bodyExprs.forEach( eq -> {sb.append("  ");eq.accept(this); sb.append(NL);});        
+        node.bodyExprs.forEach(eq -> {sb.append("  ");eq.accept(this); sb.append(NL);});        
         sb.append("tel;").append(NL).append(NL);        
     }    
     
