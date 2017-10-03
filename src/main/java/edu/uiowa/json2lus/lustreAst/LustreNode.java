@@ -16,9 +16,9 @@ public class LustreNode extends LustreAst {
 	public final List<LustreVar>    inputVars;
 	public final List<LustreVar>    outputVars;
 	public final List<LustreVar>    localVars;
-	public final List<LustreExpr>   bodyExprs;
+	public final List<LustreEq>   bodyExprs;
     
-        public LustreNode(String name, List<LustreVar> inputs, List<LustreVar> outputs, List<LustreVar> locals, List<LustreExpr> bodyExprs) {
+        public LustreNode(String name, List<LustreVar> inputs, List<LustreVar> outputs, List<LustreVar> locals, List<LustreEq> bodyExprs) {
             this.name       = name;
             this.inputVars  = inputs;
             this.outputVars = outputs;
@@ -28,6 +28,6 @@ public class LustreNode extends LustreAst {
 
     @Override
     public void accept(LustreAstVisitor visitor) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        visitor.visit(this);
     }
 }

@@ -5,6 +5,8 @@
  */
 package edu.uiowa.json2lus;
 
+import com.fasterxml.jackson.core.PrettyPrinter;
+import edu.uiowa.json2lus.lustreAst.LustrePrettyPrinter;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
@@ -57,8 +59,11 @@ public class Main {
                 jsonFile = cl.getOptionValue('i');
             }          
             if(jsonFile != null) {
-                J2LTranslator translator = new J2LTranslator(jsonFile);
-                translator.execute();
+                J2LTranslator       translator  = new J2LTranslator(jsonFile);                
+                LustrePrettyPrinter ppv         = new LustrePrettyPrinter();
+                
+                ppv.visit(translator.execute());
+                ppv.outputToFile("/Users/baoluomeng/Desktop/lus/model.lus");
             } else {
                 System.out.println("Please provide an input json file!\n");
             }

@@ -13,7 +13,7 @@ public class Contract extends LustreAst{
 
     @Override
     public void accept(LustreAstVisitor visitor) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        visitor.visit(this);
     }
     
 }

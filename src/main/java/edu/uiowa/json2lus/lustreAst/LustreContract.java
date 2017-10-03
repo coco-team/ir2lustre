@@ -13,7 +13,7 @@ public class LustreContract extends LustreAst {
 
     @Override
     public void accept(LustreAstVisitor visitor) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        visitor.visit(this);
     }
     
 }

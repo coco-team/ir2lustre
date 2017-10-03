@@ -5,15 +5,31 @@
  */
 package edu.uiowa.json2lus.lustreAst;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  *
  * @author Paul Meng
  */
 public class LustreProgram extends LustreAst {
-
+    List<LustreNode> nodes;
+    
+    public LustreProgram() {
+        this.nodes = new ArrayList<>();
+    }
+    
+    public LustreProgram(List<LustreNode> nodes) {
+        this.nodes = nodes;
+    }    
+    
+    public void addNode(LustreNode node) {
+        this.nodes.add(node);
+    }
+    
     @Override
     public void accept(LustreAstVisitor visitor) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        visitor.visit(this);
     }
     
 }
