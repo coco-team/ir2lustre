@@ -108,7 +108,7 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
     public void visit(BinaryExpr expr) {
         sb.append("(");
         expr.left.accept(this);
-        sb.append(expr.op);
+        sb.append(" ").append(expr.op).append(" ");
         expr.right.accept(this);
         sb.append(")");
     }
