@@ -43,6 +43,11 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
         }        
     }
     
+    public void printLustreProgramToFile(LustreProgram lusProg, String path) {
+        visit(lusProg);
+        printLustreProgramToFile(path);
+    }
+    
     @Override
     public void visit(LustreProgram program) {
         for(LustreNode node : program.nodes) {

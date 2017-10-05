@@ -52,15 +52,14 @@ public class Main {
             if(cl.hasOption('o')) {
                 lusFilePath = cl.getOptionValue('o');
             }             
-            if(validateInput(jsonFilePath, lusFilePath)) {
+            if(lusFilePath == null || !lusFilePath.endsWith(".lus")) {
+                lusFilePath = jsonFilePath+".lus";
+            }               
+            if(validateInput(jsonFilePath)) {
                 J2LTranslator       translator  = new J2LTranslator(jsonFilePath);                
                 LustrePrettyPrinter ppv         = new LustrePrettyPrinter();
-                                
-                if(lusFilePath == null || !lusFilePath.endsWith(".lus")) {
-                    lusFilePath = jsonFilePath+".lus";
-                }                
-                ppv.visit(translator.execute());
-                ppv.printLustreProgramToFile(lusFilePath);
+
+                ppv.printLustreProgramToFile(translator.execute(), lusFilePath);
             } else {
                 System.out.println("Please provide an input json file!\n");
             }
@@ -82,7 +81,7 @@ public class Main {
         return opts;
     }
 
-    private static boolean validateInput(String jsonFilePath, String lusFilePath) {
+    private static boolean validateInput(String jsonFilePath) {
         if(jsonFilePath == null) {
             Logger.getLogger(Main.class.getName()).log(Level.SEVERE, "Input JSON file cannot be null!");
             return false;
@@ -96,12 +95,6 @@ public class Main {
             if(!jsonFile.canRead()) {
                 Logger.getLogger(Main.class.getName()).log(Level.SEVERE, "The input JSON file cannot be read!");
                 return false;                
-            }
-            if(lusFilePath != null) {
-                if(!lusFilePath.endsWith(".lus")) {
-                    Logger.getLogger(Main.class.getName()).log(Level.WARNING, "The output Lustre file does not end with .lus, "
-                            + "thus the Lustre program will be genereated at {0}!", jsonFilePath+".lus");
-                }
             }
         }
         return true;
