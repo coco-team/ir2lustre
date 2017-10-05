@@ -31,9 +31,9 @@ public class Main {
     public static void main(String[] args) {                  
         String              jsonFilePath    = null; 
         String              lusFilePath     = null; 
-        Options             opts        = constructOptions();               
-        HelpFormatter       hf          = new HelpFormatter();        
-        CommandLineParser   parser      = new DefaultParser();           
+        Options             opts            = constructOptions();               
+        HelpFormatter       hf              = new HelpFormatter();        
+        CommandLineParser   parser          = new DefaultParser();           
         
         try {
             CommandLine cl  = parser.parse(opts, args);
@@ -55,9 +55,12 @@ public class Main {
             if(validateInput(jsonFilePath, lusFilePath)) {
                 J2LTranslator       translator  = new J2LTranslator(jsonFilePath);                
                 LustrePrettyPrinter ppv         = new LustrePrettyPrinter();
-                
+                                
+                if(lusFilePath == null || !lusFilePath.endsWith(".lus")) {
+                    lusFilePath = jsonFilePath+".lus";
+                }                
                 ppv.visit(translator.execute());
-                ppv.printLustreProgramToFile((lusFilePath != null && lusFilePath.endsWith(".lus"))?lusFilePath:jsonFilePath+".lus");
+                ppv.printLustreProgramToFile(lusFilePath);
             } else {
                 System.out.println("Please provide an input json file!\n");
             }
