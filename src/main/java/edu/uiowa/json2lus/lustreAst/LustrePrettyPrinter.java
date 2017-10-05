@@ -24,7 +24,7 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
     
     public void printLustreProgramToFile(String path) {
         Logger.getLogger(LustrePrettyPrinter.class.getName()).log(Level.INFO, "****************************************************");
-        Logger.getLogger(LustrePrettyPrinter.class.getName()).log(Level.INFO, "\n {0}", sb.toString());
+        Logger.getLogger(LustrePrettyPrinter.class.getName()).log(Level.INFO, "\n{0}", sb.toString());
         Logger.getLogger(LustrePrettyPrinter.class.getName()).log(Level.INFO, "****************************************************");
         try {
             File output = new File(path);
@@ -93,7 +93,7 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
 
     @Override
     public void visit(RealExpr expr) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        sb.append(expr.value);
     }
 
     @Override
