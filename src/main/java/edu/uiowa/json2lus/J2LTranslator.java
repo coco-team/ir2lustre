@@ -91,14 +91,10 @@ public class J2LTranslator {
     private final String LINEHANDLES    = "LineHandles";        
     private final String CONNECTIVITY   = "PortConnectivity";
     private final String PORTDATATYPE   = "CompiledPortDataTypes"; 
-
-    
-            
-        
-    
-    private LustreProgram           lustreProgram;
-    private Set<JsonNode>           subsystemNodes;
-    private JsonNode                topLevelNode = null;    
+                      
+    private JsonNode                topLevelNode;    
+    private final LustreProgram     lustreProgram;
+    private final Set<JsonNode>     subsystemNodes;    
     
             
     /**
