@@ -16,14 +16,16 @@ public class LustreNode extends LustreAst {
 	public final List<LustreVar>    inputVars;
 	public final List<LustreVar>    outputVars;
 	public final List<LustreVar>    localVars;
-	public final List<LustreEq>   bodyExprs;
+	public final List<LustreEq>     bodyExprs;
+        public final List<LustreEq>     propExprs;
     
-        public LustreNode(String name, List<LustreVar> inputs, List<LustreVar> outputs, List<LustreVar> locals, List<LustreEq> bodyExprs) {
+        public LustreNode(String name, List<LustreVar> inputs, List<LustreVar> outputs, List<LustreVar> locals, List<LustreEq> bodyExprs, List<LustreEq> props) {
             this.name       = name;
             this.inputVars  = inputs;
             this.outputVars = outputs;
             this.localVars  = locals;
             this.bodyExprs  = bodyExprs;
+            this.propExprs  = props;
         }
 
     @Override

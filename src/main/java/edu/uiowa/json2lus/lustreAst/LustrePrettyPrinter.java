@@ -50,9 +50,7 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
     
     @Override
     public void visit(LustreProgram program) {
-        for(LustreNode node : program.nodes) {
-            node.accept(this);sb.append(NL);
-        }
+        program.nodes.forEach(node -> {node.accept(this);sb.append(NL).append(NL);});
     }    
 
     @Override
@@ -72,7 +70,14 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
         }
         
         sb.append("let").append(NL);        
-        node.bodyExprs.forEach(eq -> {sb.append("  ");eq.accept(this); sb.append(NL);});        
+        node.bodyExprs.forEach(eq -> {sb.append("  ");eq.accept(this); sb.append(NL);});
+        node.propExprs.forEach(prop -> {sb.append("  ");prop.accept(this); sb.append(NL);});
+        sb.append(NL);
+        node.propExprs.forEach(prop -> {
+            prop.lhs.forEach(propVarId -> {
+                sb.append("  ");sb.append("--%PROPERTY ").append(propVarId.id).append(";").append(NL);
+            });
+        });
         sb.append("tel;").append(NL).append(NL);        
     }    
     

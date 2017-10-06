@@ -25,6 +25,14 @@ public class LustreEq extends LustreAst {
         this.lhs = new ArrayList<>();
         this.lhs.add(lhs);
         this.rhs = rhs;
+    } 
+    
+    public List<VarIdExpr> getLhs() {
+        return this.lhs;
+    }
+    
+    public LustreExpr getRhs() {
+        return this.rhs;
     }    
         
     @Override

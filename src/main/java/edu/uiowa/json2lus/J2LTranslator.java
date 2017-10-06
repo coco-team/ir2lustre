@@ -88,13 +88,15 @@ public class J2LTranslator {
     private final String DSTBLOCK       = "DstBlock";
     private final String BLOCKTYPE      = "BlockType";
     private final String SUBSYSTEM      = "SubSystem"; 
-    private final String LINEHANDLES    = "LineHandles";        
+    private final String TERMINATOR     = "Terminator";
+    private final String LINEHANDLES    = "LineHandles";     
     private final String CONNECTIVITY   = "PortConnectivity";
     private final String PORTDATATYPE   = "CompiledPortDataTypes"; 
                       
-    private JsonNode                topLevelNode;    
-    private final LustreProgram     lustreProgram;
-    private final Set<JsonNode>     subsystemNodes;    
+    private JsonNode                                topLevelNode;    
+    private final LustreProgram                     lustreProgram;
+    private final Set<JsonNode>                     subsystemNodes;    
+    private final Map<JsonNode, List<JsonNode>>     subsystemPropsMap;    
     
             
     /**
@@ -108,6 +110,7 @@ public class J2LTranslator {
                                     : inputPath.substring(inputPath.lastIndexOf(File.separator)+1);            
         this.lustreProgram      = new LustreProgram();
         this.subsystemNodes     = new HashSet<>();
+        this.subsystemPropsMap  = new HashMap<>();
     }
     
     /**
@@ -150,6 +153,7 @@ public class J2LTranslator {
     protected void collectSubsytemBlocksInfo(JsonNode subsystemNode) {
         if(subsystemNode != null && !this.subsystemNodes.contains(subsystemNode) && subsystemNode.has(CONTENT)) {
             LOGGER.log(Level.INFO, "Found a subsystem block: {0}  ", subsystemNode.equals(this.topLevelNode) ? this.modelName:subsystemNode.get(NAME).asText());            
+            
             this.subsystemNodes.add(subsystemNode);
             Iterator<Entry<String, JsonNode>> nodes = subsystemNode.get(CONTENT).fields();                         
             
@@ -158,9 +162,10 @@ public class J2LTranslator {
                 JsonNode                    fieldNode   = field.getValue();
                 
                 if(fieldNode.has(BLOCKTYPE)) {
-                    if(fieldNode.get(BLOCKTYPE).asText().equals(SUBSYSTEM)) {                        
+                    String blkType = fieldNode.get(BLOCKTYPE).asText();
+                    if(blkType.equals(SUBSYSTEM)) {                        
                         collectSubsytemBlocksInfo(fieldNode);
-                    }               
+                    }          
                 }
                
             }
@@ -194,7 +199,8 @@ public class J2LTranslator {
         List<LustreVar>     inputs          = new ArrayList<>();
         List<LustreVar>     outputs         = new ArrayList<>();
         List<LustreVar>     locals          = new ArrayList<>();
-        List<LustreEq>      equations       = new ArrayList<>();               
+        List<LustreEq>      equations       = new ArrayList<>();
+        List<LustreEq>      props           = new ArrayList<>();
         
         /** ALL the fields under content field of subsystem block */
         Iterator<Entry<String, JsonNode>>   contentFields               = subsystemNode.get(CONTENT).fields();        
@@ -204,8 +210,11 @@ public class J2LTranslator {
         Map<JsonNode, List<String>>         blkNodeToSrcBlkHandlesMap   = new HashMap<>();  
         /** A mapping between a block node and its dst block handles */
         Map<JsonNode, List<String>>         blkNodeToDstBlkHandlesMap   = new HashMap<>();          
-        /** Outports of the input subsystem block */
+        /** Outport nodes in the input subsystem block */
         List<JsonNode>                      outportNodes                = new ArrayList<>();    
+        
+        /** Terminator node in the input subsystem block */
+        List<JsonNode>                      propsNodes                  = new ArrayList<>();    
         
         LOGGER.log(Level.INFO, "Start translating subsystem block: {0}!", lusNodeName);
         
@@ -260,22 +269,99 @@ public class J2LTranslator {
                         outportNodes.add(contBlkNode);
                         break;
                     }
+                    case TERMINATOR: {
+                        propsNodes.add(contBlkNode);
+                        break;
+                    }
                     default:
                         break;
                 }                 
             }            
         }
         
-        // Translate outport equations backwards
+        // Translate outport equations backwardsly
         outportNodes.forEach((JsonNode outportNode) -> {
             LustreEq outportEq = translateOutportEquation(outportNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap);
             
             if(outportEq != null) {
                 equations.add(outportEq);
-            }
-            
+            } else {
+                LOGGER.log(Level.SEVERE, "An null outport equation was generated by the translation!");
+            }            
         });
-        return new LustreNode(lusNodeName, inputs, outputs, locals, equations);
+                
+        propsNodes.forEach(propNode -> {
+            List<LustreEq> propEqs = translatePropEquation(propNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap);
+            propEqs.forEach(eq -> {
+                List<VarIdExpr> lhsVars = eq.getLhs();
+                
+                lhsVars.forEach(var -> {
+                    locals.add(new LustreVar(var.id, PrimitiveType.BOOL));
+                });
+            });
+            props.addAll(propEqs);
+        });
+        return new LustreNode(lusNodeName, inputs, outputs, locals, equations, props);
+    }
+    
+    /**
+     * 
+     * @param propNode
+     * @param blkNodeToSrcBlkHandlesMap
+     * @param blkNodeToDstBlkHandlesMap
+     * @return Outport equation
+     */
+    protected List<LustreEq> translatePropEquation(JsonNode propNode, Map<JsonNode, List<String>> blkNodeToSrcBlkHandlesMap, Map<JsonNode, List<String>> blkNodeToDstBlkHandlesMap, Map<String, JsonNode> handleToBlkNodeMap) {
+        List<LustreEq> propEqs = new ArrayList<>();
+        
+        if(blkNodeToSrcBlkHandlesMap.containsKey(propNode)) {
+            List<String> srcBlkHandles = blkNodeToSrcBlkHandlesMap.get(propNode);
+            
+            srcBlkHandles.forEach(srcBlkHdl -> {
+                if(handleToBlkNodeMap.containsKey(srcBlkHdl)) {
+                    JsonNode srcBlkNode = handleToBlkNodeMap.get(srcBlkHdl);
+                    
+                    if(srcBlkNode.has(BLOCKTYPE)) {
+                        String srcBlkType = srcBlkNode.get(BLOCKTYPE).asText();
+                        
+                        if(srcBlkType.equals(SUBSYSTEM)) {
+                            List<VarIdExpr> outVarIdExprs   = new ArrayList<>();
+                            List<JsonNode>  outportNodes    = getBlksFromSubSystem(srcBlkNode, OUTPORT);
+                                                        
+                            outportNodes.forEach(outNode -> {
+                                outVarIdExprs.add(new VarIdExpr(srcBlkNode.get(NAME).asText()+"_"+outNode.get(NAME).asText()));
+                            });
+                            LustreExpr rhsExpr = translateBlock(srcBlkHdl, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap);
+                            propEqs.add(new LustreEq(outVarIdExprs, rhsExpr));
+                        } else {
+                            LOGGER.log(Level.SEVERE, "Unsupported property block type: {0}!", srcBlkType);
+                        }
+                    }
+                } else {
+                    LOGGER.log(Level.SEVERE, "Unexpected: No block node was found with handle: {0}!", srcBlkHdl);
+                }                
+            });
+            
+        } else {
+            LOGGER.log(Level.WARNING, "Unexpected: No src blocks connect to the terminator : {0}!", propNode.get(NAME).asText());
+        }        
+        
+        return propEqs;
+    } 
+    
+    protected List<JsonNode> getBlksFromSubSystem(JsonNode subsystemNode, String blkType) {
+        List<JsonNode> blkNodes = new ArrayList();
+        Iterator<Entry<String, JsonNode>> contentFields = subsystemNode.get(CONTENT).fields(); 
+        
+        while(contentFields.hasNext()) {
+            Map.Entry<String, JsonNode> contField       = contentFields.next();   
+            JsonNode                    contBlkNode     = contField.getValue();
+            
+            if(contBlkNode.has(BLOCKTYPE) && contBlkNode.get(BLOCKTYPE).asText().equals(blkType)) {
+                blkNodes.add(contBlkNode);
+            }           
+        }
+        return blkNodes;
     }
     
     /**
@@ -293,7 +379,7 @@ public class J2LTranslator {
             List<String> srcBlkHandles = blkNodeToSrcBlkHandlesMap.get(outportNode);
             
             if(srcBlkHandles.size() == 1) {
-                eq = new LustreEq(varIdExpr, translateRhsForOutportEq(srcBlkHandles.get(0), blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap));
+                eq = new LustreEq(varIdExpr, translateBlock(srcBlkHandles.get(0), blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap));
             } else if(srcBlkHandles.size() > 1) {
                 LOGGER.log(Level.SEVERE, "Unexpected: Multiple different src blocks connect to a same outport: {0}!", outportNode.get(NAME).asText());
             } else {
@@ -315,7 +401,7 @@ public class J2LTranslator {
      * @return Right hand side expression of an outport equation
      */
 
-    protected LustreExpr translateRhsForOutportEq(String blkHandle, Map<JsonNode, List<String>> blkNodeToSrcBlkHandlesMap,  Map<JsonNode, List<String>> blkNodeToDstBlkHandlesMap, Map<String, JsonNode> handleToBlkNodeMap) {
+    protected LustreExpr translateBlock(String blkHandle, Map<JsonNode, List<String>> blkNodeToSrcBlkHandlesMap,  Map<JsonNode, List<String>> blkNodeToDstBlkHandlesMap, Map<String, JsonNode> handleToBlkNodeMap) {
         LustreExpr  rhsExpr     = null;
         JsonNode    blkNode     = null;
         
@@ -335,7 +421,7 @@ public class J2LTranslator {
             }
             if(inHandles != null) {
                 inHandles.forEach(inHandle -> {
-                    inExprs.add(translateRhsForOutportEq(inHandle, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap));
+                    inExprs.add(translateBlock(inHandle, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap));
                 });                 
             }                         
             switch(blockType) {
