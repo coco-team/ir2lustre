@@ -172,22 +172,7 @@ public class J2LTranslator {
         } else {
             LOGGER.log(Level.SEVERE, "Cannot find the Cocosim model: {0} content definition in the input JSON file!", this.modelName);
         }       
-    }    
-    
-    private List<String> convertJsonValuesToList(JsonNode values) {
-        List<String> strValues = new ArrayList<>();
-        
-        if(values.isArray()) {
-            Iterator<JsonNode> valuesIt = values.elements();
-            
-            while(valuesIt.hasNext()) {
-                strValues.add(valuesIt.next().asText());
-            }
-        } else {
-            strValues.add(values.asText());
-        }
-        return strValues;
-    }
+    }        
     
     /**
      * 
@@ -309,7 +294,7 @@ public class J2LTranslator {
      * @param propNode
      * @param blkNodeToSrcBlkHandlesMap
      * @param blkNodeToDstBlkHandlesMap
-     * @return Outport equation
+     * @return A list of property equations
      */
     protected List<LustreEq> translatePropEquation(JsonNode propNode, Map<JsonNode, List<String>> blkNodeToSrcBlkHandlesMap, Map<JsonNode, List<String>> blkNodeToDstBlkHandlesMap, Map<String, JsonNode> handleToBlkNodeMap) {
         List<LustreEq> propEqs = new ArrayList<>();
@@ -348,21 +333,6 @@ public class J2LTranslator {
         
         return propEqs;
     } 
-    
-    protected List<JsonNode> getBlksFromSubSystem(JsonNode subsystemNode, String blkType) {
-        List<JsonNode> blkNodes = new ArrayList();
-        Iterator<Entry<String, JsonNode>> contentFields = subsystemNode.get(CONTENT).fields(); 
-        
-        while(contentFields.hasNext()) {
-            Map.Entry<String, JsonNode> contField       = contentFields.next();   
-            JsonNode                    contBlkNode     = contField.getValue();
-            
-            if(contBlkNode.has(BLOCKTYPE) && contBlkNode.get(BLOCKTYPE).asText().equals(blkType)) {
-                blkNodes.add(contBlkNode);
-            }           
-        }
-        return blkNodes;
-    }
     
     /**
      * 
@@ -570,4 +540,36 @@ public class J2LTranslator {
         
         return lusType;
     }
+    
+    private List<String> convertJsonValuesToList(JsonNode values) {
+        List<String> strValues = new ArrayList<>();
+        
+        if(values.isArray()) {
+            Iterator<JsonNode> valuesIt = values.elements();
+            
+            while(valuesIt.hasNext()) {
+                strValues.add(valuesIt.next().asText());
+            }
+        } else {
+            strValues.add(values.asText());
+        }
+        return strValues;
+    }   
+    
+    
+    protected List<JsonNode> getBlksFromSubSystem(JsonNode subsystemNode, String blkType) {
+        List<JsonNode> blkNodes = new ArrayList();
+        Iterator<Entry<String, JsonNode>> contentFields = subsystemNode.get(CONTENT).fields(); 
+        
+        while(contentFields.hasNext()) {
+            Map.Entry<String, JsonNode> contField       = contentFields.next();   
+            JsonNode                    contBlkNode     = contField.getValue();
+            
+            if(contBlkNode.has(BLOCKTYPE) && contBlkNode.get(BLOCKTYPE).asText().equals(blkType)) {
+                blkNodes.add(contBlkNode);
+            }           
+        }
+        return blkNodes;
+    }    
+    
 }
