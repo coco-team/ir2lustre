@@ -1,0 +1,924 @@
+{
+  "meta": {
+    "file_path": "example/Model_example",
+    "date": "06-Sep-2017"
+  },
+  "Model_example": {
+    "Content": {
+      "In1": {
+        "BlockType": "Inport",
+        "BusObject": "BusObject",
+        "CompiledPortComplexSignals": {
+          "Inport": [],
+          "Outport": 0,
+          "Enable": [],
+          "Trigger": [],
+          "State": [],
+          "LConn": [],
+          "RConn": [],
+          "Ifaction": [],
+          "Reset": []
+        },
+        "CompiledPortDataTypes": {
+          "Inport": [],
+          "Outport": "double",
+          "Enable": [],
+          "Trigger": [],
+          "State": [],
+          "LConn": [],
+          "RConn": [],
+          "Ifaction": [],
+          "Reset": []
+        },
+        "CompiledPortDimensions": {
+          "Inport": [],
+          "Outport": [
+            1,
+            1
+          ],
+          "Enable": [],
+          "Trigger": [],
+          "State": [],
+          "LConn": [],
+          "RConn": [],
+          "Ifaction": [],
+          "Reset": []
+        },
+        "CompiledPortWidths": {
+          "Inport": [],
+          "Outport": 1,
+          "Enable": [],
+          "Trigger": [],
+          "State": [],
+          "LConn": [],
+          "RConn": [],
+          "Ifaction": [],
+          "Reset": []
+        },
+        "CompiledSampleTime": [
+          0,
+          0
+        ],
+        "Handle": 4.0069580078125,
+        "LineHandles": {
+          "Inport": [],
+          "Outport": 15.0003662109375,
+          "Enable": [],
+          "Trigger": [],
+          "State": [],
+          "LConn": [],
+          "RConn": [],
+          "Ifaction": [],
+          "Reset": []
+        },
+        "Name": "In1",
+        "Origin_path": "Model_example/In1",
+        "Path": "Model_example/In1",
+        "Port": "1",
+        "PortConnectivity": {
+          "Type": "1",
+          "Position": [
+            185,
+            205
+          ],
+          "SrcBlock": [],
+          "SrcPort": [],
+          "DstBlock": 6.0001220703125,
+          "DstPort": 0
+        },
+        "Ports": [
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "Position": [
+          150,
+          198,
+          180,
+          212
+        ],
+        "UseBusObject": "off"
+      },      
+      "Annotation": [
+        19.0001220703125,
+        18.0003662109375
+      ],
+      "Annotation1": {
+        "Text": "one comment",
+        "Handle": 19.0001220703125
+      },
+      "Annotation2": {
+        "Text": "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\np, li { white-space: pre-wrap; }\n</style></head><body style=\" font-family:'Helvetica'; font-size:10px; font-weight:400; font-style:normal;\">\n<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:10px; font-weight:600;\">different </span><span style=\" font-size:10px;\">text form</span></p></body></html>",
+        "Handle": 18.0003662109375
+      },
+
+      "In2": {
+        "BlockType": "Inport",
+        "BusObject": "BusObject",
+        "CompiledPortComplexSignals": {
+          "Inport": [],
+          "Outport": 0,
+          "Enable": [],
+          "Trigger": [],
+          "State": [],
+          "LConn": [],
+          "RConn": [],
+          "Ifaction": [],
+          "Reset": []
+        },
+        "CompiledPortDataTypes": {
+          "Inport": [],
+          "Outport": "double",
+          "Enable": [],
+          "Trigger": [],
+          "State": [],
+          "LConn": [],
+          "RConn": [],
+          "Ifaction": [],
+          "Reset": []
+        },
+        "CompiledPortDimensions": {
+          "Inport": [],
+          "Outport": [
+            1,
+            1
+          ],
+          "Enable": [],
+          "Trigger": [],
+          "State": [],
+          "LConn": [],
+          "RConn": [],
+          "Ifaction": [],
+          "Reset": []
+        },
+        "CompiledPortWidths": {
+          "Inport": [],
+          "Outport": 1,
+          "Enable": [],
+          "Trigger": [],
+          "State": [],
+          "LConn": [],
+          "RConn": [],
+          "Ifaction": [],
+          "Reset": []
+        },
+        "CompiledSampleTime": [
+          0,
+          0
+        ],
+        "Handle": 5.0001220703125,
+        "LineHandles": {
+          "Inport": [],
+          "Outport": 14.0001220703125,
+          "Enable": [],
+          "Trigger": [],
+          "State": [],
+          "LConn": [],
+          "RConn": [],
+          "Ifaction": [],
+          "Reset": []
+        },
+        "Name": "In2",
+        "Origin_path": "Model_example/In2",
+        "Path": "Model_example/In2",
+        "Port": "2",
+        "PortConnectivity": {
+          "Type": "1",
+          "Position": [
+            185,
+            270
+          ],
+          "SrcBlock": [],
+          "SrcPort": [],
+          "DstBlock": 6.0001220703125,
+          "DstPort": 1
+        },
+        "Ports": [
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "Position": [
+          150,
+          263,
+          180,
+          277
+        ],
+        "UseBusObject": "off"
+      },
+      "Add": {
+        "Path": "Model_example/Add",
+        "BlockType": "Sum",
+        "Name": "Add",
+        "Origin_path": "Model_example/Add",
+        "Handle": 6.0001220703125,
+        "LineHandles": {
+          "Inport": [
+            15.0003662109375,
+            14.0001220703125
+          ],
+          "Outport": 16.0003662109375,
+          "Enable": [],
+          "Trigger": [],
+          "State": [],
+          "LConn": [],
+          "RConn": [],
+          "Ifaction": [],
+          "Reset": []
+        },
+        "CompiledSampleTime": [
+          0,
+          0
+        ],
+        "CompiledPortDataTypes": {
+          "Inport": [
+            "double",
+            "double"
+          ],
+          "Outport": "double",
+          "Enable": [],
+          "Trigger": [],
+          "State": [],
+          "LConn": [],
+          "RConn": [],
+          "Ifaction": [],
+          "Reset": []
+        },
+        "CompiledPortDimensions": {
+          "Inport": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "Outport": [
+            1,
+            1
+          ],
+          "Enable": [],
+          "Trigger": [],
+          "State": [],
+          "LConn": [],
+          "RConn": [],
+          "Ifaction": [],
+          "Reset": []
+        },
+        "CompiledPortWidths": {
+          "Inport": [
+            1,
+            1
+          ],
+          "Outport": 1,
+          "Enable": [],
+          "Trigger": [],
+          "State": [],
+          "LConn": [],
+          "RConn": [],
+          "Ifaction": [],
+          "Reset": []
+        },
+        "CompiledPortComplexSignals": {
+          "Inport": [
+            0,
+            0
+          ],
+          "Outport": 0,
+          "Enable": [],
+          "Trigger": [],
+          "State": [],
+          "LConn": [],
+          "RConn": [],
+          "Ifaction": [],
+          "Reset": []
+        },
+        "PortConnectivity": [
+          {
+            "Type": "1",
+            "Position": [
+              275,
+              225
+            ],
+            "SrcBlock": 4.0069580078125,
+            "SrcPort": 0,
+            "DstBlock": [],
+            "DstPort": []
+          },
+          {
+            "Type": "2",
+            "Position": [
+              275,
+              240
+            ],
+            "SrcBlock": 5.0001220703125,
+            "SrcPort": 0,
+            "DstBlock": [],
+            "DstPort": []
+          },
+          {
+            "Type": "1",
+            "Position": [
+              315,
+              235
+            ],
+            "SrcBlock": [],
+            "SrcPort": [],
+            "DstBlock": 7.0001220703125,
+            "DstPort": 0
+          }
+        ],
+        "Ports": [
+          2,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "Position": [
+          280,
+          217,
+          310,
+          248
+        ],
+        "IconShape": "rectangular",
+        "Inputs": "++",
+        "CollapseMode": "All dimensions",
+        "CollapseDim": "1",
+        "InputSameDT": "off",
+        "AccumDataTypeStr": "Inherit: Inherit via internal rule",
+        "OutMin": "[]",
+        "OutMax": "[]",
+        "OutDataTypeStr": "Inherit: Inherit via internal rule",
+        "LockScale": "off",
+        "RndMeth": "Floor",
+        "SaturateOnIntegerOverflow": "off",
+        "SampleTime": "-1"
+      },
+      "Subsystem": {
+        "Path": "Model_example/Subsystem",
+        "BlockType": "SubSystem",
+        "Name": "Subsystem",
+        "Origin_path": "Model_example/Subsystem",
+        "Handle": 7.0001220703125,
+        "LineHandles": {
+          "Inport": 16.0003662109375,
+          "Outport": 17.0003662109375,
+          "Enable": [],
+          "Trigger": [],
+          "State": [],
+          "LConn": [],
+          "RConn": [],
+          "Ifaction": [],
+          "Reset": []
+        },
+        "CompiledSampleTime": [
+          0,
+          0
+        ],
+        "CompiledPortDataTypes": {
+          "Inport": "double",
+          "Outport": "double",
+          "Enable": [],
+          "Trigger": [],
+          "State": [],
+          "LConn": [],
+          "RConn": [],
+          "Ifaction": [],
+          "Reset": []
+        },
+        "CompiledPortDimensions": {
+          "Inport": [
+            1,
+            1
+          ],
+          "Outport": [
+            1,
+            1
+          ],
+          "Enable": [],
+          "Trigger": [],
+          "State": [],
+          "LConn": [],
+          "RConn": [],
+          "Ifaction": [],
+          "Reset": []
+        },
+        "CompiledPortWidths": {
+          "Inport": 1,
+          "Outport": 1,
+          "Enable": [],
+          "Trigger": [],
+          "State": [],
+          "LConn": [],
+          "RConn": [],
+          "Ifaction": [],
+          "Reset": []
+        },
+        "CompiledPortComplexSignals": {
+          "Inport": 0,
+          "Outport": 0,
+          "Enable": [],
+          "Trigger": [],
+          "State": [],
+          "LConn": [],
+          "RConn": [],
+          "Ifaction": [],
+          "Reset": []
+        },
+        "PortConnectivity": [
+          {
+            "Type": "1",
+            "Position": [
+              255,
+              315
+            ],
+            "SrcBlock": 6.0001220703125,
+            "SrcPort": 0,
+            "DstBlock": [],
+            "DstPort": []
+          },
+          {
+            "Type": "1",
+            "Position": [
+              365,
+              315
+            ],
+            "SrcBlock": [],
+            "SrcPort": [],
+            "DstBlock": 13.0003662109375,
+            "DstPort": 0
+          }
+        ],
+        "Ports": [
+          1,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "Position": [
+          260,
+          294,
+          360,
+          336
+        ],
+        "ShowPortLabels": "FromPortIcon",
+        "TemplateBlock": "",
+        "Permissions": "ReadWrite",
+        "PermitHierarchicalResolution": "All",
+        "TreatAsAtomicUnit": "off",
+        "MinAlgLoopOccurrences": "off",
+        "PropExecContextOutsideSubsystem": "off",
+        "IsSubsystemVirtual": "on",
+        "DataTypeOverride": "UseLocalSettings",
+        "MinMaxOverflowLogging": "UseLocalSettings",
+        "Virtual": "on",
+        "SFBlockType": "NONE",
+        "Mask": "off",
+        "MaskType": "",
+        "Content": {
+          "In1": {
+            "BlockType": "Inport",
+            "BusObject": "BusObject",
+            "CompiledPortComplexSignals": {
+              "Inport": [],
+              "Outport": 0,
+              "Enable": [],
+              "Trigger": [],
+              "State": [],
+              "LConn": [],
+              "RConn": [],
+              "Ifaction": [],
+              "Reset": []
+            },
+            "CompiledPortDataTypes": {
+              "Inport": [],
+              "Outport": "double",
+              "Enable": [],
+              "Trigger": [],
+              "State": [],
+              "LConn": [],
+              "RConn": [],
+              "Ifaction": [],
+              "Reset": []
+            },
+            "CompiledPortDimensions": {
+              "Inport": [],
+              "Outport": [
+                1,
+                1
+              ],
+              "Enable": [],
+              "Trigger": [],
+              "State": [],
+              "LConn": [],
+              "RConn": [],
+              "Ifaction": [],
+              "Reset": []
+            },
+            "CompiledPortWidths": {
+              "Inport": [],
+              "Outport": 1,
+              "Enable": [],
+              "Trigger": [],
+              "State": [],
+              "LConn": [],
+              "RConn": [],
+              "Ifaction": [],
+              "Reset": []
+            },
+            "CompiledSampleTime": [
+              0,
+              0
+            ],
+            "Handle": 8.0001220703125,
+            "LineHandles": {
+              "Inport": [],
+              "Outport": 11.0001220703125,
+              "Enable": [],
+              "Trigger": [],
+              "State": [],
+              "LConn": [],
+              "RConn": [],
+              "Ifaction": [],
+              "Reset": []
+            },
+            "Name": "In1",
+            "Origin_path": "Model_example/Subsystem/In1",
+            "Path": "Model_example/Subsystem/In1",
+            "Port": "1",
+            "PortConnectivity": {
+              "Type": "1",
+              "Position": [
+                145,
+                110
+              ],
+              "SrcBlock": [],
+              "SrcPort": [],
+              "DstBlock": 9.0001220703125,
+              "DstPort": 0
+            },
+            "Ports": [
+              0,
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "Position": [
+              110,
+              103,
+              140,
+              117
+            ],
+            "UseBusObject": "off"
+          },
+          "Abs": {
+            "Path": "Model_example/Subsystem/Abs",
+            "BlockType": "Abs",
+            "Name": "Abs",
+            "Origin_path": "Model_example/Subsystem/Abs",
+            "Handle": 9.0001220703125,
+            "LineHandles": {
+              "Inport": 11.0001220703125,
+              "Outport": 12.0003662109375,
+              "Enable": [],
+              "Trigger": [],
+              "State": [],
+              "LConn": [],
+              "RConn": [],
+              "Ifaction": [],
+              "Reset": []
+            },
+            "CompiledSampleTime": [
+              0,
+              0
+            ],
+            "CompiledPortDataTypes": {
+              "Inport": "double",
+              "Outport": "double",
+              "Enable": [],
+              "Trigger": [],
+              "State": [],
+              "LConn": [],
+              "RConn": [],
+              "Ifaction": [],
+              "Reset": []
+            },
+            "CompiledPortDimensions": {
+              "Inport": [
+                1,
+                1
+              ],
+              "Outport": [
+                1,
+                1
+              ],
+              "Enable": [],
+              "Trigger": [],
+              "State": [],
+              "LConn": [],
+              "RConn": [],
+              "Ifaction": [],
+              "Reset": []
+            },
+            "CompiledPortWidths": {
+              "Inport": 1,
+              "Outport": 1,
+              "Enable": [],
+              "Trigger": [],
+              "State": [],
+              "LConn": [],
+              "RConn": [],
+              "Ifaction": [],
+              "Reset": []
+            },
+            "CompiledPortComplexSignals": {
+              "Inport": 0,
+              "Outport": 0,
+              "Enable": [],
+              "Trigger": [],
+              "State": [],
+              "LConn": [],
+              "RConn": [],
+              "Ifaction": [],
+              "Reset": []
+            },
+            "PortConnectivity": [
+              {
+                "Type": "1",
+                "Position": [
+                  215,
+                  110
+                ],
+                "SrcBlock": 8.0001220703125,
+                "SrcPort": 0,
+                "DstBlock": [],
+                "DstPort": []
+              },
+              {
+                "Type": "1",
+                "Position": [
+                  255,
+                  110
+                ],
+                "SrcBlock": [],
+                "SrcPort": [],
+                "DstBlock": 10.0001220703125,
+                "DstPort": 0
+              }
+            ],
+            "Ports": [
+              1,
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "Position": [
+              220,
+              95,
+              250,
+              125
+            ],
+            "ZeroCross": "on",
+            "SampleTime": "-1",
+            "OutMin": "[]",
+            "OutMax": "[]",
+            "OutDataTypeStr": "Inherit: Same as input",
+            "LockScale": "off",
+            "RndMeth": "Floor",
+            "SaturateOnIntegerOverflow": "off"
+          },
+          "Out1": {
+            "BlockType": "Outport",
+            "BusObject": "BusObject",
+            "CompiledPortComplexSignals": {
+              "Inport": 0,
+              "Outport": [],
+              "Enable": [],
+              "Trigger": [],
+              "State": [],
+              "LConn": [],
+              "RConn": [],
+              "Ifaction": [],
+              "Reset": []
+            },
+            "CompiledPortDataTypes": {
+              "Inport": "double",
+              "Outport": [],
+              "Enable": [],
+              "Trigger": [],
+              "State": [],
+              "LConn": [],
+              "RConn": [],
+              "Ifaction": [],
+              "Reset": []
+            },
+            "CompiledPortDimensions": {
+              "Inport": [
+                1,
+                1
+              ],
+              "Outport": [],
+              "Enable": [],
+              "Trigger": [],
+              "State": [],
+              "LConn": [],
+              "RConn": [],
+              "Ifaction": [],
+              "Reset": []
+            },
+            "CompiledPortWidths": {
+              "Inport": 1,
+              "Outport": [],
+              "Enable": [],
+              "Trigger": [],
+              "State": [],
+              "LConn": [],
+              "RConn": [],
+              "Ifaction": [],
+              "Reset": []
+            },
+            "CompiledSampleTime": [
+              0,
+              0
+            ],
+            "Handle": 10.0001220703125,
+            "LineHandles": {
+              "Inport": 12.0003662109375,
+              "Outport": [],
+              "Enable": [],
+              "Trigger": [],
+              "State": [],
+              "LConn": [],
+              "RConn": [],
+              "Ifaction": [],
+              "Reset": []
+            },
+            "Name": "Out1",
+            "Origin_path": "Model_example/Subsystem/Out1",
+            "Path": "Model_example/Subsystem/Out1",
+            "Port": "1",
+            "PortConnectivity": {
+              "Type": "1",
+              "Position": [
+                355,
+                110
+              ],
+              "SrcBlock": 9.0001220703125,
+              "SrcPort": 0,
+              "DstBlock": [],
+              "DstPort": []
+            },
+            "Ports": [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "Position": [
+              360,
+              103,
+              390,
+              117
+            ],
+            "UseBusObject": "off"
+          }
+        }
+      },
+      "Out1": {
+        "BlockType": "Outport",
+        "BusObject": "BusObject",
+        "CompiledPortComplexSignals": {
+          "Inport": 0,
+          "Outport": [],
+          "Enable": [],
+          "Trigger": [],
+          "State": [],
+          "LConn": [],
+          "RConn": [],
+          "Ifaction": [],
+          "Reset": []
+        },
+        "CompiledPortDataTypes": {
+          "Inport": "double",
+          "Outport": [],
+          "Enable": [],
+          "Trigger": [],
+          "State": [],
+          "LConn": [],
+          "RConn": [],
+          "Ifaction": [],
+          "Reset": []
+        },
+        "CompiledPortDimensions": {
+          "Inport": [
+            1,
+            1
+          ],
+          "Outport": [],
+          "Enable": [],
+          "Trigger": [],
+          "State": [],
+          "LConn": [],
+          "RConn": [],
+          "Ifaction": [],
+          "Reset": []
+        },
+        "CompiledPortWidths": {
+          "Inport": 1,
+          "Outport": [],
+          "Enable": [],
+          "Trigger": [],
+          "State": [],
+          "LConn": [],
+          "RConn": [],
+          "Ifaction": [],
+          "Reset": []
+        },
+        "CompiledSampleTime": [
+          0,
+          0
+        ],
+        "Handle": 13.0003662109375,
+        "LineHandles": {
+          "Inport": 17.0003662109375,
+          "Outport": [],
+          "Enable": [],
+          "Trigger": [],
+          "State": [],
+          "LConn": [],
+          "RConn": [],
+          "Ifaction": [],
+          "Reset": []
+        },
+        "Name": "Out1",
+        "Origin_path": "Model_example/Out1",
+        "Path": "Model_example/Out1",
+        "Port": "1",
+        "PortConnectivity": {
+          "Type": "1",
+          "Position": [
+            375,
+            235
+          ],
+          "SrcBlock": 7.0001220703125,
+          "SrcPort": 0,
+          "DstBlock": [],
+          "DstPort": []
+        },
+        "Ports": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "Position": [
+          380,
+          228,
+          410,
+          242
+        ],
+        "UseBusObject": "off"
+      }
+    }
+  }
+}

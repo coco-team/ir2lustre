@@ -1,0 +1,2080 @@
+{
+    "meta": {
+        "date": "06-Oct-2017",
+        "file_path": "unsafe_1_PP",
+        "sampleTime": 0.2
+    },
+    "unsafe_1_PP": {
+        "Content": {
+            "In1": {
+                "AttributesFormatString": "",
+                "BlockType": "Inport",
+                "BusObject": "BusObject",
+                "CompiledPortComplexSignals": {
+                    "Enable": [],
+                    "Ifaction": [],
+                    "Inport": [],
+                    "LConn": [],
+                    "Outport": 0,
+                    "RConn": [],
+                    "Reset": [],
+                    "State": [],
+                    "Trigger": []
+                },
+                "CompiledPortDataTypes": {
+                    "Enable": [],
+                    "Ifaction": [],
+                    "Inport": [],
+                    "LConn": [],
+                    "Outport": "boolean",
+                    "RConn": [],
+                    "Reset": [],
+                    "State": [],
+                    "Trigger": []
+                },
+                "CompiledPortDimensions": {
+                    "Enable": [],
+                    "Ifaction": [],
+                    "Inport": [],
+                    "LConn": [],
+                    "Outport": [
+                        1,
+                        1
+                    ],
+                    "RConn": [],
+                    "Reset": [],
+                    "State": [],
+                    "Trigger": []
+                },
+                "CompiledPortWidths": {
+                    "Enable": [],
+                    "Ifaction": [],
+                    "Inport": [],
+                    "LConn": [],
+                    "Outport": 1,
+                    "RConn": [],
+                    "Reset": [],
+                    "State": [],
+                    "Trigger": []
+                },
+                "CompiledSampleTime": [
+                    0.2,
+                    0
+                ],
+                "Handle": 77.0003662109375,
+                "LineHandles": {
+                    "Enable": [],
+                    "Ifaction": [],
+                    "Inport": [],
+                    "LConn": [],
+                    "Outport": 107.0009765625,
+                    "RConn": [],
+                    "Reset": [],
+                    "State": [],
+                    "Trigger": []
+                },
+                "Name": "In1",
+                "Origin_path": "unsafe_1_PP/In1",
+                "Path": "unsafe_1_PP/In1",
+                "Port": "1",
+                "PortConnectivity": {
+                    "DstBlock": [
+                        79.0003662109375,
+                        92.0008544921875
+                    ],
+                    "DstPort": [
+                        0,
+                        0
+                    ],
+                    "Position": [
+                        85,
+                        95
+                    ],
+                    "SrcBlock": [],
+                    "SrcPort": [],
+                    "Type": "1"
+                },
+                "Ports": [
+                    0,
+                    1,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                ],
+                "Position": [
+                    50,
+                    88,
+                    80,
+                    102
+                ],
+                "UseBusObject": "off"
+            },
+            "In2": {
+                "AttributesFormatString": "",
+                "BlockType": "Inport",
+                "BusObject": "BusObject",
+                "CompiledPortComplexSignals": {
+                    "Enable": [],
+                    "Ifaction": [],
+                    "Inport": [],
+                    "LConn": [],
+                    "Outport": 0,
+                    "RConn": [],
+                    "Reset": [],
+                    "State": [],
+                    "Trigger": []
+                },
+                "CompiledPortDataTypes": {
+                    "Enable": [],
+                    "Ifaction": [],
+                    "Inport": [],
+                    "LConn": [],
+                    "Outport": "boolean",
+                    "RConn": [],
+                    "Reset": [],
+                    "State": [],
+                    "Trigger": []
+                },
+                "CompiledPortDimensions": {
+                    "Enable": [],
+                    "Ifaction": [],
+                    "Inport": [],
+                    "LConn": [],
+                    "Outport": [
+                        1,
+                        1
+                    ],
+                    "RConn": [],
+                    "Reset": [],
+                    "State": [],
+                    "Trigger": []
+                },
+                "CompiledPortWidths": {
+                    "Enable": [],
+                    "Ifaction": [],
+                    "Inport": [],
+                    "LConn": [],
+                    "Outport": 1,
+                    "RConn": [],
+                    "Reset": [],
+                    "State": [],
+                    "Trigger": []
+                },
+                "CompiledSampleTime": [
+                    0.2,
+                    0
+                ],
+                "Handle": 78.0003662109375,
+                "LineHandles": {
+                    "Enable": [],
+                    "Ifaction": [],
+                    "Inport": [],
+                    "LConn": [],
+                    "Outport": 110.0008544921875,
+                    "RConn": [],
+                    "Reset": [],
+                    "State": [],
+                    "Trigger": []
+                },
+                "Name": "In2",
+                "Origin_path": "unsafe_1_PP/In2",
+                "Path": "unsafe_1_PP/In2",
+                "Port": "2",
+                "PortConnectivity": {
+                    "DstBlock": [
+                        79.0003662109375,
+                        92.0008544921875
+                    ],
+                    "DstPort": [
+                        1,
+                        1
+                    ],
+                    "Position": [
+                        85,
+                        180
+                    ],
+                    "SrcBlock": [],
+                    "SrcPort": [],
+                    "Type": "1"
+                },
+                "Ports": [
+                    0,
+                    1,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                ],
+                "Position": [
+                    50,
+                    173,
+                    80,
+                    187
+                ],
+                "UseBusObject": "off"
+            },
+            "Out1": {
+                "AttributesFormatString": "",
+                "BlockType": "Outport",
+                "BusObject": "BusObject",
+                "CompiledPortComplexSignals": {
+                    "Enable": [],
+                    "Ifaction": [],
+                    "Inport": 0,
+                    "LConn": [],
+                    "Outport": [],
+                    "RConn": [],
+                    "Reset": [],
+                    "State": [],
+                    "Trigger": []
+                },
+                "CompiledPortDataTypes": {
+                    "Enable": [],
+                    "Ifaction": [],
+                    "Inport": "boolean",
+                    "LConn": [],
+                    "Outport": [],
+                    "RConn": [],
+                    "Reset": [],
+                    "State": [],
+                    "Trigger": []
+                },
+                "CompiledPortDimensions": {
+                    "Enable": [],
+                    "Ifaction": [],
+                    "Inport": [
+                        1,
+                        1
+                    ],
+                    "LConn": [],
+                    "Outport": [],
+                    "RConn": [],
+                    "Reset": [],
+                    "State": [],
+                    "Trigger": []
+                },
+                "CompiledPortWidths": {
+                    "Enable": [],
+                    "Ifaction": [],
+                    "Inport": 1,
+                    "LConn": [],
+                    "Outport": [],
+                    "RConn": [],
+                    "Reset": [],
+                    "State": [],
+                    "Trigger": []
+                },
+                "CompiledSampleTime": [
+                    0.2,
+                    0
+                ],
+                "Handle": 106.0009765625,
+                "LineHandles": {
+                    "Enable": [],
+                    "Ifaction": [],
+                    "Inport": 114.000732421875,
+                    "LConn": [],
+                    "Outport": [],
+                    "RConn": [],
+                    "Reset": [],
+                    "State": [],
+                    "Trigger": []
+                },
+                "Name": "Out1",
+                "Origin_path": "unsafe_1_PP/Out1",
+                "Path": "unsafe_1_PP/Out1",
+                "Port": "1",
+                "PortConnectivity": {
+                    "DstBlock": [],
+                    "DstPort": [],
+                    "Position": [
+                        370,
+                        135
+                    ],
+                    "SrcBlock": 92.0008544921875,
+                    "SrcPort": 0,
+                    "Type": "1"
+                },
+                "Ports": [
+                    1,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                ],
+                "Position": [
+                    375,
+                    128,
+                    405,
+                    142
+                ],
+                "UseBusObject": "off"
+            },
+            "Safety": {
+                "AnnotationType": "ensures",
+                "AttributesFormatString": "",
+                "BlockType": "SubSystem",
+                "CompiledPortComplexSignals": {
+                    "Enable": [],
+                    "Ifaction": [],
+                    "Inport": [
+                        0,
+                        0,
+                        0
+                    ],
+                    "LConn": [],
+                    "Outport": 0,
+                    "RConn": [],
+                    "Reset": [],
+                    "State": [],
+                    "Trigger": []
+                },
+                "CompiledPortDataTypes": {
+                    "Enable": [],
+                    "Ifaction": [],
+                    "Inport": [
+                        "boolean",
+                        "boolean",
+                        "boolean"
+                    ],
+                    "LConn": [],
+                    "Outport": "boolean",
+                    "RConn": [],
+                    "Reset": [],
+                    "State": [],
+                    "Trigger": []
+                },
+                "CompiledPortDimensions": {
+                    "Enable": [],
+                    "Ifaction": [],
+                    "Inport": [
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1
+                    ],
+                    "LConn": [],
+                    "Outport": [
+                        1,
+                        1
+                    ],
+                    "RConn": [],
+                    "Reset": [],
+                    "State": [],
+                    "Trigger": []
+                },
+                "CompiledPortWidths": {
+                    "Enable": [],
+                    "Ifaction": [],
+                    "Inport": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "LConn": [],
+                    "Outport": 1,
+                    "RConn": [],
+                    "Reset": [],
+                    "State": [],
+                    "Trigger": []
+                },
+                "CompiledSampleTime": [
+                    0.2,
+                    0
+                ],
+                "Content": {
+                    "In1": {
+                        "AttributesFormatString": "",
+                        "BlockType": "Inport",
+                        "BusObject": "BusObject",
+                        "CompiledPortComplexSignals": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [],
+                            "LConn": [],
+                            "Outport": 0,
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledPortDataTypes": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [],
+                            "LConn": [],
+                            "Outport": "boolean",
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledPortDimensions": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [],
+                            "LConn": [],
+                            "Outport": [
+                                1,
+                                1
+                            ],
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledPortWidths": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [],
+                            "LConn": [],
+                            "Outport": 1,
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledSampleTime": [
+                            0.2,
+                            0
+                        ],
+                        "Handle": 80.0006103515625,
+                        "LineHandles": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [],
+                            "LConn": [],
+                            "Outport": 86.000732421875,
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "Name": "In1",
+                        "Origin_path": "unsafe_1_PP/Safety/In1",
+                        "Path": "unsafe_1_PP/Safety/In1",
+                        "Port": "1",
+                        "PortConnectivity": {
+                            "DstBlock": 84.0008544921875,
+                            "DstPort": 0,
+                            "Position": [
+                                125,
+                                100
+                            ],
+                            "SrcBlock": [],
+                            "SrcPort": [],
+                            "Type": "1"
+                        },
+                        "Ports": [
+                            0,
+                            1,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0
+                        ],
+                        "Position": [
+                            90,
+                            92,
+                            120,
+                            108
+                        ],
+                        "UseBusObject": "off"
+                    },
+                    "In2": {
+                        "AttributesFormatString": "",
+                        "BlockType": "Inport",
+                        "BusObject": "BusObject",
+                        "CompiledPortComplexSignals": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [],
+                            "LConn": [],
+                            "Outport": 0,
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledPortDataTypes": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [],
+                            "LConn": [],
+                            "Outport": "boolean",
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledPortDimensions": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [],
+                            "LConn": [],
+                            "Outport": [
+                                1,
+                                1
+                            ],
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledPortWidths": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [],
+                            "LConn": [],
+                            "Outport": 1,
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledSampleTime": [
+                            0.2,
+                            0
+                        ],
+                        "Handle": 81.00048828125,
+                        "LineHandles": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [],
+                            "LConn": [],
+                            "Outport": 87.0010986328125,
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "Name": "In2",
+                        "Origin_path": "unsafe_1_PP/Safety/In2",
+                        "Path": "unsafe_1_PP/Safety/In2",
+                        "Port": "2",
+                        "PortConnectivity": {
+                            "DstBlock": 84.0008544921875,
+                            "DstPort": 1,
+                            "Position": [
+                                125,
+                                160
+                            ],
+                            "SrcBlock": [],
+                            "SrcPort": [],
+                            "Type": "1"
+                        },
+                        "Ports": [
+                            0,
+                            1,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0
+                        ],
+                        "Position": [
+                            90,
+                            152,
+                            120,
+                            168
+                        ],
+                        "UseBusObject": "off"
+                    },
+                    "LogicalOperator": {
+                        "AllPortsSameDT": "off",
+                        "AttributesFormatString": "",
+                        "BlockType": "Logic",
+                        "CompiledPortComplexSignals": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [
+                                0,
+                                0
+                            ],
+                            "LConn": [],
+                            "Outport": 0,
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledPortDataTypes": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [
+                                "boolean",
+                                "boolean"
+                            ],
+                            "LConn": [],
+                            "Outport": "boolean",
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledPortDimensions": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [
+                                1,
+                                1,
+                                1,
+                                1
+                            ],
+                            "LConn": [],
+                            "Outport": [
+                                1,
+                                1
+                            ],
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledPortWidths": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [
+                                1,
+                                1
+                            ],
+                            "LConn": [],
+                            "Outport": 1,
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledSampleTime": [
+                            0.2,
+                            0
+                        ],
+                        "Handle": 83.0009765625,
+                        "Inputs": "2",
+                        "LineHandles": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [
+                                89.0008544921875,
+                                88.0009765625
+                            ],
+                            "LConn": [],
+                            "Outport": 90.0008544921875,
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "Name": "Logical\nOperator",
+                        "Operator": "AND",
+                        "Origin_path": "unsafe_1_PP/Safety/Logical\nOperator",
+                        "OutDataTypeStr": "boolean",
+                        "Path": "unsafe_1_PP/Safety/LogicalOperator",
+                        "PortConnectivity": [
+                            {
+                                "DstBlock": [],
+                                "DstPort": [],
+                                "Position": [
+                                    405,
+                                    150
+                                ],
+                                "SrcBlock": 84.0008544921875,
+                                "SrcPort": 0,
+                                "Type": "1"
+                            },
+                            {
+                                "DstBlock": [],
+                                "DstPort": [],
+                                "Position": [
+                                    405,
+                                    165
+                                ],
+                                "SrcBlock": 82.0006103515625,
+                                "SrcPort": 0,
+                                "Type": "2"
+                            },
+                            {
+                                "DstBlock": 85.0008544921875,
+                                "DstPort": 0,
+                                "Position": [
+                                    445,
+                                    160
+                                ],
+                                "SrcBlock": [],
+                                "SrcPort": [],
+                                "Type": "1"
+                            }
+                        ],
+                        "Ports": [
+                            2,
+                            1,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0
+                        ],
+                        "Position": [
+                            410,
+                            142,
+                            440,
+                            173
+                        ],
+                        "SampleTime": "-1"
+                    },
+                    "Out1": {
+                        "AttributesFormatString": "",
+                        "BlockType": "Inport",
+                        "BusObject": "BusObject",
+                        "CompiledPortComplexSignals": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [],
+                            "LConn": [],
+                            "Outport": 0,
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledPortDataTypes": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [],
+                            "LConn": [],
+                            "Outport": "boolean",
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledPortDimensions": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [],
+                            "LConn": [],
+                            "Outport": [
+                                1,
+                                1
+                            ],
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledPortWidths": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [],
+                            "LConn": [],
+                            "Outport": 1,
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledSampleTime": [
+                            0.2,
+                            0
+                        ],
+                        "Handle": 82.0006103515625,
+                        "LineHandles": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [],
+                            "LConn": [],
+                            "Outport": 88.0009765625,
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "Name": "Out1",
+                        "Origin_path": "unsafe_1_PP/Safety/Out1",
+                        "Path": "unsafe_1_PP/Safety/Out1",
+                        "Port": "3",
+                        "PortConnectivity": {
+                            "DstBlock": 83.0009765625,
+                            "DstPort": 1,
+                            "Position": [
+                                125,
+                                220
+                            ],
+                            "SrcBlock": [],
+                            "SrcPort": [],
+                            "Type": "1"
+                        },
+                        "Ports": [
+                            0,
+                            1,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0
+                        ],
+                        "Position": [
+                            90,
+                            212,
+                            120,
+                            228
+                        ],
+                        "UseBusObject": "off"
+                    },
+                    "RelationalOperator": {
+                        "AttributesFormatString": "",
+                        "BlockType": "RelationalOperator",
+                        "CompiledPortComplexSignals": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [
+                                0,
+                                0
+                            ],
+                            "LConn": [],
+                            "Outport": 0,
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledPortDataTypes": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [
+                                "boolean",
+                                "boolean"
+                            ],
+                            "LConn": [],
+                            "Outport": "boolean",
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledPortDimensions": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [
+                                1,
+                                1,
+                                1,
+                                1
+                            ],
+                            "LConn": [],
+                            "Outport": [
+                                1,
+                                1
+                            ],
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledPortWidths": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [
+                                1,
+                                1
+                            ],
+                            "LConn": [],
+                            "Outport": 1,
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledSampleTime": [
+                            0.2,
+                            0
+                        ],
+                        "Handle": 84.0008544921875,
+                        "InputSameDT": "off",
+                        "LineHandles": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [
+                                86.000732421875,
+                                87.0010986328125
+                            ],
+                            "LConn": [],
+                            "Outport": 89.0008544921875,
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "Name": "Relational\nOperator",
+                        "Operator": ">=",
+                        "Origin_path": "unsafe_1_PP/Safety/Relational\nOperator",
+                        "OutDataTypeStr": "boolean",
+                        "Path": "unsafe_1_PP/Safety/RelationalOperator",
+                        "PortConnectivity": [
+                            {
+                                "DstBlock": [],
+                                "DstPort": [],
+                                "Position": [
+                                    280,
+                                    155
+                                ],
+                                "SrcBlock": 80.0006103515625,
+                                "SrcPort": 0,
+                                "Type": "1"
+                            },
+                            {
+                                "DstBlock": [],
+                                "DstPort": [],
+                                "Position": [
+                                    280,
+                                    170
+                                ],
+                                "SrcBlock": 81.00048828125,
+                                "SrcPort": 0,
+                                "Type": "2"
+                            },
+                            {
+                                "DstBlock": 83.0009765625,
+                                "DstPort": 0,
+                                "Position": [
+                                    320,
+                                    165
+                                ],
+                                "SrcBlock": [],
+                                "SrcPort": [],
+                                "Type": "1"
+                            }
+                        ],
+                        "Ports": [
+                            2,
+                            1,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0
+                        ],
+                        "Position": [
+                            285,
+                            147,
+                            315,
+                            178
+                        ],
+                        "RndMeth": "Nearest",
+                        "SampleTime": "-1",
+                        "ZeroCross": "on"
+                    },
+                    "Safety": {
+                        "AttributesFormatString": "",
+                        "BlockType": "Outport",
+                        "BusObject": "BusObject",
+                        "CompiledPortComplexSignals": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": 0,
+                            "LConn": [],
+                            "Outport": [],
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledPortDataTypes": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": "boolean",
+                            "LConn": [],
+                            "Outport": [],
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledPortDimensions": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [
+                                1,
+                                1
+                            ],
+                            "LConn": [],
+                            "Outport": [],
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledPortWidths": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": 1,
+                            "LConn": [],
+                            "Outport": [],
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledSampleTime": [
+                            0.2,
+                            0
+                        ],
+                        "Handle": 85.0008544921875,
+                        "LineHandles": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": 90.0008544921875,
+                            "LConn": [],
+                            "Outport": [],
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "Name": "Safety",
+                        "Origin_path": "unsafe_1_PP/Safety/Safety",
+                        "Path": "unsafe_1_PP/Safety/Safety",
+                        "Port": "1",
+                        "PortConnectivity": {
+                            "DstBlock": [],
+                            "DstPort": [],
+                            "Position": [
+                                455,
+                                100
+                            ],
+                            "SrcBlock": 83.0009765625,
+                            "SrcPort": 0,
+                            "Type": "1"
+                        },
+                        "Ports": [
+                            1,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0
+                        ],
+                        "Position": [
+                            460,
+                            92,
+                            490,
+                            108
+                        ],
+                        "UseBusObject": "off"
+                    }
+                },
+                "DataTypeOverride": "UseLocalSettings",
+                "Handle": 79.0003662109375,
+                "IsSubsystemVirtual": "off",
+                "LineHandles": {
+                    "Enable": [],
+                    "Ifaction": [],
+                    "Inport": [
+                        109.0009765625,
+                        112.0009765625,
+                        115.0009765625
+                    ],
+                    "LConn": [],
+                    "Outport": 116.0008544921875,
+                    "RConn": [],
+                    "Reset": [],
+                    "State": [],
+                    "Trigger": []
+                },
+                "Mask": "on",
+                "MaskType": "Observer",
+                "MinAlgLoopOccurrences": "off",
+                "MinMaxOverflowLogging": "UseLocalSettings",
+                "Name": "Safety",
+                "ObserverType": "[]",
+                "Origin_path": "unsafe_1_PP/Safety",
+                "Path": "unsafe_1_PP/Safety",
+                "Permissions": "ReadWrite",
+                "PermitHierarchicalResolution": "All",
+                "PortConnectivity": [
+                    {
+                        "DstBlock": [],
+                        "DstPort": [],
+                        "Position": [
+                            370,
+                            10
+                        ],
+                        "SrcBlock": 77.0003662109375,
+                        "SrcPort": 0,
+                        "Type": "1"
+                    },
+                    {
+                        "DstBlock": [],
+                        "DstPort": [],
+                        "Position": [
+                            370,
+                            30
+                        ],
+                        "SrcBlock": 78.0003662109375,
+                        "SrcPort": 0,
+                        "Type": "2"
+                    },
+                    {
+                        "DstBlock": [],
+                        "DstPort": [],
+                        "Position": [
+                            370,
+                            50
+                        ],
+                        "SrcBlock": 92.0008544921875,
+                        "SrcPort": 0,
+                        "Type": "3"
+                    },
+                    {
+                        "DstBlock": 91.000732421875,
+                        "DstPort": 0,
+                        "Position": [
+                            530,
+                            30
+                        ],
+                        "SrcBlock": [],
+                        "SrcPort": [],
+                        "Type": "1"
+                    }
+                ],
+                "Ports": [
+                    3,
+                    1,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                ],
+                "Position": [
+                    375,
+                    0,
+                    525,
+                    60
+                ],
+                "PropExecContextOutsideSubsystem": "off",
+                "SFBlockType": "NONE",
+                "ShowPortLabels": "FromPortIcon",
+                "TemplateBlock": "",
+                "TreatAsAtomicUnit": "on",
+                "Virtual": "off"
+            },
+            "Safety_term": {
+                "AttributesFormatString": "",
+                "BlockType": "Terminator",
+                "CompiledPortComplexSignals": {
+                    "Enable": [],
+                    "Ifaction": [],
+                    "Inport": 0,
+                    "LConn": [],
+                    "Outport": [],
+                    "RConn": [],
+                    "Reset": [],
+                    "State": [],
+                    "Trigger": []
+                },
+                "CompiledPortDataTypes": {
+                    "Enable": [],
+                    "Ifaction": [],
+                    "Inport": "boolean",
+                    "LConn": [],
+                    "Outport": [],
+                    "RConn": [],
+                    "Reset": [],
+                    "State": [],
+                    "Trigger": []
+                },
+                "CompiledPortDimensions": {
+                    "Enable": [],
+                    "Ifaction": [],
+                    "Inport": [
+                        1,
+                        1
+                    ],
+                    "LConn": [],
+                    "Outport": [],
+                    "RConn": [],
+                    "Reset": [],
+                    "State": [],
+                    "Trigger": []
+                },
+                "CompiledPortWidths": {
+                    "Enable": [],
+                    "Ifaction": [],
+                    "Inport": 1,
+                    "LConn": [],
+                    "Outport": [],
+                    "RConn": [],
+                    "Reset": [],
+                    "State": [],
+                    "Trigger": []
+                },
+                "CompiledSampleTime": [
+                    0.2,
+                    0
+                ],
+                "Handle": 91.000732421875,
+                "LineHandles": {
+                    "Enable": [],
+                    "Ifaction": [],
+                    "Inport": 116.0008544921875,
+                    "LConn": [],
+                    "Outport": [],
+                    "RConn": [],
+                    "Reset": [],
+                    "State": [],
+                    "Trigger": []
+                },
+                "Name": "Safety_term",
+                "Origin_path": "unsafe_1_PP/Safety_term",
+                "Path": "unsafe_1_PP/Safety_term",
+                "PortConnectivity": {
+                    "DstBlock": [],
+                    "DstPort": [],
+                    "Position": [
+                        560,
+                        30
+                    ],
+                    "SrcBlock": 79.0003662109375,
+                    "SrcPort": 0,
+                    "Type": "1"
+                },
+                "Ports": [
+                    1,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                ],
+                "Position": [
+                    565,
+                    20,
+                    585,
+                    40
+                ]
+            },
+            "Subsystem": {
+                "AttributesFormatString": "",
+                "BlockType": "SubSystem",
+                "CompiledPortComplexSignals": {
+                    "Enable": [],
+                    "Ifaction": [],
+                    "Inport": [
+                        0,
+                        0
+                    ],
+                    "LConn": [],
+                    "Outport": 0,
+                    "RConn": [],
+                    "Reset": [],
+                    "State": [],
+                    "Trigger": []
+                },
+                "CompiledPortDataTypes": {
+                    "Enable": [],
+                    "Ifaction": [],
+                    "Inport": [
+                        "boolean",
+                        "boolean"
+                    ],
+                    "LConn": [],
+                    "Outport": "boolean",
+                    "RConn": [],
+                    "Reset": [],
+                    "State": [],
+                    "Trigger": []
+                },
+                "CompiledPortDimensions": {
+                    "Enable": [],
+                    "Ifaction": [],
+                    "Inport": [
+                        1,
+                        1,
+                        1,
+                        1
+                    ],
+                    "LConn": [],
+                    "Outport": [
+                        1,
+                        1
+                    ],
+                    "RConn": [],
+                    "Reset": [],
+                    "State": [],
+                    "Trigger": []
+                },
+                "CompiledPortWidths": {
+                    "Enable": [],
+                    "Ifaction": [],
+                    "Inport": [
+                        1,
+                        1
+                    ],
+                    "LConn": [],
+                    "Outport": 1,
+                    "RConn": [],
+                    "Reset": [],
+                    "State": [],
+                    "Trigger": []
+                },
+                "CompiledSampleTime": [
+                    0.2,
+                    0
+                ],
+                "Content": {
+                    "In1": {
+                        "AttributesFormatString": "",
+                        "BlockType": "Inport",
+                        "BusObject": "BusObject",
+                        "CompiledPortComplexSignals": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [],
+                            "LConn": [],
+                            "Outport": 0,
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledPortDataTypes": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [],
+                            "LConn": [],
+                            "Outport": "boolean",
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledPortDimensions": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [],
+                            "LConn": [],
+                            "Outport": [
+                                1,
+                                1
+                            ],
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledPortWidths": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [],
+                            "LConn": [],
+                            "Outport": 1,
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledSampleTime": [
+                            0.2,
+                            0
+                        ],
+                        "Handle": 93.0009765625,
+                        "LineHandles": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [],
+                            "LConn": [],
+                            "Outport": 98.000732421875,
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "Name": "In1",
+                        "Origin_path": "unsafe_1_PP/Subsystem/In1",
+                        "Path": "unsafe_1_PP/Subsystem/In1",
+                        "Port": "1",
+                        "PortConnectivity": {
+                            "DstBlock": [
+                                96.0009765625,
+                                95.000732421875
+                            ],
+                            "DstPort": [
+                                0,
+                                0
+                            ],
+                            "Position": [
+                                55,
+                                30
+                            ],
+                            "SrcBlock": [],
+                            "SrcPort": [],
+                            "Type": "1"
+                        },
+                        "Ports": [
+                            0,
+                            1,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0
+                        ],
+                        "Position": [
+                            20,
+                            23,
+                            50,
+                            37
+                        ],
+                        "UseBusObject": "off"
+                    },
+                    "In2": {
+                        "AttributesFormatString": "",
+                        "BlockType": "Inport",
+                        "BusObject": "BusObject",
+                        "CompiledPortComplexSignals": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [],
+                            "LConn": [],
+                            "Outport": 0,
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledPortDataTypes": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [],
+                            "LConn": [],
+                            "Outport": "boolean",
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledPortDimensions": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [],
+                            "LConn": [],
+                            "Outport": [
+                                1,
+                                1
+                            ],
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledPortWidths": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [],
+                            "LConn": [],
+                            "Outport": 1,
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledSampleTime": [
+                            0.2,
+                            0
+                        ],
+                        "Handle": 94.0008544921875,
+                        "LineHandles": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [],
+                            "LConn": [],
+                            "Outport": 101.0009765625,
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "Name": "In2",
+                        "Origin_path": "unsafe_1_PP/Subsystem/In2",
+                        "Path": "unsafe_1_PP/Subsystem/In2",
+                        "Port": "2",
+                        "PortConnectivity": {
+                            "DstBlock": [
+                                96.0009765625,
+                                95.000732421875
+                            ],
+                            "DstPort": [
+                                2,
+                                1
+                            ],
+                            "Position": [
+                                55,
+                                115
+                            ],
+                            "SrcBlock": [],
+                            "SrcPort": [],
+                            "Type": "1"
+                        },
+                        "Ports": [
+                            0,
+                            1,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0
+                        ],
+                        "Position": [
+                            20,
+                            108,
+                            50,
+                            122
+                        ],
+                        "UseBusObject": "off"
+                    },
+                    "Out1": {
+                        "AttributesFormatString": "",
+                        "BlockType": "Outport",
+                        "BusObject": "BusObject",
+                        "CompiledPortComplexSignals": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": 0,
+                            "LConn": [],
+                            "Outport": [],
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledPortDataTypes": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": "boolean",
+                            "LConn": [],
+                            "Outport": [],
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledPortDimensions": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [
+                                1,
+                                1
+                            ],
+                            "LConn": [],
+                            "Outport": [],
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledPortWidths": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": 1,
+                            "LConn": [],
+                            "Outport": [],
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledSampleTime": [
+                            0.2,
+                            0
+                        ],
+                        "Handle": 97.0008544921875,
+                        "LineHandles": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": 105.0013427734375,
+                            "LConn": [],
+                            "Outport": [],
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "Name": "Out1",
+                        "Origin_path": "unsafe_1_PP/Subsystem/Out1",
+                        "Path": "unsafe_1_PP/Subsystem/Out1",
+                        "Port": "1",
+                        "PortConnectivity": {
+                            "DstBlock": [],
+                            "DstPort": [],
+                            "Position": [
+                                360,
+                                70
+                            ],
+                            "SrcBlock": 96.0009765625,
+                            "SrcPort": 0,
+                            "Type": "1"
+                        },
+                        "Ports": [
+                            1,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0
+                        ],
+                        "Position": [
+                            365,
+                            63,
+                            395,
+                            77
+                        ],
+                        "UseBusObject": "off"
+                    },
+                    "RelationalOperator": {
+                        "AttributesFormatString": "",
+                        "BlockType": "RelationalOperator",
+                        "CompiledPortComplexSignals": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [
+                                0,
+                                0
+                            ],
+                            "LConn": [],
+                            "Outport": 0,
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledPortDataTypes": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [
+                                "boolean",
+                                "boolean"
+                            ],
+                            "LConn": [],
+                            "Outport": "boolean",
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledPortDimensions": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [
+                                1,
+                                1,
+                                1,
+                                1
+                            ],
+                            "LConn": [],
+                            "Outport": [
+                                1,
+                                1
+                            ],
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledPortWidths": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [
+                                1,
+                                1
+                            ],
+                            "LConn": [],
+                            "Outport": 1,
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledSampleTime": [
+                            0.2,
+                            0
+                        ],
+                        "Handle": 95.000732421875,
+                        "InputSameDT": "off",
+                        "LineHandles": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [
+                                99.0009765625,
+                                102.0010986328125
+                            ],
+                            "LConn": [],
+                            "Outport": 104.0009765625,
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "Name": "Relational\nOperator",
+                        "Operator": ">=",
+                        "Origin_path": "unsafe_1_PP/Subsystem/Relational\nOperator",
+                        "OutDataTypeStr": "boolean",
+                        "Path": "unsafe_1_PP/Subsystem/RelationalOperator",
+                        "PortConnectivity": [
+                            {
+                                "DstBlock": [],
+                                "DstPort": [],
+                                "Position": [
+                                    140,
+                                    60
+                                ],
+                                "SrcBlock": 93.0009765625,
+                                "SrcPort": 0,
+                                "Type": "1"
+                            },
+                            {
+                                "DstBlock": [],
+                                "DstPort": [],
+                                "Position": [
+                                    140,
+                                    75
+                                ],
+                                "SrcBlock": 94.0008544921875,
+                                "SrcPort": 0,
+                                "Type": "2"
+                            },
+                            {
+                                "DstBlock": 96.0009765625,
+                                "DstPort": 1,
+                                "Position": [
+                                    180,
+                                    70
+                                ],
+                                "SrcBlock": [],
+                                "SrcPort": [],
+                                "Type": "1"
+                            }
+                        ],
+                        "Ports": [
+                            2,
+                            1,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0
+                        ],
+                        "Position": [
+                            145,
+                            52,
+                            175,
+                            83
+                        ],
+                        "RndMeth": "Nearest",
+                        "SampleTime": "-1",
+                        "ZeroCross": "on"
+                    },
+                    "Switch": {
+                        "AllowDiffInputSizes": "off",
+                        "AttributesFormatString": "",
+                        "BlockType": "Switch",
+                        "CompiledPortComplexSignals": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [
+                                0,
+                                0,
+                                0
+                            ],
+                            "LConn": [],
+                            "Outport": 0,
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledPortDataTypes": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [
+                                "boolean",
+                                "boolean",
+                                "boolean"
+                            ],
+                            "LConn": [],
+                            "Outport": "boolean",
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledPortDimensions": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [
+                                1,
+                                1,
+                                1,
+                                1,
+                                1,
+                                1
+                            ],
+                            "LConn": [],
+                            "Outport": [
+                                1,
+                                1
+                            ],
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledPortWidths": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [
+                                1,
+                                1,
+                                1
+                            ],
+                            "LConn": [],
+                            "Outport": 1,
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "CompiledSampleTime": [
+                            0.2,
+                            0
+                        ],
+                        "Criteria": "u2 ~= 0",
+                        "Handle": 96.0009765625,
+                        "InputSameDT": "off",
+                        "LineHandles": {
+                            "Enable": [],
+                            "Ifaction": [],
+                            "Inport": [
+                                100.0013427734375,
+                                104.0009765625,
+                                103.0010986328125
+                            ],
+                            "LConn": [],
+                            "Outport": 105.0013427734375,
+                            "RConn": [],
+                            "Reset": [],
+                            "State": [],
+                            "Trigger": []
+                        },
+                        "LockScale": "off",
+                        "Name": "Switch",
+                        "Origin_path": "unsafe_1_PP/Subsystem/Switch",
+                        "OutDataTypeStr": "Inherit: Inherit via internal rule",
+                        "OutMax": "[]",
+                        "OutMin": "[]",
+                        "Path": "unsafe_1_PP/Subsystem/Switch",
+                        "PortConnectivity": [
+                            {
+                                "DstBlock": [],
+                                "DstPort": [],
+                                "Position": [
+                                    250,
+                                    60
+                                ],
+                                "SrcBlock": 93.0009765625,
+                                "SrcPort": 0,
+                                "Type": "1"
+                            },
+                            {
+                                "DstBlock": [],
+                                "DstPort": [],
+                                "Position": [
+                                    250,
+                                    70
+                                ],
+                                "SrcBlock": 95.000732421875,
+                                "SrcPort": 0,
+                                "Type": "2"
+                            },
+                            {
+                                "DstBlock": [],
+                                "DstPort": [],
+                                "Position": [
+                                    250,
+                                    80
+                                ],
+                                "SrcBlock": 94.0008544921875,
+                                "SrcPort": 0,
+                                "Type": "3"
+                            },
+                            {
+                                "DstBlock": 97.0008544921875,
+                                "DstPort": 0,
+                                "Position": [
+                                    290,
+                                    70
+                                ],
+                                "SrcBlock": [],
+                                "SrcPort": [],
+                                "Type": "1"
+                            }
+                        ],
+                        "Ports": [
+                            3,
+                            1,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0
+                        ],
+                        "Position": [
+                            255,
+                            55,
+                            285,
+                            85
+                        ],
+                        "RndMeth": "Floor",
+                        "SampleTime": "-1",
+                        "SaturateOnIntegerOverflow": "off",
+                        "Threshold": "0",
+                        "ZeroCross": "on"
+                    }
+                },
+                "DataTypeOverride": "UseLocalSettings",
+                "Handle": 92.0008544921875,
+                "IsSubsystemVirtual": "off",
+                "LineHandles": {
+                    "Enable": [],
+                    "Ifaction": [],
+                    "Inport": [
+                        108.0009765625,
+                        111.000732421875
+                    ],
+                    "LConn": [],
+                    "Outport": 113.0008544921875,
+                    "RConn": [],
+                    "Reset": [],
+                    "State": [],
+                    "Trigger": []
+                },
+                "Mask": "off",
+                "MaskType": "",
+                "MinAlgLoopOccurrences": "off",
+                "MinMaxOverflowLogging": "UseLocalSettings",
+                "Name": "Subsystem",
+                "Origin_path": "unsafe_1_PP/Subsystem",
+                "Path": "unsafe_1_PP/Subsystem",
+                "Permissions": "ReadWrite",
+                "PermitHierarchicalResolution": "All",
+                "PortConnectivity": [
+                    {
+                        "DstBlock": [],
+                        "DstPort": [],
+                        "Position": [
+                            215,
+                            135
+                        ],
+                        "SrcBlock": 77.0003662109375,
+                        "SrcPort": 0,
+                        "Type": "1"
+                    },
+                    {
+                        "DstBlock": [],
+                        "DstPort": [],
+                        "Position": [
+                            215,
+                            195
+                        ],
+                        "SrcBlock": 78.0003662109375,
+                        "SrcPort": 0,
+                        "Type": "2"
+                    },
+                    {
+                        "DstBlock": [
+                            79.0003662109375,
+                            106.0009765625
+                        ],
+                        "DstPort": [
+                            2,
+                            0
+                        ],
+                        "Position": [
+                            350,
+                            165
+                        ],
+                        "SrcBlock": [],
+                        "SrcPort": [],
+                        "Type": "1"
+                    }
+                ],
+                "Ports": [
+                    2,
+                    1,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                ],
+                "Position": [
+                    220,
+                    105,
+                    345,
+                    225
+                ],
+                "PropExecContextOutsideSubsystem": "off",
+                "SFBlockType": "NONE",
+                "ShowPortLabels": "FromPortIcon",
+                "TemplateBlock": "",
+                "TreatAsAtomicUnit": "on",
+                "Virtual": "off"
+            }
+        }
+    }
+}
