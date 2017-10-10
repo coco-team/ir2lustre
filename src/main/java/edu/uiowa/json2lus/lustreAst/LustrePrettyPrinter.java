@@ -125,7 +125,7 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
 
     @Override
     public void visit(BooleanExpr expr) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        sb.append(expr.value);
     }
 
     @Override

@@ -10,11 +10,22 @@ package edu.uiowa.json2lus.lustreAst;
  * @author Paul Meng
  */
 public class BooleanExpr extends LustreExpr {
+    
     public final boolean value;
     
     public BooleanExpr(boolean value) {
         this.value = value;
     }
+    
+    public BooleanExpr(String value) {
+        if(value.toLowerCase().equals("true")) {
+            this.value = true;
+        } else if(value.toLowerCase().equals("false")) { 
+            this.value = false;
+        } else {
+            this.value = true;
+        }
+    }    
 
     @Override
     public void accept(LustreAstVisitor visitor) {

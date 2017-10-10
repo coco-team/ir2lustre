@@ -8,6 +8,7 @@ package edu.uiowa.json2lus;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.uiowa.json2lus.lustreAst.BinaryExpr;
+import edu.uiowa.json2lus.lustreAst.BooleanExpr;
 import edu.uiowa.json2lus.lustreAst.IntExpr;
 import edu.uiowa.json2lus.lustreAst.IteExpr;
 import edu.uiowa.json2lus.lustreAst.LustreEq;
@@ -72,13 +73,25 @@ public class J2LTranslator {
     private final String SWITCH         = "Switch";
     private final String CRITERIA       = "Criteria";
     private final String THRESHOLD      = "Threshold";
+    private final String TRDCRIT        = "u2 ~= 0";
     private final String FSTCRIT        = "u2 >= Threshold"; 
     private final String SNDCRIT        = "u2 > Threshold"; 
-    private final String TRDCRIT        = "u2 ~= 0";     
+        
+    private final String X0             = "X0";
+    private final String MAX            = "max";
+    private final String MIN            = "min";
+    private final String GAIN           = "Gain";
+    private final String INPUTS         = "Inputs";
+    private final String MINMAX         = "MinMax"; 
+    private final String MEMORY         = "Memory";
+    private final String PRODUCT        = "Product";
+    private final String CONSTANT       = "Constant";        
+    private final String FUNCTION       = "Function";            
     
     /** Blocks information */
     private final String NAME           = "Name";
     private final String TYPE           = "Type";
+    private final String VALUE          = "Value";
     private final String HANDLE         = "Handle";
     private final String INPORT         = "Inport";    
     private final String OUTPORT        = "Outport";    
@@ -142,7 +155,8 @@ public class J2LTranslator {
             this.topLevelNode = topNode;
             collectSubsytemBlocksInfo(topNode);               
         } else {
-            LOGGER.log(Level.SEVERE, "JSON root node: {0} content definition is an unexpected format!", rootNode);
+            LOGGER.log(Level.SEVERE, "We are assuming that the root node in the JSON model is the same as the input file name!");
+            LOGGER.log(Level.SEVERE, "But we did not find a such field: {0}!", this.modelName);
         }   
     }
 
@@ -372,7 +386,7 @@ public class J2LTranslator {
      */
 
     protected LustreExpr translateBlock(String blkHandle, Map<JsonNode, List<String>> blkNodeToSrcBlkHandlesMap,  Map<JsonNode, List<String>> blkNodeToDstBlkHandlesMap, Map<String, JsonNode> handleToBlkNodeMap) {
-        LustreExpr  rhsExpr     = null;
+        LustreExpr  blkExpr     = null;
         JsonNode    blkNode     = null;
         
         if(handleToBlkNodeMap.containsKey(blkHandle)) {
@@ -396,64 +410,151 @@ public class J2LTranslator {
             }                         
             switch(blockType) {
                 case EQ: {                                                            
-                    rhsExpr = new BinaryExpr(inExprs.get(0), BinaryExpr.Op.EQ, inExprs.get(1));                                       
+                    blkExpr = new BinaryExpr(inExprs.get(0), BinaryExpr.Op.EQ, inExprs.get(1));                                       
                     break;
                 }  
                 case NEQ: {                                                            
-                    rhsExpr = new BinaryExpr(inExprs.get(0), BinaryExpr.Op.NEQ, inExprs.get(1));                                       
+                    blkExpr = new BinaryExpr(inExprs.get(0), BinaryExpr.Op.NEQ, inExprs.get(1));                                       
                     break;
                 } 
                 case GTE: {                                                            
-                    rhsExpr = new BinaryExpr(inExprs.get(0), BinaryExpr.Op.GTE, inExprs.get(1));                                       
+                    blkExpr = new BinaryExpr(inExprs.get(0), BinaryExpr.Op.GTE, inExprs.get(1));                                       
                     break;
                 } 
                 case LTE: {                                                            
-                    rhsExpr = new BinaryExpr(inExprs.get(0), BinaryExpr.Op.LTE, inExprs.get(1));                                       
+                    blkExpr = new BinaryExpr(inExprs.get(0), BinaryExpr.Op.LTE, inExprs.get(1));                                       
                     break;
                 }  
                 case GT: {                                                            
-                    rhsExpr = new BinaryExpr(inExprs.get(0), BinaryExpr.Op.GT, inExprs.get(1));                                       
+                    blkExpr = new BinaryExpr(inExprs.get(0), BinaryExpr.Op.GT, inExprs.get(1));                                       
                     break;
                 }  
                 case LT: {                                                            
-                    rhsExpr = new BinaryExpr(inExprs.get(0), BinaryExpr.Op.LT, inExprs.get(1));                                       
+                    blkExpr = new BinaryExpr(inExprs.get(0), BinaryExpr.Op.LT, inExprs.get(1));                                       
                     break;
                 }                  
                 case NOT: {                                                                             
-                    rhsExpr = new UnaryExpr(UnaryExpr.Op.NOT, inExprs.get(0));                                      
+                    blkExpr = new UnaryExpr(UnaryExpr.Op.NOT, inExprs.get(0));                                      
                     break;
                 }                   
                 case OR: {                                                                               
-                    rhsExpr = inExprs.get(0);
+                    blkExpr = inExprs.get(0);
                     for(int i = 1; i < inExprs.size(); i++) {
-                        rhsExpr = new BinaryExpr(rhsExpr, BinaryExpr.Op.OR, inExprs.get(i));   
+                        blkExpr = new BinaryExpr(blkExpr, BinaryExpr.Op.OR, inExprs.get(i));   
                     }                                        
                     break;
                 }                 
                 case AND: {                                                                             
-                    rhsExpr = inExprs.get(0);
+                    blkExpr = inExprs.get(0);
                     for(int i = 1; i < inExprs.size(); i++) {
-                        rhsExpr = new BinaryExpr(rhsExpr, BinaryExpr.Op.AND, inExprs.get(i));   
+                        blkExpr = new BinaryExpr(blkExpr, BinaryExpr.Op.AND, inExprs.get(i));   
                     }                                        
                     break;
                 }                
                 case ABS: {                  
-                    rhsExpr = new IteExpr(new BinaryExpr(inExprs.get(0), BinaryExpr.Op.GTE, new IntExpr(new BigInteger("0"))), inExprs.get(0), new UnaryExpr(UnaryExpr.Op.NEG, inExprs.get(0)));                                      
+                    blkExpr = new IteExpr(new BinaryExpr(inExprs.get(0), BinaryExpr.Op.GTE, new IntExpr(new BigInteger("0"))), inExprs.get(0), new UnaryExpr(UnaryExpr.Op.NEG, inExprs.get(0)));                                      
                     break;                    
                 }
                 case SUM: {                                                                              
-                    rhsExpr = inExprs.get(0);
+                    blkExpr = inExprs.get(0);
                     for(int i = 1; i < inExprs.size(); i++) {
-                        rhsExpr = new BinaryExpr(rhsExpr, BinaryExpr.Op.PLUS, inExprs.get(i));   
+                        blkExpr = new BinaryExpr(blkExpr, BinaryExpr.Op.PLUS, inExprs.get(i));   
                     }                                        
                     break;
                 }
                 case SUBSYSTEM: {    
-                    rhsExpr = new NodeCallExpr(blkNode.get(NAME).asText(), inExprs);
+                    blkExpr = new NodeCallExpr(blkNode.get(NAME).asText(), inExprs);
                     break;
                 }
                 case INPORT: {
-                    rhsExpr = new VarIdExpr(blkNode.get(NAME).asText());
+                    blkExpr = new VarIdExpr(blkNode.get(NAME).asText());
+                    break;
+                }
+                case CONSTANT: {
+                    String      value   = blkNode.get(VALUE).asText();
+                    LustreType  type    = getBlockOutportType(blkNode);
+                                        
+                    if(type == PrimitiveType.REAL) {
+                        blkExpr = new RealExpr(new BigDecimal(value));
+                    } else if(type == PrimitiveType.INT) {
+                        blkExpr = new IntExpr(new BigInteger(value));
+                    } else if(type == PrimitiveType.BOOL) {
+                        blkExpr = new BooleanExpr(value);
+                    } else {
+                        LOGGER.log(Level.SEVERE, "Unsupported constant datatype: {0}", type);
+                    }
+                    break;
+                }
+                case PRODUCT: {
+                    String inputs = blkNode.get(INPUTS).asText();
+                    
+                    switch (inputs) {
+                        case "2": {
+                            blkExpr = new BinaryExpr(inExprs.get(0), BinaryExpr.Op.MULTIPLY, inExprs.get(1));
+                            break;
+                        }
+                        case "*/": {
+                            blkExpr = new BinaryExpr(inExprs.get(0), BinaryExpr.Op.DIVIDE, inExprs.get(1));
+                            break;
+                        }
+                        default:
+                            LOGGER.log(Level.SEVERE, "Unsupported product block inputs: {0}", inputs);
+                            break;
+                    }                    
+                    break;
+                }
+                case GAIN: {
+                    String gain = blkNode.get(GAIN).asText();
+
+                    if(gain.contains(".")) {
+                        blkExpr = new BinaryExpr(inExprs.get(0), BinaryExpr.Op.MULTIPLY, new RealExpr(new BigDecimal(gain)));
+                    } else {
+                        blkExpr = new BinaryExpr(inExprs.get(0), BinaryExpr.Op.MULTIPLY, new IntExpr(new BigInteger(gain)));
+                    }
+                    break;
+                }                
+                case MINMAX: {
+                    int     numOfInputs = blkNode.get(INPUTS).asInt();
+                    String  funcName    = blkNode.get(FUNCTION).asText();
+                    
+                    if(numOfInputs != inExprs.size()) {
+                        LOGGER.log(Level.SEVERE, "Inputs to MINMAX blocks does not match the actual inputs!");
+                    } else if(numOfInputs == 1) {
+                        blkExpr = inExprs.get(0);
+                    } else if(numOfInputs > 1) {
+                        BinaryExpr.Op op = null;
+                        
+                        switch (funcName) {
+                            case MAX:
+                                op = BinaryExpr.Op.GTE;
+                                break;
+                            case MIN:
+                                op = BinaryExpr.Op.LTE;
+                                break;
+                            default:
+                                LOGGER.log(Level.SEVERE, "Unsupported MINMAX function operator type: {0}", funcName);
+                                break;
+                        }
+                        
+                        LustreExpr ifCond   = new BinaryExpr(inExprs.get(numOfInputs-2), op, inExprs.get(numOfInputs-1));
+
+                        for(int i = 0; i < numOfInputs-2; i++) {
+                            ifCond = new BinaryExpr(new BinaryExpr(inExprs.get(numOfInputs-2), op, inExprs.get(i)), BinaryExpr.Op.AND, ifCond);
+                        }
+                        blkExpr = new IteExpr(ifCond, inExprs.get(numOfInputs-2), inExprs.get(numOfInputs-1));
+
+                        for(int i = numOfInputs-3; i >= 0; i--) {
+                            ifCond = new BinaryExpr(inExprs.get(i), op, inExprs.get(i+1));
+
+                            for(int j = 0; j < i; j++) {
+                                ifCond = new BinaryExpr(new BinaryExpr(inExprs.get(i), op, inExprs.get(j)), BinaryExpr.Op.AND, ifCond);
+                            }
+                            for(int k = i+2; k < numOfInputs-1; k++) {
+                                ifCond = new BinaryExpr(new BinaryExpr(inExprs.get(i), op, inExprs.get(k)), BinaryExpr.Op.AND, ifCond);
+                            }
+                            blkExpr = new IteExpr(ifCond, inExprs.get(i), blkExpr);
+                        }                                               
+                    }                      
                     break;
                 }
                 case SWITCH: {
@@ -491,7 +592,27 @@ public class J2LTranslator {
                     } else {
                         LOGGER.log(Level.SEVERE, "UNSUPPORTED condition type: {0}", condType);
                     }
-                    rhsExpr = new IteExpr(condExpr, inExprs.get(0), inExprs.get(2));
+                    blkExpr = new IteExpr(condExpr, inExprs.get(0), inExprs.get(2));
+                    break;
+                }
+                case MEMORY: {
+                    String init = blkNode.get(X0).asText();                    
+                    LustreExpr initExpr = null;
+                    LustreType initType = getBlockOutportType(blkNode);          
+                    blkExpr = new UnaryExpr(UnaryExpr.Op.PRE, inExprs.get(0));
+                    
+                    if(initType == PrimitiveType.REAL) {
+                        initExpr = new RealExpr(new BigDecimal(init));
+                    } else if(initType == PrimitiveType.INT) {
+                        initExpr = new IntExpr(new BigInteger(init));
+                    } else if(initType == PrimitiveType.BOOL) {
+                        initExpr = new BooleanExpr(init);
+                    } else {
+                        LOGGER.log(Level.SEVERE, "UNSUPPORTED init value type: {0}", initType);
+                    }
+                    if(initExpr != null) {
+                        blkExpr = new BinaryExpr(initExpr, BinaryExpr.Op.ARROW, blkExpr);
+                    }
                     break;
                 }
                 default:
@@ -500,7 +621,7 @@ public class J2LTranslator {
             }
         }                       
         
-        return rhsExpr;
+        return blkExpr;
     }    
     
     protected LustreType getSwitchCondType(JsonNode switchBlk) {        
@@ -525,7 +646,11 @@ public class J2LTranslator {
                 break;
             }
             case "integer": 
-            case "int": {
+            case "int": 
+            case "int64":     
+            case "int32": 
+            case "int16": 
+            case "int8": {
                 lusType = PrimitiveType.INT;
                 break;                
             }            
@@ -554,7 +679,11 @@ public class J2LTranslator {
             strValues.add(values.asText());
         }
         return strValues;
-    }   
+    }  
+    
+    protected LustreType getBlockOutportType(JsonNode blkNode) {
+        return getLustreTypeFromStrRep(blkNode.get(PORTDATATYPE).get(OUTPORT).asText());
+    }
     
     
     protected List<JsonNode> getBlksFromSubSystem(JsonNode subsystemNode, String blkType) {
