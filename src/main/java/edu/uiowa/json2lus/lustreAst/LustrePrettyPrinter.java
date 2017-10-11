@@ -50,7 +50,9 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
     
     @Override
     public void visit(LustreProgram program) {
-        program.nodes.forEach(node -> {node.accept(this);sb.append(NL).append(NL);});
+        for(LustreNode node : program.nodes) {
+            node.accept(this);sb.append(NL).append(NL);
+        }
     }    
 
     @Override
@@ -69,15 +71,21 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
             sb.append(";").append(NL);
         }
         
-        sb.append("let").append(NL);        
-        node.bodyExprs.forEach(eq -> {sb.append("  ");eq.accept(this); sb.append(NL);});
-        node.propExprs.forEach(prop -> {sb.append("  ");prop.accept(this); sb.append(NL);});
-        sb.append(NL);
-        node.propExprs.forEach(prop -> {
-            prop.lhs.forEach(propVarId -> {
+        sb.append("let").append(NL); 
+        for(LustreEq eq : node.bodyExprs) {
+            sb.append("  ");eq.accept(this); sb.append(NL);
+        }
+        for(LustreEq prop : node.propExprs) {
+            sb.append("  ");prop.accept(this); sb.append(NL);
+        }
+        if(!node.propExprs.isEmpty()) {
+            sb.append(NL);
+        }
+        for(LustreEq prop : node.propExprs) {
+            for(VarIdExpr propVarId : prop.lhs) {
                 sb.append("  ");sb.append("--%PROPERTY ").append(propVarId.id).append(";").append(NL);
-            });
-        });
+            }
+        }
         sb.append("tel;").append(NL).append(NL);        
     }    
     
