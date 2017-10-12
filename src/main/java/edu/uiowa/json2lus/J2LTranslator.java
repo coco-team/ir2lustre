@@ -65,19 +65,29 @@ public class J2LTranslator {
     
     /** Logical operators */
     private final String AND            = "AND";
+    private final String NAND           = "NAND";    
     private final String OR             = "OR";
+    private final String NOR            = "NOR";
+    private final String XOR            = "XOR";
+    private final String NXOR           = "NXOR";
     private final String NOT            = "NOT";
     
     /** Math operators */
-    private final String SUM            = "Sum";    
+    private final String SUM            = "Sum";
+    private final String MOD            = "mod";    
     private final String ABS            = "Abs";
+    private final String SQRT           = "Sqrt";
+    private final String MATH           = "Math";
+    private final String UNARYMINUS     = "UnaryMinus";
     
+    private final String IF             = "If";    
     private final String SWITCH         = "Switch";
     private final String CRITERIA       = "Criteria";
     private final String THRESHOLD      = "Threshold";
     private final String TRDCRIT        = "u2 ~= 0";
     private final String FSTCRIT        = "u2 >= Threshold"; 
     private final String SNDCRIT        = "u2 > Threshold"; 
+    private final String UNITDELAY      = "UnitDelay";
         
     private final String X0             = "X0";
     private final String MAX            = "max";
@@ -88,13 +98,17 @@ public class J2LTranslator {
     private final String MEMORY         = "Memory";
     private final String PRODUCT        = "Product";
     private final String CONSTANT       = "Constant";        
-    private final String FUNCTION       = "Function";            
+    private final String FUNCTION       = "Function";    
+    private final String INITCOND       = "InitialCondition";    
+    
     
     /** Blocks information */
     private final String NAME           = "Name";
     private final String TYPE           = "Type";
     private final String PATH           = "Path";
     private final String VALUE          = "Value";
+    private final String LOGIC          = "logic";
+    private final String RELOP          = "relationaloperator";
     private final String HANDLE         = "Handle";
     private final String INPORT         = "Inport";    
     private final String OUTPORT        = "Outport";    
@@ -202,26 +216,25 @@ public class J2LTranslator {
      * @return The Lustre node corresponding to the input subsystem JSON node
      */
     protected LustreNode translateSubsystemNode(JsonNode subsystemNode) {            
-        String              lusNodeName     = subsystemNode.equals(this.topLevelNode) ? this.modelName : subsystemNode.get(NAME).asText();        
-        List<LustreVar>     inputs          = new ArrayList<>();
-        List<LustreVar>     outputs         = new ArrayList<>();
-        List<LustreVar>     locals          = new ArrayList<>();
-        List<LustreEq>      equations       = new ArrayList<>();
         List<LustreEq>      props           = new ArrayList<>();
-        
-        /** ALL the fields under content field of subsystem block */
-        Iterator<Entry<String, JsonNode>>   contentFields               = subsystemNode.get(CONTENT).fields();        
+        List<LustreVar>     inputs          = new ArrayList<>();        
+        List<LustreVar>     locals          = new ArrayList<>();
+        List<LustreVar>     outputs         = new ArrayList<>();
+        List<LustreEq>      equations       = new ArrayList<>();
+                                        
+        /** Terminator node in the input subsystem block */
+        List<JsonNode>                      propsNodes                  = new ArrayList<>();   
+        /** Outport nodes in the input subsystem block */
+        List<JsonNode>                      outportNodes                = new ArrayList<>();        
         /** A mapping between a handle and the block node */
         Map<String, JsonNode>               handleToBlkNodeMap          = new HashMap<>();                
         /** A mapping between a block node and its src block handles */
         Map<JsonNode, List<String>>         blkNodeToSrcBlkHandlesMap   = new HashMap<>();  
         /** A mapping between a block node and its dst block handles */
-        Map<JsonNode, List<String>>         blkNodeToDstBlkHandlesMap   = new HashMap<>();          
-        /** Outport nodes in the input subsystem block */
-        List<JsonNode>                      outportNodes                = new ArrayList<>();    
-        
-        /** Terminator node in the input subsystem block */
-        List<JsonNode>                      propsNodes                  = new ArrayList<>();    
+        Map<JsonNode, List<String>>         blkNodeToDstBlkHandlesMap   = new HashMap<>();         
+        /** ALL the fields under content field of subsystem block */
+        Iterator<Entry<String, JsonNode>>   contentFields               = subsystemNode.get(CONTENT).fields();     
+        String              lusNodeName     = subsystemNode.equals(this.topLevelNode) ? this.modelName : subsystemNode.get(NAME).asText();                
         
         LOGGER.log(Level.INFO, "Start translating subsystem block: {0}!", lusNodeName);
         
@@ -288,7 +301,7 @@ public class J2LTranslator {
         
         // Translate outport equations backwardsly
         for(JsonNode outportNode : outportNodes) {
-            LustreEq outportEq = translateOutportEquation(outportNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap);
+            LustreEq outportEq = translateOutportEquation(outportNode, subsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap);
             
             if(outportEq != null) {
                 equations.add(outportEq);
@@ -297,7 +310,7 @@ public class J2LTranslator {
             }              
         }
         for(JsonNode propNode : propsNodes) {
-            List<LustreEq> propEqs = translatePropEquation(propNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap);
+            List<LustreEq> propEqs = translatePropEquation(propNode, subsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap);
             for(LustreEq eq : propEqs) {
                 for(VarIdExpr var : eq.getLhs()) {
                     locals.add(new LustreVar(var.id, PrimitiveType.BOOL));
@@ -311,11 +324,13 @@ public class J2LTranslator {
     /**
      * 
      * @param propNode
+     * @param subsystemNode
      * @param blkNodeToSrcBlkHandlesMap
      * @param blkNodeToDstBlkHandlesMap
+     * @param handleToBlkNodeMap
      * @return A list of property equations
      */
-    protected List<LustreEq> translatePropEquation(JsonNode propNode, Map<JsonNode, List<String>> blkNodeToSrcBlkHandlesMap, Map<JsonNode, List<String>> blkNodeToDstBlkHandlesMap, Map<String, JsonNode> handleToBlkNodeMap) {
+    protected List<LustreEq> translatePropEquation(JsonNode propNode, JsonNode subsystemNode, Map<JsonNode, List<String>> blkNodeToSrcBlkHandlesMap, Map<JsonNode, List<String>> blkNodeToDstBlkHandlesMap, Map<String, JsonNode> handleToBlkNodeMap) {
         List<LustreEq> propEqs = new ArrayList<>();
         
         if(blkNodeToSrcBlkHandlesMap.containsKey(propNode)) {
@@ -336,7 +351,7 @@ public class J2LTranslator {
                                 outVarIdExprs.add(new VarIdExpr(srcBlkNode.get(NAME).asText()+"_"+outNode.get(NAME).asText()));
                             }
                             
-                            LustreExpr rhsExpr = translateBlock(srcBlkHdl, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap);
+                            LustreExpr rhsExpr = translateBlock(srcBlkHdl, subsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap);
                             propEqs.add(new LustreEq(outVarIdExprs, rhsExpr));
                         } else {
                             LOGGER.log(Level.SEVERE, "Unsupported property block type: {0}!", srcBlkType);
@@ -356,11 +371,13 @@ public class J2LTranslator {
     /**
      * 
      * @param outportNode
+     * @param subsystemNode
      * @param blkNodeToSrcBlkHandlesMap
      * @param blkNodeToDstBlkHandlesMap
+     * @param handleToBlkNodeMap
      * @return Outport equation
      */
-    protected LustreEq translateOutportEquation(JsonNode outportNode, Map<JsonNode, List<String>> blkNodeToSrcBlkHandlesMap, Map<JsonNode, List<String>> blkNodeToDstBlkHandlesMap, Map<String, JsonNode> handleToBlkNodeMap) {
+    protected LustreEq translateOutportEquation(JsonNode outportNode, JsonNode subsystemNode, Map<JsonNode, List<String>> blkNodeToSrcBlkHandlesMap, Map<JsonNode, List<String>> blkNodeToDstBlkHandlesMap, Map<String, JsonNode> handleToBlkNodeMap) {
         LustreEq    eq          = null;
         VarIdExpr   varIdExpr   = new VarIdExpr(outportNode.get(NAME).asText());        
         
@@ -368,7 +385,7 @@ public class J2LTranslator {
             List<String> srcBlkHandles = blkNodeToSrcBlkHandlesMap.get(outportNode);
             
             if(srcBlkHandles.size() == 1) {
-                eq = new LustreEq(varIdExpr, translateBlock(srcBlkHandles.get(0), blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap));
+                eq = new LustreEq(varIdExpr, translateBlock(srcBlkHandles.get(0), subsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap));
             } else if(srcBlkHandles.size() > 1) {
                 LOGGER.log(Level.SEVERE, "Unexpected: Multiple different src blocks connect to a same outport: {0}!", outportNode.get(NAME).asText());
             } else {
@@ -380,129 +397,19 @@ public class J2LTranslator {
         
         return eq;
     }
-
-    protected String createLustreLibNode(JsonNode blkNode) {
-        String path     = blkNode.get(PATH).asText();
-        String nodeName = path.replace(File.separator,"_");
-        String blkType  = blkNode.get(BLOCKTYPE).asText();
-        
-        switch(blkType) {
-            case ABS: {
-                LustreType  outType = getBlockOutportType(blkNode);
-                
-                if(this.libNodeNameMap.containsKey("abs_"+outType)) {
-                    nodeName = this.libNodeNameMap.get("abs_"+outType);
-                    break;
-                }
-                
-                LustreExpr  zeroExpr = null;
-                
-                if(outType == PrimitiveType.INT) {
-                    nodeName    = nodeName + "_int";
-                    zeroExpr    = new IntExpr(new BigInteger("0"));                    
-                } else if(outType == PrimitiveType.REAL) {
-                    nodeName    = nodeName + "_real";
-                    zeroExpr    = new RealExpr(new BigDecimal("0.0"));
-                } else {
-                    LOGGER.log(Level.SEVERE, "Unsupported library node input and output type: {0}", outType);
-                }
-                
-                VarIdExpr           inVarExpr   = new VarIdExpr("in");
-                VarIdExpr           outVarExpr  = new VarIdExpr("out");   
-                List<LustreEq>      bodyExprs   = new ArrayList<>();                  
     
-                bodyExprs.add(new LustreEq(outVarExpr, new IteExpr(new BinaryExpr(inVarExpr, BinaryExpr.Op.GTE, zeroExpr), inVarExpr, new UnaryExpr(UnaryExpr.Op.NEG, inVarExpr))));
-                this.libNodeNameMap.put("abs_"+outType, nodeName);
-                this.lustreProgram.addNode(new LustreNode(nodeName, new LustreVar("in", outType), new LustreVar("out", outType), bodyExprs));                
-                break;
-            }
-            case MINMAX: {
-                String      funcName    = blkNode.get(FUNCTION).asText();
-                LustreType  outType     = getBlockOutportType(blkNode);
-                
-                if(this.libNodeNameMap.containsKey(funcName+"_"+outType)) {
-                    nodeName = this.libNodeNameMap.get(funcName+"_"+outType);
-                    break;
-                }                
-                
-                LustreExpr          rhsExpr     = null;             
-                VarIdExpr           outVarExpr  = new VarIdExpr("out");
-                int                 numOfInputs = blkNode.get(INPUTS).asInt();                
-                List<LustreType>    inTypes     = getBlockInportType(blkNode);
-                List<LustreVar>     inputVars   = new ArrayList<>();
-                List<LustreVar>     outputVars  = Arrays.asList(new LustreVar("out", outType));
-                List<VarIdExpr>     inExprs     = new ArrayList<>();
-                List<LustreEq>      bodyExprs   = new ArrayList<>();   
-                
-                nodeName = nodeName + "_" + funcName + "_" + outType;
-                for(int i = 0; i < inTypes.size(); i++) {
-                    String varName = "in_" + i;
-                    inputVars.add(new LustreVar(varName, inTypes.get(i)));
-                    inExprs.add(new VarIdExpr(varName));
-                }
 
-                if(numOfInputs != inExprs.size()) {
-                    LOGGER.log(Level.SEVERE, "Inputs to MINMAX blocks does not match the actual inputs!");
-                } else if(numOfInputs == 1) {
-                    rhsExpr = inExprs.get(0);
-                } else if(numOfInputs > 1) {
-                    BinaryExpr.Op op = null;
-
-                    switch (funcName) {
-                        case MAX: 
-                            op = BinaryExpr.Op.GTE;
-                            break;
-                        case MIN:
-                            op = BinaryExpr.Op.LTE;
-                            break;
-                        default:
-                            LOGGER.log(Level.SEVERE, "Unsupported MINMAX function operator type: {0}", funcName);
-                            break;
-                    }
-
-                    LustreExpr ifCond   = new BinaryExpr(inExprs.get(numOfInputs-2), op, inExprs.get(numOfInputs-1));
-
-                    for(int i = 0; i < numOfInputs-2; i++) {
-                        ifCond = new BinaryExpr(new BinaryExpr(inExprs.get(numOfInputs-2), op, inExprs.get(i)), BinaryExpr.Op.AND, ifCond);
-                    }
-                    rhsExpr = new IteExpr(ifCond, inExprs.get(numOfInputs-2), inExprs.get(numOfInputs-1));
-
-                    for(int i = numOfInputs-3; i >= 0; i--) {
-                        ifCond = new BinaryExpr(inExprs.get(i), op, inExprs.get(i+1));
-
-                        for(int j = 0; j < i; j++) {
-                            ifCond = new BinaryExpr(new BinaryExpr(inExprs.get(i), op, inExprs.get(j)), BinaryExpr.Op.AND, ifCond);
-                        }
-                        for(int k = i+2; k < numOfInputs-1; k++) {
-                            ifCond = new BinaryExpr(new BinaryExpr(inExprs.get(i), op, inExprs.get(k)), BinaryExpr.Op.AND, ifCond);
-                        }
-                        rhsExpr = new IteExpr(ifCond, inExprs.get(i), rhsExpr);
-                    }                                               
-                }          
-                bodyExprs.add(new LustreEq(outVarExpr, rhsExpr));
-                this.libNodeNameMap.put(funcName+"_"+outType, nodeName);
-                this.lustreProgram.addNode(new LustreNode(nodeName, inputVars, outputVars, bodyExprs));                                
-                break;
-            }
-            default:
-                LOGGER.log(Level.SEVERE, "Unsupported library node type: {0}", blkType);
-                break;
-        }
-        
-        
-        return nodeName;
-    }
-    
     /**
      * 
      * @param blkHandle
+     * @param parentSubsystemNode
      * @param blkNodeToSrcBlkHandlesMap
      * @param blkNodeToDstBlkHandlesMap
      * @param handleToBlkNodeMap
      * @return The Lustre expression corresponding to the input JSON block node
      */
 
-    protected LustreExpr translateBlock(String blkHandle, Map<JsonNode, List<String>> blkNodeToSrcBlkHandlesMap,  Map<JsonNode, List<String>> blkNodeToDstBlkHandlesMap, Map<String, JsonNode> handleToBlkNodeMap) {
+    protected LustreExpr translateBlock(String blkHandle, JsonNode parentSubsystemNode, Map<JsonNode, List<String>> blkNodeToSrcBlkHandlesMap,  Map<JsonNode, List<String>> blkNodeToDstBlkHandlesMap, Map<String, JsonNode> handleToBlkNodeMap) {
         LustreExpr  blkExpr     = null;
         JsonNode    blkNode     = null;
         
@@ -513,19 +420,19 @@ public class J2LTranslator {
         }
         
         if(blkNode != null && blkNode.has(BLOCKTYPE)) {
-            String              blockType   = blkNode.get(BLOCKTYPE).asText();
+            String              blkType     = blkNode.get(BLOCKTYPE).asText();
             List<LustreExpr>    inExprs     = new ArrayList<>();            
             List<String>        inHandles   = blkNodeToSrcBlkHandlesMap.get(blkNode);
             
-            if(blockType.toLowerCase().equals("logic") || blockType.toLowerCase().equals("relationaloperator")) {
-                blockType = blkNode.get(OPERATOR).asText();
+            if(blkType.toLowerCase().equals(LOGIC) || blkType.toLowerCase().equals(RELOP) || blkType.equals(MATH)) {
+                blkType = blkNode.get(OPERATOR).asText();
             }
             if(inHandles != null) {
                 for(String inHandle : inHandles) {
-                    inExprs.add(translateBlock(inHandle, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap));
+                    inExprs.add(translateBlock(inHandle, parentSubsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap));
                 }                
             }                         
-            switch(blockType) {
+            switch(blkType) {
                 case EQ: {                                                            
                     blkExpr = new BinaryExpr(inExprs.get(0), BinaryExpr.Op.EQ, inExprs.get(1));                                       
                     break;
@@ -560,18 +467,61 @@ public class J2LTranslator {
                         blkExpr = new BinaryExpr(blkExpr, BinaryExpr.Op.OR, inExprs.get(i));   
                     }                                        
                     break;
-                }                 
+                }
+                case NOR: {                                                                               
+                    blkExpr = inExprs.get(0);
+                    for(int i = 1; i < inExprs.size(); i++) {
+                        blkExpr = new UnaryExpr(UnaryExpr.Op.NOT, new BinaryExpr(blkExpr, BinaryExpr.Op.OR, inExprs.get(i)));   
+                    }                                        
+                    break;
+                }                
+                case XOR: {                                                                               
+                    blkExpr = inExprs.get(0);
+                    for(int i = 1; i < inExprs.size(); i++) {
+                        blkExpr = new BinaryExpr(blkExpr, BinaryExpr.Op.XOR, inExprs.get(i));   
+                    }                                        
+                    break;
+                }                
+                case NXOR: {                                                                               
+                    blkExpr = inExprs.get(0);
+                    for(int i = 1; i < inExprs.size(); i++) {
+                        blkExpr = new UnaryExpr(UnaryExpr.Op.NOT, new BinaryExpr(blkExpr, BinaryExpr.Op.XOR, inExprs.get(i)));   
+                    }                                        
+                    break;
+                }                  
                 case AND: {                                                                             
                     blkExpr = inExprs.get(0);
                     for(int i = 1; i < inExprs.size(); i++) {
                         blkExpr = new BinaryExpr(blkExpr, BinaryExpr.Op.AND, inExprs.get(i));   
                     }                                        
                     break;
-                }                
+                } 
+                case NAND: {                                                                             
+                    blkExpr = inExprs.get(0);
+                    for(int i = 1; i < inExprs.size(); i++) {
+                        blkExpr = new UnaryExpr(UnaryExpr.Op.NOT, new BinaryExpr(blkExpr, BinaryExpr.Op.AND, inExprs.get(i)));   
+                    }                                        
+                    break;
+                }                 
                 case ABS: {
                     blkExpr = new NodeCallExpr(createLustreLibNode(blkNode), inExprs.get(0));                   
                     break;                    
                 }
+                case SQRT: {
+                    blkExpr = new NodeCallExpr(createLustreLibNode(blkNode), inExprs.get(0));                   
+                    break;                    
+                }
+                case MOD: {
+                    blkExpr = inExprs.get(0);
+                    for(int i = 1; i < inExprs.size(); i++) {
+                        blkExpr = new BinaryExpr(blkExpr, BinaryExpr.Op.MOD, inExprs.get(i));   
+                    }                                        
+                    break;                  
+                } 
+                case UNARYMINUS: {
+                    blkExpr = new UnaryExpr(UnaryExpr.Op.NEG, inExprs.get(0));                                                                           
+                    break;                  
+                }                 
                 case SUM: {
                     int     numOfInputs = -1;
                     String  ops         = blkNode.get(INPUTS).asText();
@@ -623,20 +573,16 @@ public class J2LTranslator {
                     break;
                 }
                 case CONSTANT: {
-                    String      value   = blkNode.get(VALUE).asText();
+                    String      value   = blkNode.get(VALUE).asText().trim();
                     LustreType  type    = getBlockOutportType(blkNode);
-                                        
-                    if(type == PrimitiveType.REAL) {
-                        if(!value.contains(".")) {
-                            value = value + ".0";
-                        }
-                        blkExpr = new RealExpr(new BigDecimal(value));
-                    } else if(type == PrimitiveType.INT) {
-                        blkExpr = new IntExpr(new BigInteger(value));
-                    } else if(type == PrimitiveType.BOOL) {
-                        blkExpr = new BooleanExpr(value);
+                    
+                    if(isValidConst(value)) {
+                        blkExpr = getLustreConst(value, type);
+                    // It is possible that the value of the constant field refers to some field of its parent node
+                    } else if(parentSubsystemNode.has(value)) {
+                        blkExpr = getLustreConst(parentSubsystemNode.get(value).asText().trim(), type);
                     } else {
-                        LOGGER.log(Level.SEVERE, "Unsupported constant datatype: {0}", type);
+                        LOGGER.log(Level.SEVERE, "Unexpected constant value in JSON node: {0}", value);
                     }
                     break;
                 }
@@ -736,41 +682,53 @@ public class J2LTranslator {
                     blkExpr = new IteExpr(condExpr, inExprs.get(0), inExprs.get(2));
                     break;
                 }
-                case MEMORY: {
-                    LustreExpr  initExpr    = null;
-                    String      init        = blkNode.get(X0).asText();                                        
-                    LustreType  initType    = getBlockOutportType(blkNode); 
+                case IF: {
+                    break;
+                }
+                case MEMORY: 
+                case UNITDELAY: {
+                    String      init        = blkType.equals(MEMORY) ? blkNode.get(X0).asText() : blkNode.get(INITCOND).asText();                                        
+                    LustreType  blkOutType  = getBlockOutportType(blkNode); 
+                    LustreExpr  initExpr    = getLustreConst(init, blkOutType);
                     
-                    blkExpr = new UnaryExpr(UnaryExpr.Op.PRE, inExprs.get(0));                    
-                    if(initType == PrimitiveType.REAL) {
-                        if(init.matches("^[-+]?\\d+(\\.\\d+)?$")) {
-                            if(!init.contains(".")) {
-                                init = init + ".0";
-                            }
-                            initExpr = new RealExpr(new BigDecimal(init));
-                        } else {
-                            LOGGER.log(Level.SEVERE, "UNSUPPORTED init value: {0}", init);
-                        }                        
-                    } else if(initType == PrimitiveType.INT) {
-                        initExpr = new IntExpr(new BigInteger(init));
-                    } else if(initType == PrimitiveType.BOOL) {
-                        initExpr = new BooleanExpr(init);
-                    } else {
-                        LOGGER.log(Level.SEVERE, "UNSUPPORTED init value type: {0}", initType);
-                    }
+                    blkExpr     = new UnaryExpr(UnaryExpr.Op.PRE, inExprs.get(0));                      
                     if(initExpr != null) {
                         blkExpr = new BinaryExpr(initExpr, BinaryExpr.Op.ARROW, blkExpr);
+                    } else {
+                        LOGGER.log(Level.SEVERE, "UNEXPECTED init value : {0}", blkOutType);
                     }
                     break;
                 }
                 default:
-                    LOGGER.log(Level.SEVERE, "Unsupported block type: {0}!", blockType);
+                    LOGGER.log(Level.SEVERE, "Unsupported block type: {0}!", blkType);
                     break;
             }
         }                       
         
         return blkExpr;
-    }    
+    }
+
+    protected LustreExpr getLustreConst(String value, LustreType type) {
+        LustreExpr constExpr = null;
+        
+        if(isValidConst(value)) {
+            if(type == PrimitiveType.REAL) {
+                if(!value.contains(".")) {
+                    value = value + ".0";
+                }
+                constExpr = new RealExpr(new BigDecimal(value));
+            } else if(type == PrimitiveType.INT) {
+                constExpr = new IntExpr(new BigInteger(value));
+            } else if(type == PrimitiveType.BOOL) {
+                constExpr = new BooleanExpr(value);
+            } else {
+                LOGGER.log(Level.SEVERE, "Unsupported constant datatype: {0}", type);
+            }            
+        } else {
+            LOGGER.log(Level.SEVERE, "Unexpected constant value: {0}", value);
+        } 
+        return constExpr;
+    }
     
     protected LustreType getSwitchCondType(JsonNode switchBlk) {        
         List<String>        types   = convertJsonValuesToList(switchBlk.get(PORTDATATYPE).get(INPORT));
@@ -778,6 +736,141 @@ public class J2LTranslator {
         // The switch condition is the second port in the port connectivity
         return getLustreTypeFromStrRep(types.get(connIt.next().get(TYPE).asInt()));
     }
+    
+    /**
+     * @param blkNode
+     * @return The name of library Lustre node corresponding to the input JsonNode
+     */
+    protected String createLustreLibNode(JsonNode blkNode) {
+        String path     = blkNode.get(PATH).asText();
+        String nodeName = path.replace(File.separator,"_");
+        String blkType  = blkNode.get(BLOCKTYPE).asText();
+        
+        switch(blkType) {
+            case ABS: {
+                LustreType  outType = getBlockOutportType(blkNode);
+                
+                if(this.libNodeNameMap.containsKey(ABS+"_"+outType)) {
+                    nodeName = this.libNodeNameMap.get(ABS+"_"+outType);
+                    break;
+                }
+                
+                LustreExpr  zeroExpr = null;
+                
+                if(outType == PrimitiveType.INT) {
+                    nodeName    = nodeName + "_int";
+                    zeroExpr    = new IntExpr(new BigInteger("0"));                    
+                } else if(outType == PrimitiveType.REAL) {
+                    nodeName    = nodeName + "_real";
+                    zeroExpr    = new RealExpr(new BigDecimal("0.0"));
+                } else {
+                    LOGGER.log(Level.SEVERE, "Unsupported library node input and output type: {0}", outType);
+                }
+                
+                VarIdExpr           inVarExpr   = new VarIdExpr("in");
+                VarIdExpr           outVarExpr  = new VarIdExpr("out");   
+                List<LustreEq>      bodyExprs   = new ArrayList<>();                  
+    
+                bodyExprs.add(new LustreEq(outVarExpr, new IteExpr(new BinaryExpr(inVarExpr, BinaryExpr.Op.GTE, zeroExpr), inVarExpr, new UnaryExpr(UnaryExpr.Op.NEG, inVarExpr))));
+                this.libNodeNameMap.put(ABS+"_"+outType, nodeName);
+                this.lustreProgram.addNode(new LustreNode(nodeName, new LustreVar("in", outType), new LustreVar("out", outType), bodyExprs));                
+                break;
+            }
+            case SQRT: {
+                LustreType  outType = getBlockOutportType(blkNode);
+                
+                if(this.libNodeNameMap.containsKey(SQRT+"_"+outType)) {
+                    nodeName = this.libNodeNameMap.get(SQRT+"_"+outType);
+                    break;
+                }
+                if(outType == PrimitiveType.INT) {
+                    nodeName    = SQRT + "_int";              
+                } else if(outType == PrimitiveType.REAL) {
+                    nodeName    = SQRT + "_real";
+                } else {
+                    LOGGER.log(Level.SEVERE, "Unsupported library node input and output type: {0}", outType);
+                }
+                this.libNodeNameMap.put(nodeName, nodeName);
+                this.lustreProgram.addNode(new LustreNode(nodeName, new LustreVar("in", outType), new LustreVar("out", outType), new ArrayList<LustreEq>()));                
+                break;
+            }            
+            case MINMAX: {
+                String      funcName    = blkNode.get(FUNCTION).asText();
+                LustreType  outType     = getBlockOutportType(blkNode);
+                
+                if(this.libNodeNameMap.containsKey(funcName+"_"+outType)) {
+                    nodeName = this.libNodeNameMap.get(funcName+"_"+outType);
+                    break;
+                }                
+                
+                LustreExpr          rhsExpr     = null;             
+                VarIdExpr           outVarExpr  = new VarIdExpr("out");
+                int                 numOfInputs = blkNode.get(INPUTS).asInt();                
+                List<LustreType>    inTypes     = getBlockInportType(blkNode);
+                List<LustreVar>     inputVars   = new ArrayList<>();
+                List<LustreVar>     outputVars  = Arrays.asList(new LustreVar("out", outType));
+                List<VarIdExpr>     inExprs     = new ArrayList<>();
+                List<LustreEq>      bodyExprs   = new ArrayList<>();   
+                
+                nodeName = nodeName + "_" + funcName + "_" + outType;
+                for(int i = 0; i < inTypes.size(); i++) {
+                    String varName = "in_" + i;
+                    inputVars.add(new LustreVar(varName, inTypes.get(i)));
+                    inExprs.add(new VarIdExpr(varName));
+                }
+
+                if(numOfInputs != inExprs.size()) {
+                    LOGGER.log(Level.SEVERE, "Inputs to MINMAX blocks does not match the actual inputs!");
+                } else if(numOfInputs == 1) {
+                    rhsExpr = inExprs.get(0);
+                } else if(numOfInputs > 1) {
+                    BinaryExpr.Op op = null;
+
+                    switch (funcName) {
+                        case MAX: 
+                            op = BinaryExpr.Op.GTE;
+                            break;
+                        case MIN:
+                            op = BinaryExpr.Op.LTE;
+                            break;
+                        default:
+                            LOGGER.log(Level.SEVERE, "Unsupported MINMAX function operator type: {0}", funcName);
+                            break;
+                    }
+
+                    LustreExpr ifCond   = new BinaryExpr(inExprs.get(numOfInputs-2), op, inExprs.get(numOfInputs-1));
+
+                    for(int i = 0; i < numOfInputs-2; i++) {
+                        ifCond = new BinaryExpr(new BinaryExpr(inExprs.get(numOfInputs-2), op, inExprs.get(i)), BinaryExpr.Op.AND, ifCond);
+                    }
+                    rhsExpr = new IteExpr(ifCond, inExprs.get(numOfInputs-2), inExprs.get(numOfInputs-1));
+
+                    for(int i = numOfInputs-3; i >= 0; i--) {
+                        ifCond = new BinaryExpr(inExprs.get(i), op, inExprs.get(i+1));
+
+                        for(int j = 0; j < i; j++) {
+                            ifCond = new BinaryExpr(new BinaryExpr(inExprs.get(i), op, inExprs.get(j)), BinaryExpr.Op.AND, ifCond);
+                        }
+                        for(int k = i+2; k < numOfInputs-1; k++) {
+                            ifCond = new BinaryExpr(new BinaryExpr(inExprs.get(i), op, inExprs.get(k)), BinaryExpr.Op.AND, ifCond);
+                        }
+                        rhsExpr = new IteExpr(ifCond, inExprs.get(i), rhsExpr);
+                    }                                               
+                }          
+                bodyExprs.add(new LustreEq(outVarExpr, rhsExpr));
+                this.libNodeNameMap.put(funcName+"_"+outType, nodeName);
+                this.lustreProgram.addNode(new LustreNode(nodeName, inputVars, outputVars, bodyExprs));                                
+                break;
+            }
+            default:
+                LOGGER.log(Level.SEVERE, "Unsupported library node type: {0}", blkType);
+                break;
+        }
+        
+        
+        return nodeName;
+    }
+        
     
     /**
      * 
@@ -848,6 +941,21 @@ public class J2LTranslator {
         return types;
     }    
     
+    protected boolean isNum(String str) {
+        return str.matches("^[-+]?\\d+(\\.\\d+)?$");
+    }
+    
+    protected boolean isBool(String str) {
+        return str.toLowerCase().equals("true") || str.toLowerCase().equals("false") ;
+    }    
+    
+    protected boolean isValidConst(String str) {
+        return isNum(str) || isBool(str);
+    }
+    
+    protected boolean isNumType(LustreType type) {
+        return type == PrimitiveType.REAL || type == PrimitiveType.INT;
+    }    
     
     protected List<JsonNode> getBlksFromSubSystem(JsonNode subsystemNode, String blkType) {
         List<JsonNode> blkNodes = new ArrayList();
