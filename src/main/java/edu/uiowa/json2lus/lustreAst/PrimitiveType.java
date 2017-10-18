@@ -56,4 +56,49 @@ public class PrimitiveType extends LustreType {
         }
         return true;
     }    
+
+    @Override
+    public int compareTo(LustreType targetType) {
+        if((targetType instanceof PrimitiveType)) {
+            return 0;
+        }
+        
+        int    result   = -1;
+        String thisName = this.name;
+        String oName    = ((PrimitiveType)targetType).name;
+        
+        switch(thisName) {
+            case "real" : {
+                if(oName.equals("real")) {
+                    result = 0;
+                } else if(oName.equals("int")) {
+                    result = 1;
+                } else {
+                    result = -1;
+                }
+                break;
+            }
+            case "int" : {
+                if(oName.equals("real")) {
+                    result = -1;
+                } else if(oName.equals("int")) {
+                    result = 0;
+                } else {
+                    result = 1;
+                }
+                break;
+            }
+            case "bool" : {
+                if(oName.equals("real")) {
+                    result = -1;
+                } else if(oName.equals("int")) {
+                    result = -1;
+                } else {
+                    result = 0;
+                }
+                break;
+            }            
+        }
+        return result;
+    }
 }

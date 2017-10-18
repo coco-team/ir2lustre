@@ -35,8 +35,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.Stack;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  *
@@ -46,7 +49,7 @@ public class J2LTranslator {
     /** The path of the input JSON file */
     public  final String inputPath;
     
-    /** Assumption: The file name is also the model name */
+    /** Assumption: The file name is also the top-level model name */
     public  final String modelName;
     
     /** Logger */
@@ -441,8 +444,12 @@ public class J2LTranslator {
             }
             // For the merge block, we need to translate it in a special way
             if(!blkType.equals(MERGE)) {
+                LustreType highestType = getTheHighestType(inHandles, handleToBlkNodeMap);
+                
                 for(String inHandle : inHandles) {
-                    inExprs.add(translateBlock(inHandle, parentSubsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap));
+                    LustreExpr inExpr = translateBlock(inHandle, parentSubsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap);
+                                        
+                    inExprs.add(inExpr);
                 }                
             }                         
             switch(blkType) {
@@ -790,6 +797,7 @@ public class J2LTranslator {
                     inExprs.add(translateBlock(inHandle, parentSubsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap));
                 }  
             }
+            // The number of condition expressions is one less than the number of branches
             if(condStrExprs.size() == hdlActSysExprMap.size()-1) {
                 condExprs = buildIteConExprs(condStrExprs, inExprs);
             } else {
@@ -803,9 +811,57 @@ public class J2LTranslator {
         List<LustreExpr> condExprs = new ArrayList<>();
         
         for(String condStrExpr : condStrExprs) {
-//            condExprs.add(buildIteCondExpr(condStrExpr, inExprs));
+            condExprs.add(buildIteCondExpr(condStrExpr, inExprs));
         }
         return condExprs;
+    }
+    
+    // Assumption: condStrExpr is a valid string representaiton of a condition expression.
+    protected LustreExpr buildIteCondExpr(String strExpr, List<LustreExpr> inExprs) {        
+        LustreExpr  lusExpr = null;
+        String      condStrExpr         = strExpr.trim();
+        Matcher     ltMatcher           = Pattern.compile("^[\\(]?[-]?\\s*[\\(]?\\s*u\\d+\\s*[\\)]?\\s*<\\s*[\\(]?\\s*[-]?\\s*[\\(]?\\s*u\\d+[\\)]?$").matcher(condStrExpr);
+        Matcher     gtMatcher           = Pattern.compile("^u\\d+\\s*>\\s*u\\d+$").matcher(condStrExpr);
+        Matcher     lteMatcher          = Pattern.compile("^u\\d+\\s*<=\\s*u\\d+$").matcher(condStrExpr);
+        Matcher     gteMatcher          = Pattern.compile("^u\\d+\\s*>=\\s*u\\d+$").matcher(condStrExpr);
+        Matcher     eqMatcher           = Pattern.compile("^u\\d+\\s*==\\s*u\\d+$").matcher(condStrExpr);
+        Matcher     neqMatcher          = Pattern.compile("^u\\d+\\s*~=\\s*u\\d+$").matcher(condStrExpr);
+        Matcher     andMatcher          = Pattern.compile("^u\\d+\\s*~=\\s*u\\d+$").matcher(condStrExpr);
+        Matcher     orMatcher           = Pattern.compile("^u\\d+\\s*~=\\s*u\\d+$").matcher(condStrExpr);
+        Matcher     varMatcher          = Pattern.compile("^u\\d+$").matcher(condStrExpr);
+        Matcher     minusMatcher        = Pattern.compile("^[-][\\(]\\s*[\\(]*\\s*u\\d+\\s*[\\)]*\\s*[\\)]*$").matcher(condStrExpr);
+              
+        // conStrExpr is an input var like "u1, u2, ..."
+        if(isParathesized(condStrExpr)) {
+            lusExpr = buildIteCondExpr(condStrExpr.substring(1, condStrExpr.length()-1), inExprs);
+        } else if(minusMatcher.find()) {
+            lusExpr = new UnaryExpr(UnaryExpr.Op.NEG, buildIteCondExpr(condStrExpr.substring(1), inExprs));
+        } else if(varMatcher.find()) {
+            int index = Integer.parseInt(condStrExpr.substring(1));
+            
+            if(index <= inExprs.size() && index > 0) {
+                lusExpr = inExprs.get(index-1);
+            } else {
+                 LOGGER.log(Level.SEVERE, "UNEXPECTED index in buildIteCondExpr: {0}", index);
+            }
+        } else if(ltMatcher.find()) {
+            
+        } else if(gtMatcher.find()) {
+            
+        } else if(lteMatcher.find()) {
+            
+        } else if(gteMatcher.find()) {
+            
+        } else if(eqMatcher.find()) {
+            
+        } else if(neqMatcher.find()) {
+            
+        } else if(andMatcher.find()) {
+
+        } else if(orMatcher.find()) {
+            
+        }         
+        return lusExpr;
     }
     
     protected boolean isIfBlock(JsonNode node) {
@@ -1058,6 +1114,24 @@ public class J2LTranslator {
         
         return nodeName;
     }
+    
+    
+    protected LustreType getTheHighestType(List<String> handles, Map<String, JsonNode> handleToBlkNodeMap) {        
+        LustreType highestType = null;
+        
+        if(handles != null && handles.size() > 0) {
+             highestType = getBlockOutportType(handleToBlkNodeMap.get(handles.get(0)));
+             
+             for(int i = 1; i < handles.size(); i++) {
+                 LustreType hType = getBlockOutportType(handleToBlkNodeMap.get(handles.get(i)));
+                 
+                 if(highestType.compareTo(hType) < 0) {
+                     highestType = hType;
+                 }
+             }
+        }
+        return highestType;
+    }    
         
     
     /**
@@ -1162,6 +1236,34 @@ public class J2LTranslator {
             }           
         }
         return blkNodes;
-    }    
+    }  
+    
+    protected boolean isParathesized(String s) {
+        if(s == null) {
+            return false;
+        }
+        
+        String candStr = s.trim();
+        
+        if(!candStr.startsWith("(") || !candStr.endsWith(")")) {
+            return false;
+        }
+        
+        Stack<Character> stack  = new Stack<>();
+        
+        stack.push('(');
+        for(int i = 1; i < candStr.length()-1; i++) {
+            char c = candStr.charAt(i);
+            if(c == '(') {     
+                stack.push(c);
+            } else if(c == ')') {
+                stack.pop();
+                if(stack.isEmpty()) {
+                    return false;
+                }
+            }
+        }
+        return !stack.isEmpty();
+    }      
     
 }
