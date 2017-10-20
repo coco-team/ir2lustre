@@ -10,5 +10,5 @@ package edu.uiowa.json2lus.lustreAst;
  * @author Paul Meng
  */
 public abstract class LustreType implements Comparable<LustreType> {
-    
+    public abstract void accept(LustreAstVisitor visitor);
 }

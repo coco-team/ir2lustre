@@ -50,6 +50,11 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
     
     @Override
     public void visit(LustreProgram program) {
+        for(LustreEnumType enumType : program.typesDef) {
+            enumType.accept(this);
+            sb.append(NL);
+        }        
+        sb.append(NL);
         for(LustreNode node : program.nodes) {
             node.accept(this);sb.append(NL).append(NL);
         }
@@ -208,6 +213,18 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
             sb.append(")");
             sb.append(NL);            
         }
+    }
+
+    @Override
+    public void visit(LustreEnumType enumType) {
+        sb.append("type ").append(enumType.name).append(" = {");
+        for(int i = 0; i < enumType.values.size(); i++) {
+            sb.append(enumType.values.get(i));
+            if(i != enumType.values.size()-1) {
+                sb.append(", ");
+            }
+        }
+        sb.append("};");
     }
     
 }

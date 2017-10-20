@@ -30,5 +30,10 @@ public class LustreEnumType extends LustreType{
     public int compareTo(LustreType o) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
+
+    @Override
+    public void accept(LustreAstVisitor visitor) {
+        visitor.visit(this);
+    }
     
 }
