@@ -5,10 +5,11 @@
  */
 package edu.uiowa.json2lus;
 
-import edu.uiowa.json2lus.ExprParser.BinaryNode;
+import edu.uiowa.json2lus.ExprParser.AstNode;
 import org.parboiled.BaseParser;
 import static org.parboiled.BaseParser.EOI;
 import org.parboiled.Rule;
+import org.parboiled.annotations.BuildParseTree;
 import org.parboiled.annotations.DontLabel;
 import org.parboiled.annotations.SuppressNode;
 import org.parboiled.support.StringVar;
@@ -19,7 +20,9 @@ import org.parboiled.trees.ImmutableBinaryTreeNode;
  * @author Paul Meng
  */
 
-public class ExprParser extends BaseParser<BinaryNode> {
+@SuppressWarnings({"InfiniteRecursion"})
+@BuildParseTree
+public class ExprParser extends BaseParser<AstNode> {
     
     final Rule AND  = Terminal("&");
     final Rule OR   = Terminal("|");
@@ -32,7 +35,7 @@ public class ExprParser extends BaseParser<BinaryNode> {
     final Rule EQ   = Terminal("==");
     final Rule NEQ  = Terminal("~=");
     final Rule LPAR = Terminal("(");    
-    final Rule RPAR = Terminal(")");       
+    final Rule RPAR = Terminal(")");        
     
     public Rule InputLine() {
         return Sequence(Expression(), EOI);
@@ -45,41 +48,45 @@ public class ExprParser extends BaseParser<BinaryNode> {
     Rule ConditionalOrExpression() {
         StringVar op = new StringVar();
         return Sequence(ConditionalAndExpression(),
-                        ZeroOrMore(OR, op.set(matchOrDefault("")), 
+                        ZeroOrMore(OR, op.set(matchOrDefault(null)), 
                         ConditionalAndExpression(), 
-                        push(new BinaryNode(op.get(), pop(1), pop()))));
+                        push(new AstNode(op.get(), pop(1), pop())))
+        );
     }    
     
     Rule ConditionalAndExpression() {
         StringVar op = new StringVar();
         return Sequence(EqualityExpression(),
-                        ZeroOrMore(AND, op.set(matchOrDefault("")), 
+                        ZeroOrMore(AND, op.set(matchOrDefault(null)), 
                         EqualityExpression(), 
-                        push(new BinaryNode(op.get(), pop(1), pop()))));
+                        push(new AstNode(op.get(), pop(1), pop())))
+        );
     }    
     
 
     Rule EqualityExpression() {
         StringVar op = new StringVar();
         return Sequence(RelationalExpression(),
-                        ZeroOrMore(FirstOf(EQ, NEQ), op.set(matchOrDefault("")), 
+                        ZeroOrMore(FirstOf(EQ, NEQ), op.set(matchOrDefault(null)), 
                         RelationalExpression(), 
-                        push(new BinaryNode(op.get(), pop(1), pop()))));
+                        push(new AstNode(op.get(), pop(1), pop())))
+        );
     }    
     
     Rule RelationalExpression() {
         StringVar op = new StringVar();
         return Sequence(UnaryExpression(),
-                        ZeroOrMore(FirstOf(LTE, GTE, LT, GT), op.set(matchOrDefault("")), 
+                        ZeroOrMore(FirstOf(LTE, GTE, LT, GT), op.set(matchOrDefault(null)), 
                         UnaryExpression(), 
-                        push(new BinaryNode(op.get(), pop(1), pop()))));
+                        push(new AstNode(op.get(), pop(1), pop())))
+        );
     } 
-    
+
     Rule UnaryExpression() {
         StringVar op = new StringVar();
-        return FirstOf(Sequence(FirstOf(NEG, NOT), op.set(matchOrDefault("")), 
-                       UnaryExpression(), 
-                       push(new BinaryNode(op.get(), pop(1), pop()))), 
+        return FirstOf(Sequence(FirstOf(NEG, NOT), op.set(matchOrDefault(null)), 
+                                UnaryExpression(), 
+                                push(new AstNode(op.get(), pop(), null))), 
                        Primary());
     }  
     
@@ -92,7 +99,7 @@ public class ExprParser extends BaseParser<BinaryNode> {
     }     
 
     Rule InputVar() {
-        return Sequence(Literal(), push(new BinaryNode(matchOrDefault("0"))));
+        return Sequence(Literal(), push(new AstNode(matchOrDefault(null))));
     }
     
     Rule Literal() {
@@ -105,7 +112,7 @@ public class ExprParser extends BaseParser<BinaryNode> {
 
     Rule WhiteSpace() {
         return ZeroOrMore(AnyOf(" \t\f"));
-    }         
+    }        
 
     @SuppressNode
     @DontLabel
@@ -118,25 +125,24 @@ public class ExprParser extends BaseParser<BinaryNode> {
         return string.endsWith(" ") ?
                 Sequence(String(string.substring(0, string.length() - 1)), WhiteSpace()) :
                 String(string);
-    }    
-
-    public static class BinaryNode extends ImmutableBinaryTreeNode<BinaryNode> {
+    }
+    
+    public static class AstNode extends ImmutableBinaryTreeNode<AstNode> {
         public String value;
         public String operator;
 
-        public BinaryNode(String value) {
+        public AstNode(String value) {
             super(null, null);
             this.value = value;
         }
 
-        public BinaryNode(String operator, BinaryNode left, BinaryNode right) {
+        public AstNode(String operator, AstNode left, AstNode right) {
             super(left, right);
             this.operator = operator;
         }
 
         public String getValue() {
             if (operator == null) return value;
-            System.out.println("Getvalue operator: " + operator);
             switch (operator.trim()) {
                 case "<":
                     return left().getValue() + " < " + right().getValue();
@@ -151,11 +157,13 @@ public class ExprParser extends BaseParser<BinaryNode> {
                 case "~=":
                     return left().getValue() + " ~= " + right().getValue();
                 case "&":
-                    return left().getValue() + " and " + right().getValue();                    
+                    return left().getValue() + " & " + right().getValue();                    
                 case "|":
-                    return left().getValue() + " or " + right().getValue();   
+                    return left().getValue() + " | " + right().getValue();   
                 case "~":
-                    return " not(" + left().getValue() + ")";                       
+                    return " ~ (" + left().getValue() + ")"; 
+                case "-":
+                    return " (-" + left().getValue() + ")";                     
                 default:
                     throw new IllegalStateException();
             }

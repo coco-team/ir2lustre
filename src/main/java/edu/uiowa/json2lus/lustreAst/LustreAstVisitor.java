@@ -24,4 +24,6 @@ public interface LustreAstVisitor {
     public void visit(LustreEq equation);
     public void visit(LustreVar var);
     public void visit(VarIdExpr varId);
+
+    public void visit(MergeExpr aThis);
 }

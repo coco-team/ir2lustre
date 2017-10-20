@@ -196,5 +196,18 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
     public void visit(VarIdExpr varId) {
         sb.append(varId.id);
     }
+
+    @Override
+    public void visit(MergeExpr mergeExpr) {
+        sb.append("merge ");
+        mergeExpr.clock.accept(this);
+        sb.append(NL);
+        for(int i = 0; i < mergeExpr.exprs.size(); i++) {
+            sb.append("          (");
+            mergeExpr.exprs.get(i).accept(this);
+            sb.append(")");
+            sb.append(NL);            
+        }
+    }
     
 }

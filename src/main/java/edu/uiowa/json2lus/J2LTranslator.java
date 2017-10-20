@@ -7,16 +7,19 @@ package edu.uiowa.json2lus;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import edu.uiowa.json2lus.ExprParser.AstNode;
 import edu.uiowa.json2lus.lustreAst.BinaryExpr;
 import edu.uiowa.json2lus.lustreAst.BooleanExpr;
 import edu.uiowa.json2lus.lustreAst.IntExpr;
 import edu.uiowa.json2lus.lustreAst.IteExpr;
+import edu.uiowa.json2lus.lustreAst.LustreEnumType;
 import edu.uiowa.json2lus.lustreAst.LustreEq;
 import edu.uiowa.json2lus.lustreAst.LustreExpr;
 import edu.uiowa.json2lus.lustreAst.LustreNode;
 import edu.uiowa.json2lus.lustreAst.LustreProgram;
 import edu.uiowa.json2lus.lustreAst.LustreType;
 import edu.uiowa.json2lus.lustreAst.LustreVar;
+import edu.uiowa.json2lus.lustreAst.MergeExpr;
 import edu.uiowa.json2lus.lustreAst.NodeCallExpr;
 import edu.uiowa.json2lus.lustreAst.PrimitiveType;
 import edu.uiowa.json2lus.lustreAst.RealExpr;
@@ -40,6 +43,10 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.parboiled.Parboiled;
+import static org.parboiled.errors.ErrorUtils.printParseErrors;
+import org.parboiled.parserunners.RecoveringParseRunner;
+import org.parboiled.support.ParsingResult;
 
 /**
  *
@@ -54,6 +61,15 @@ public class J2LTranslator {
     
     /** Logger */
     private static final Logger LOGGER = Logger.getLogger(J2LTranslator.class.getName());
+    
+    /** Counter for naming */
+    private static int COUNT = 0;
+    
+    /** Naming for conditional expressions */
+    private final String CONDENUM           = "Cond_Enum_";
+    private final String CONDEXPR           = "Cond_Expr_";
+    private final String CONDEXPRVAR        = "Cond_Expr_Var_";
+    private final String CONDEXPRENUMTYPE   = "Cond_Expr_Enum_Type_";
     
     /** JSON fields */
     
@@ -135,7 +151,9 @@ public class J2LTranslator {
     private final String BOOLTOREAL     = "bool_to_real";
     private final String REALTOBOOL     = "real_to_bool";    
                       
-    private JsonNode                                topLevelNode;    
+    private JsonNode                                topLevelNode;  
+    private List<LustreEq>                          auxNodeEqs;
+    private List<LustreVar>                         auxNodeLocalVars;    
     private final LustreProgram                     lustreProgram;
     private final Set<JsonNode>                     subsystemNodes;    
     private final Map<String, String>               libNodeNameMap;    
@@ -152,6 +170,8 @@ public class J2LTranslator {
         this.libNodeNameMap     = new HashMap<>();
         this.subsystemNodes     = new HashSet<>();
         this.subsystemPropsMap  = new HashMap<>();
+        this.auxNodeEqs         = new ArrayList<>();
+        this.auxNodeLocalVars   = new ArrayList<>();        
         this.lustreProgram      = new LustreProgram();
         this.modelName          = inputPath.toLowerCase().endsWith(".json") ? 
                                     inputPath.substring(inputPath.lastIndexOf(File.separator)+1, inputPath.lastIndexOf("."))
@@ -330,6 +350,10 @@ public class J2LTranslator {
             }
             props.addAll(propEqs);            
         }
+        equations.addAll(this.auxNodeEqs);
+        locals.addAll(this.auxNodeLocalVars);
+        this.auxNodeEqs.clear();
+        this.auxNodeLocalVars.clear();
         return new LustreNode(lusNodeName, inputs, outputs, locals, equations, props);
     }
     
@@ -774,16 +798,16 @@ public class J2LTranslator {
     }
     
     protected LustreExpr translateIfBlock(JsonNode ifBlkNode, Map<String, LustreExpr> hdlActSysExprMap, JsonNode parentSubsystemNode, Map<JsonNode, List<String>> blkNodeToSrcBlkHandlesMap,  Map<JsonNode, List<String>> blkNodeToDstBlkHandlesMap, Map<String, JsonNode> handleToBlkNodeMap) {
-        LustreExpr blkExpr = null;
+        LustreExpr ifBlkExpr = null;
         
         if(ifBlkNode != null) {            
-            //Since Simulink checks the validity of ifCondExpr and elseIfCondExpr, we assume they are valid in the input.
+            //Since Simulink checks the validity of ifCondExpr and elseIfCondExpr, we assume the input are valid.
+            List<LustreExpr>    inExprs         = new ArrayList<>();
+            List<LustreExpr>    condExprs       = new ArrayList<>();
+            List<String>        condStrExprs    = new ArrayList<>();            
             String              ifCondExpr      = ifBlkNode.get(IFEXPRESSION).asText().trim();
             String              elseIfCondExpr  = ifBlkNode.get(ELSEIFEXPRS).asText().trim();
             List<String>        dstBlockHandles = blkNodeToDstBlkHandlesMap.get(ifBlkNode);
-            List<LustreExpr>    inExprs         = new ArrayList<>();
-            List<LustreExpr>    condExprs       = new ArrayList<>();
-            List<String>        condStrExprs    = new ArrayList<>();
                        
             if(ifCondExpr != null && !ifCondExpr.equals("")) {
                 condStrExprs.add(ifCondExpr);
@@ -799,15 +823,51 @@ public class J2LTranslator {
             }
             // The number of condition expressions is one less than the number of branches
             if(condStrExprs.size() == hdlActSysExprMap.size()-1) {
-                condExprs = buildIteConExprs(condStrExprs, inExprs);
+                LustreExpr condEnumExpr = null;                
+                condExprs = convertIteCondExprs(condStrExprs, inExprs);
+                List<String>    enumValues     = new ArrayList<>();
+                List<VarIdExpr> enumValueExprs = new ArrayList<>();                
+                
+                for(int i = 0; i <= condExprs.size(); i++){
+                    String val = CONDENUM+(COUNT++);
+                    enumValues.add(val);
+                    enumValueExprs.add(new VarIdExpr(val));
+                }
+                
+                int condExprsSize       = condExprs.size();
+                int enumValueExprsSize  = enumValueExprs.size();
+                
+                String          condVarName = CONDEXPRVAR+(COUNT++);
+                LustreEnumType  enumType    = new LustreEnumType(CONDEXPRENUMTYPE+(COUNT++), enumValues);                
+                LustreVar       condVar     = new LustreVar(condVarName, enumType);
+                VarIdExpr       condVarExpr = new VarIdExpr(condVarName);                
+                IteExpr         clockExpr = new IteExpr(condExprs.get(condExprsSize-1), enumValueExprs.get(enumValueExprsSize-2), enumValueExprs.get(enumValueExprsSize-1));
+                
+                for(int j = condExprsSize-2; j >= 0; j--) {
+                    clockExpr = new IteExpr(condExprs.get(j), enumValueExprs.get(j-1), clockExpr);
+                }
+                
+                List<LustreExpr> mergeExprs = new ArrayList<>();
+                                
+                for(int k = 0; k < dstBlockHandles.size(); k++) {
+                    // o = when enum(c)    
+                    BinaryExpr outExpr = new BinaryExpr(hdlActSysExprMap.get(dstBlockHandles.get(k)), BinaryExpr.Op.WHEN, new NodeCallExpr(enumValues.get(k), condVarExpr));
+                    // enum -> o = when enum(c)
+                    outExpr = new BinaryExpr(enumValueExprs.get(k), BinaryExpr.Op.ARROW, outExpr);
+                    mergeExprs.add(outExpr);                    
+                }
+                this.auxNodeLocalVars.add(condVar);
+                this.lustreProgram.addEnumDef(enumType);
+                this.auxNodeEqs.add(new LustreEq(condVarExpr, clockExpr));                
+                ifBlkExpr = new MergeExpr(clockExpr, mergeExprs);
             } else {
                 LOGGER.log(Level.SEVERE, "UNEXPECTED: there is a mismatch in IF block between Ite conditions with its outputs!");
             }
         }
-        return blkExpr;
+        return ifBlkExpr;
     }
     
-    protected List<LustreExpr> buildIteConExprs(List<String> condStrExprs, List<LustreExpr> inExprs) {
+    protected List<LustreExpr> convertIteCondExprs(List<String> condStrExprs, List<LustreExpr> inExprs) {
         List<LustreExpr> condExprs = new ArrayList<>();
         
         for(String condStrExpr : condStrExprs) {
@@ -818,49 +878,85 @@ public class J2LTranslator {
     
     // Assumption: condStrExpr is a valid string representaiton of a condition expression.
     protected LustreExpr buildIteCondExpr(String strExpr, List<LustreExpr> inExprs) {        
-        LustreExpr  lusExpr = null;
-        String      condStrExpr         = strExpr.trim();
-        Matcher     ltMatcher           = Pattern.compile("^[\\(]?[-]?\\s*[\\(]?\\s*u\\d+\\s*[\\)]?\\s*<\\s*[\\(]?\\s*[-]?\\s*[\\(]?\\s*u\\d+[\\)]?$").matcher(condStrExpr);
-        Matcher     gtMatcher           = Pattern.compile("^u\\d+\\s*>\\s*u\\d+$").matcher(condStrExpr);
-        Matcher     lteMatcher          = Pattern.compile("^u\\d+\\s*<=\\s*u\\d+$").matcher(condStrExpr);
-        Matcher     gteMatcher          = Pattern.compile("^u\\d+\\s*>=\\s*u\\d+$").matcher(condStrExpr);
-        Matcher     eqMatcher           = Pattern.compile("^u\\d+\\s*==\\s*u\\d+$").matcher(condStrExpr);
-        Matcher     neqMatcher          = Pattern.compile("^u\\d+\\s*~=\\s*u\\d+$").matcher(condStrExpr);
-        Matcher     andMatcher          = Pattern.compile("^u\\d+\\s*~=\\s*u\\d+$").matcher(condStrExpr);
-        Matcher     orMatcher           = Pattern.compile("^u\\d+\\s*~=\\s*u\\d+$").matcher(condStrExpr);
-        Matcher     varMatcher          = Pattern.compile("^u\\d+$").matcher(condStrExpr);
-        Matcher     minusMatcher        = Pattern.compile("^[-][\\(]\\s*[\\(]*\\s*u\\d+\\s*[\\)]*\\s*[\\)]*$").matcher(condStrExpr);
-              
-        // conStrExpr is an input var like "u1, u2, ..."
-        if(isParathesized(condStrExpr)) {
-            lusExpr = buildIteCondExpr(condStrExpr.substring(1, condStrExpr.length()-1), inExprs);
-        } else if(minusMatcher.find()) {
-            lusExpr = new UnaryExpr(UnaryExpr.Op.NEG, buildIteCondExpr(condStrExpr.substring(1), inExprs));
-        } else if(varMatcher.find()) {
-            int index = Integer.parseInt(condStrExpr.substring(1));
-            
-            if(index <= inExprs.size() && index > 0) {
-                lusExpr = inExprs.get(index-1);
+        String      condStrExpr = strExpr.trim();
+        ExprParser  parser      = Parboiled.createParser(ExprParser.class);
+        ParsingResult<?> result = new RecoveringParseRunner(parser.InputLine()).run(condStrExpr);
+        
+        if (result.hasErrors()) {
+            LOGGER.log(Level.SEVERE, "****** Parse ITE condition expression errors: {0}", printParseErrors(result));
+        }    
+        return convertStrSimExprToLusExpr(result.parseTreeRoot.getValue(), inExprs);
+    }
+    
+    protected LustreExpr convertStrSimExprToLusExpr(Object astNode, List<LustreExpr> inExprs) {
+        LustreExpr lusExpr = null;
+        
+        if(astNode instanceof AstNode) {
+            // astNode is a leaf node
+            if(((AstNode)astNode).operator == null) {
+                String  leafNode    = ((AstNode)astNode).value.trim();
+                int     index       = Integer.parseInt(leafNode.substring(1).trim());
+                
+                if(index >= 1 && index <= inExprs.size()) {
+                    lusExpr = inExprs.get(index-1);
+                } else {
+                    LOGGER.log(Level.SEVERE, "UNEXPECTED: the input variable index for ITE epxression is not within the expected range!");
+                }                
             } else {
-                 LOGGER.log(Level.SEVERE, "UNEXPECTED index in buildIteCondExpr: {0}", index);
+                String              op              = ((AstNode)astNode).operator.trim();
+                List<LustreExpr>    childrenExpr    = new ArrayList<>();
+                               
+                for(AstNode child : ((AstNode)astNode).getChildren()) {
+                    childrenExpr.add(convertStrSimExprToLusExpr(child, inExprs));
+                }                                
+                switch(op) {
+                    case "<": {
+                        lusExpr = new BinaryExpr(childrenExpr.get(0), BinaryExpr.Op.LT, childrenExpr.get(1));
+                        break;
+                    }
+                    case ">": {
+                        lusExpr = new BinaryExpr(childrenExpr.get(0), BinaryExpr.Op.GT, childrenExpr.get(1));
+                        break;
+                    }
+                    case "<=": {
+                        lusExpr = new BinaryExpr(childrenExpr.get(0), BinaryExpr.Op.LTE, childrenExpr.get(1));
+                        break;
+                    }
+                    case ">=": {
+                        lusExpr = new BinaryExpr(childrenExpr.get(0), BinaryExpr.Op.GTE, childrenExpr.get(1));
+                        break;
+                    }
+                    case "==": {
+                        lusExpr = new BinaryExpr(childrenExpr.get(0), BinaryExpr.Op.EQ, childrenExpr.get(1));
+                        break;
+                    }
+                    case "~=": {
+                        lusExpr = new BinaryExpr(childrenExpr.get(0), BinaryExpr.Op.NEQ, childrenExpr.get(1));
+                        break;
+                    }
+                    case "&": {
+                        lusExpr = new BinaryExpr(childrenExpr.get(0), BinaryExpr.Op.AND, childrenExpr.get(1));
+                        break;
+                    }
+                    case "|": {
+                        lusExpr = new BinaryExpr(childrenExpr.get(0), BinaryExpr.Op.OR, childrenExpr.get(1));
+                        break;
+                    }
+                    case "~": {
+                        lusExpr = new UnaryExpr(UnaryExpr.Op.NOT, childrenExpr.get(0));
+                        break;
+                    }
+                    case "-": {
+                        lusExpr = new UnaryExpr(UnaryExpr.Op.NEG, childrenExpr.get(0));
+                        break;
+                    }
+                    default:
+                        LOGGER.log(Level.SEVERE, "UNEXPECTED operator in ITE condition expression: {0}", op);
+                        break;
+                }
             }
-        } else if(ltMatcher.find()) {
-            
-        } else if(gtMatcher.find()) {
-            
-        } else if(lteMatcher.find()) {
-            
-        } else if(gteMatcher.find()) {
-            
-        } else if(eqMatcher.find()) {
-            
-        } else if(neqMatcher.find()) {
-            
-        } else if(andMatcher.find()) {
-
-        } else if(orMatcher.find()) {
-            
-        }         
+        }
+        
         return lusExpr;
     }
     
@@ -882,7 +978,7 @@ public class J2LTranslator {
                     while(contentFields.hasNext()) {
                         JsonNode fieldNode = contentFields.next().getValue();
 
-                        if(fieldNode.has(BLOCKTYPE) && fieldNode.get(BLOCKTYPE).equals(ACTIONPORT)) {
+                        if(fieldNode.has(BLOCKTYPE) && fieldNode.get(BLOCKTYPE).asText().equals(ACTIONPORT)) {
                             return true;
                         }
                     }
@@ -1131,8 +1227,7 @@ public class J2LTranslator {
              }
         }
         return highestType;
-    }    
-        
+    }   
     
     /**
      * 
@@ -1236,34 +1331,6 @@ public class J2LTranslator {
             }           
         }
         return blkNodes;
-    }  
-    
-    protected boolean isParathesized(String s) {
-        if(s == null) {
-            return false;
-        }
-        
-        String candStr = s.trim();
-        
-        if(!candStr.startsWith("(") || !candStr.endsWith(")")) {
-            return false;
-        }
-        
-        Stack<Character> stack  = new Stack<>();
-        
-        stack.push('(');
-        for(int i = 1; i < candStr.length()-1; i++) {
-            char c = candStr.charAt(i);
-            if(c == '(') {     
-                stack.push(c);
-            } else if(c == ')') {
-                stack.pop();
-                if(stack.isEmpty()) {
-                    return false;
-                }
-            }
-        }
-        return !stack.isEmpty();
     }      
     
 }

@@ -13,18 +13,29 @@ import java.util.List;
  * @author Paul Meng
  */
 public class LustreProgram extends LustreAst {
-    List<LustreNode> nodes;
+    public List<LustreNode> nodes;
+    public List<LustreEnumType> typesDef;
     
     public LustreProgram() {
-        this.nodes = new ArrayList<>();
+        this.nodes      = new ArrayList<>();
+        this.typesDef   = new ArrayList<>();
     }
     
     public LustreProgram(List<LustreNode> nodes) {
         this.nodes = nodes;
-    }    
+    } 
+
+    public LustreProgram(List<LustreNode> nodes, List<LustreEnumType> enums) {
+        this.nodes      = nodes;
+        this.typesDef   = enums;
+    }     
     
     public void addNode(LustreNode node) {
         this.nodes.add(node);
+    }
+    
+    public void addEnumDef(LustreEnumType enumDef) {
+        this.typesDef.add(enumDef);
     }
     
     @Override

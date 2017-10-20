@@ -42,7 +42,8 @@ public class BinaryExpr extends LustreExpr {
         LTE ("<="),
         GT (">"),
         LT ("<"),        
-        ARROW ("->");    
+        ARROW ("->"),
+        WHEN ("when");    
 
         private final String opStr;
 
