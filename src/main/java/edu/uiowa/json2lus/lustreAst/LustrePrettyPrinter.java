@@ -224,7 +224,7 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
 
     @Override
     public void visit(LustreEnumType enumType) {
-        sb.append("type ").append(enumType.name).append(" = {");
+        sb.append("type ").append(enumType.name).append(" = enum {");
         for(int i = 0; i < enumType.values.size(); i++) {
             sb.append(enumType.values.get(i));
             if(i != enumType.values.size()-1) {
