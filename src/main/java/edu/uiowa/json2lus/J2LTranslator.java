@@ -859,7 +859,7 @@ public class J2LTranslator {
                 this.auxNodeLocalVars.add(condVar);
                 this.lustreProgram.addEnumDef(enumType);
                 this.auxNodeEqs.add(new LustreEq(condVarExpr, clockExpr));                
-                ifBlkExpr = new MergeExpr(clockExpr, mergeExprs);
+                ifBlkExpr = new MergeExpr(condVarExpr, mergeExprs);
             } else {
                 LOGGER.log(Level.SEVERE, "UNEXPECTED: there is a mismatch in IF block between Ite conditions with its outputs!");
             }

@@ -63,15 +63,15 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
     @Override
     public void visit(LustreNode node) {
         sb.append("node ").append(node.name);
-        sb.append("(");
+        sb.append("(").append(NL);
         declVariables(node.inputVars);
         sb.append(")").append(NL);
-        sb.append("returns (");
+        sb.append("returns (").append(NL);
         declVariables(node.outputVars);
         sb.append(");").append(NL);
         
         if(!node.localVars.isEmpty()) {
-            sb.append("var ");
+            sb.append("var ").append(NL);
             declVariables(node.localVars);
             sb.append(";").append(NL);
         }
@@ -159,7 +159,8 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
             vars.get(i).accept(this);
             if(i < vars.size()-1) {
                 sb.append("; ");
-            }
+                sb.append(NL);
+            }            
         }
     }
 
@@ -194,7 +195,12 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
 
     @Override
     public void visit(LustreVar var) {
-        sb.append(var.name).append(" : ").append(var.type);
+        sb.append("  ").append(var.name).append(" : ");
+        if(var.type instanceof PrimitiveType) {
+            sb.append(var.type);
+        } else if(var.type instanceof LustreEnumType) {
+            sb.append(((LustreEnumType)var.type).name);
+        }
     }
 
     @Override
@@ -204,7 +210,7 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
 
     @Override
     public void visit(MergeExpr mergeExpr) {
-        sb.append("merge ");
+        sb.append("(merge ");
         mergeExpr.clock.accept(this);
         sb.append(NL);
         for(int i = 0; i < mergeExpr.exprs.size(); i++) {
@@ -213,6 +219,7 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
             sb.append(")");
             sb.append(NL);            
         }
+        sb.append(")");
     }
 
     @Override
