@@ -429,8 +429,7 @@ public class J2LTranslator {
         }
         
         return eq;
-    }
-    
+    }   
 
     /**
      * 
@@ -465,33 +464,34 @@ public class J2LTranslator {
             }
             // Since the MERGE block always bundles with other blocks (IF, IfActionSubsystem and etc.),
             // the inputs to the MERGE block need to be handled differently.
-            if(!blkType.equals(MERGE)) {
-                LustreType highestType = getTheHighestType(inHandles, handleToBlkNodeMap);
-                
-                for(String inHandle : inHandles) {
-                    LustreExpr inExpr = translateBlock(inHandle, parentSubsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap);
-                                        
-                    inExprs.add(inExpr);
+            if(!blkType.equals(MERGE)) {              
+                for(String inHandle : inHandles) {                                        
+                    inExprs.add(translateBlock(inHandle, parentSubsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap));
                 }                
             }                         
             switch(blkType) {
-                case EQ: {                                                            
+                case EQ: {
+                    tryLiftingExprTypes(inExprs, inHandles, handleToBlkNodeMap);
                     blkExpr = new BinaryExpr(inExprs.get(0), BinaryExpr.Op.EQ, inExprs.get(1));                                       
                     break;
                 }  
-                case NEQ: {                                                            
+                case NEQ: {
+                    tryLiftingExprTypes(inExprs, inHandles, handleToBlkNodeMap);
                     blkExpr = new BinaryExpr(inExprs.get(0), BinaryExpr.Op.NEQ, inExprs.get(1));                                       
                     break;
                 } 
-                case GTE: {                                                            
+                case GTE: {
+                    tryLiftingExprTypes(inExprs, inHandles, handleToBlkNodeMap);
                     blkExpr = new BinaryExpr(inExprs.get(0), BinaryExpr.Op.GTE, inExprs.get(1));                                       
                     break;
                 } 
-                case LTE: {                                                            
+                case LTE: {  
+                    tryLiftingExprTypes(inExprs, inHandles, handleToBlkNodeMap);
                     blkExpr = new BinaryExpr(inExprs.get(0), BinaryExpr.Op.LTE, inExprs.get(1));                                       
                     break;
                 }  
-                case GT: {                                                            
+                case GT: { 
+                    tryLiftingExprTypes(inExprs, inHandles, handleToBlkNodeMap);
                     blkExpr = new BinaryExpr(inExprs.get(0), BinaryExpr.Op.GT, inExprs.get(1));                                       
                     break;
                 }  
@@ -499,46 +499,53 @@ public class J2LTranslator {
                     blkExpr = new BinaryExpr(inExprs.get(0), BinaryExpr.Op.LT, inExprs.get(1));                                       
                     break;
                 }                  
-                case NOT: {                                                                             
+                case NOT: { 
+                    tryLoweringExprTypes(inExprs, inHandles, handleToBlkNodeMap);
                     blkExpr = new UnaryExpr(UnaryExpr.Op.NOT, inExprs.get(0));                                      
                     break;
                 }                   
-                case OR: {                                                                               
+                case OR: {
+                    tryLoweringExprTypes(inExprs, inHandles, handleToBlkNodeMap);
                     blkExpr = inExprs.get(0);
                     for(int i = 1; i < inExprs.size(); i++) {
                         blkExpr = new BinaryExpr(blkExpr, BinaryExpr.Op.OR, inExprs.get(i));   
                     }                                        
                     break;
                 }
-                case NOR: {                                                                               
+                case NOR: { 
+                    tryLoweringExprTypes(inExprs, inHandles, handleToBlkNodeMap);
                     blkExpr = inExprs.get(0);
                     for(int i = 1; i < inExprs.size(); i++) {
                         blkExpr = new UnaryExpr(UnaryExpr.Op.NOT, new BinaryExpr(blkExpr, BinaryExpr.Op.OR, inExprs.get(i)));   
                     }                                        
                     break;
                 }                
-                case XOR: {                                                                               
+                case XOR: { 
+                    tryLoweringExprTypes(inExprs, inHandles, handleToBlkNodeMap);
                     blkExpr = inExprs.get(0);
                     for(int i = 1; i < inExprs.size(); i++) {
                         blkExpr = new BinaryExpr(blkExpr, BinaryExpr.Op.XOR, inExprs.get(i));   
                     }                                        
                     break;
                 }                
-                case NXOR: {                                                                               
+                case NXOR: { 
+                    tryLoweringExprTypes(inExprs, inHandles, handleToBlkNodeMap);
                     blkExpr = inExprs.get(0);
                     for(int i = 1; i < inExprs.size(); i++) {
                         blkExpr = new UnaryExpr(UnaryExpr.Op.NOT, new BinaryExpr(blkExpr, BinaryExpr.Op.XOR, inExprs.get(i)));   
                     }                                        
                     break;
                 }                  
-                case AND: {                                                                             
+                case AND: { 
+                    tryLoweringExprTypes(inExprs, inHandles, handleToBlkNodeMap);
                     blkExpr = inExprs.get(0);
                     for(int i = 1; i < inExprs.size(); i++) {
                         blkExpr = new BinaryExpr(blkExpr, BinaryExpr.Op.AND, inExprs.get(i));   
                     }                                        
                     break;
                 } 
-                case NAND: {                                                                             
+                case NAND: { 
+                    tryLoweringExprTypes(inExprs, inHandles, handleToBlkNodeMap);
                     blkExpr = inExprs.get(0);
                     for(int i = 1; i < inExprs.size(); i++) {
                         blkExpr = new UnaryExpr(UnaryExpr.Op.NOT, new BinaryExpr(blkExpr, BinaryExpr.Op.AND, inExprs.get(i)));   
@@ -546,11 +553,11 @@ public class J2LTranslator {
                     break;
                 }                 
                 case ABS: {
-                    blkExpr = new NodeCallExpr(createLustreLibNode(blkNode), inExprs.get(0));                   
+                    blkExpr = new NodeCallExpr(getOrCreateLustreLibNode(blkNode), inExprs.get(0));                   
                     break;                    
                 }
                 case SQRT: {
-                    blkExpr = new NodeCallExpr(createLustreLibNode(blkNode), inExprs.get(0));                   
+                    blkExpr = new NodeCallExpr(getOrCreateLustreLibNode(blkNode), inExprs.get(0));                   
                     break;                    
                 }
                 case MOD: {
@@ -568,7 +575,7 @@ public class J2LTranslator {
                     int     numOfInputs = -1;
                     String  ops         = blkNode.get(INPUTS).asText();
                     
-                    
+                    tryLiftingExprTypes(inExprs, inHandles, handleToBlkNodeMap);
                     if(ops.matches("\\d+")) {
                         numOfInputs = Integer.parseInt(ops);
                     } else {
@@ -631,7 +638,8 @@ public class J2LTranslator {
                 case PRODUCT: {
                     int     numOfInputs = -1;
                     String  ops         = blkNode.get(INPUTS).asText();
-                                        
+                    
+                    tryLiftingExprTypes(inExprs, inHandles, handleToBlkNodeMap);
                     if(ops.matches("\\d+")) {
                         numOfInputs = Integer.parseInt(ops);
                     } else {
@@ -671,7 +679,8 @@ public class J2LTranslator {
                 }
                 case GAIN: {
                     String gain = blkNode.get(GAIN).asText();
-
+                    
+                    tryLiftingExprTypes(inExprs, inHandles, handleToBlkNodeMap);
                     if(gain.contains(".")) {
                         blkExpr = new BinaryExpr(inExprs.get(0), BinaryExpr.Op.MULTIPLY, new RealExpr(new BigDecimal(gain)));
                     } else {
@@ -680,7 +689,8 @@ public class J2LTranslator {
                     break;
                 }                
                 case MINMAX: {
-                    blkExpr = new NodeCallExpr(createLustreLibNode(blkNode), inExprs);
+                    tryLiftingExprTypes(inExprs, inHandles, handleToBlkNodeMap);
+                    blkExpr = new NodeCallExpr(getOrCreateLustreLibNode(blkNode), inExprs);
                     break;
                 }
                 case SWITCH: {
@@ -960,77 +970,62 @@ public class J2LTranslator {
         return lusExpr;
     }
 
-    
     /**
-     * @param blkNode
+     * @param nodeName
      * @return The name of library Lustre node corresponding to the input JsonNode
      */
-    protected String createLustreLibNode(JsonNode blkNode) {
-        String path     = blkNode.get(PATH).asText();
-        String nodeName = path.replace(File.separator,"_");
-        String blkType  = blkNode.get(BLOCKTYPE).asText();
+    protected String getOrCreateLustreLibNode(String nodeName) {        
+        if(this.libNodeNameMap.containsKey(nodeName)) {                    
+            return this.libNodeNameMap.get(nodeName);
+        }        
         
-        switch(blkType) {
-            case BOOLTOINT: {
-                nodeName = BOOLTOINT;
-                if(this.libNodeNameMap.containsKey(BOOLTOINT)) {                    
-                    break;
-                }
-                
-                VarIdExpr           inVarExpr   = new VarIdExpr("in");
-                VarIdExpr           outVarExpr  = new VarIdExpr("out");   
-                List<LustreEq>      bodyExprs   = new ArrayList<>();    
-
+        VarIdExpr           inVarExpr   = new VarIdExpr("in");
+        VarIdExpr           outVarExpr  = new VarIdExpr("out");   
+        List<LustreEq>      bodyExprs   = new ArrayList<>();            
+        
+        switch(nodeName) {
+            case BOOLTOINT: {                 
                 bodyExprs.add(new LustreEq(outVarExpr, new IteExpr(inVarExpr, new IntExpr(BigInteger.ONE), new IntExpr(BigInteger.ZERO))));
                 this.libNodeNameMap.put(BOOLTOINT, BOOLTOINT);
                 this.lustreProgram.addNode(new LustreNode(nodeName, new LustreVar("in", PrimitiveType.BOOL), new LustreVar("out", PrimitiveType.INT), bodyExprs));                                
                 break;
             }
             case BOOLTOREAL: {
-                nodeName = BOOLTOREAL;
-                if(this.libNodeNameMap.containsKey(BOOLTOREAL)) {                    
-                    break;
-                }
-                
-                VarIdExpr           inVarExpr   = new VarIdExpr("in");
-                VarIdExpr           outVarExpr  = new VarIdExpr("out");   
-                List<LustreEq>      bodyExprs   = new ArrayList<>();    
-
                 bodyExprs.add(new LustreEq(outVarExpr, new IteExpr(inVarExpr, new RealExpr(BigDecimal.ONE), new RealExpr(BigDecimal.ZERO))));
                 this.libNodeNameMap.put(BOOLTOREAL, BOOLTOREAL);
                 this.lustreProgram.addNode(new LustreNode(nodeName, new LustreVar("in", PrimitiveType.BOOL), new LustreVar("out", PrimitiveType.REAL), bodyExprs));                                
                 break;
             }  
             case INTTOBOOL: {
-                nodeName = INTTOBOOL;
-                if(this.libNodeNameMap.containsKey(INTTOBOOL)) {                    
-                    break;
-                }
-                
-                VarIdExpr           inVarExpr   = new VarIdExpr("in");
-                VarIdExpr           outVarExpr  = new VarIdExpr("out");   
-                List<LustreEq>      bodyExprs   = new ArrayList<>();    
-
                 bodyExprs.add(new LustreEq(outVarExpr, new IteExpr(new BinaryExpr(inVarExpr, BinaryExpr.Op.NEQ, new IntExpr(new BigInteger("0"))), new BooleanExpr(true), new BooleanExpr(false))));
                 this.libNodeNameMap.put(INTTOBOOL, INTTOBOOL);
                 this.lustreProgram.addNode(new LustreNode(nodeName, new LustreVar("in", PrimitiveType.INT), new LustreVar("out", PrimitiveType.BOOL), bodyExprs));                                
                 break;
             } 
             case REALTOBOOL: {
-                nodeName = REALTOBOOL;
-                if(this.libNodeNameMap.containsKey(REALTOBOOL)) {                    
-                    break;
-                }
-                
-                VarIdExpr           inVarExpr   = new VarIdExpr("in");
-                VarIdExpr           outVarExpr  = new VarIdExpr("out");   
-                List<LustreEq>      bodyExprs   = new ArrayList<>();    
-
                 bodyExprs.add(new LustreEq(outVarExpr, new IteExpr(new BinaryExpr(inVarExpr, BinaryExpr.Op.NEQ, new RealExpr(BigDecimal.ZERO)), new BooleanExpr(true), new BooleanExpr(false))));
                 this.libNodeNameMap.put(REALTOBOOL, REALTOBOOL);
                 this.lustreProgram.addNode(new LustreNode(nodeName, new LustreVar("in", PrimitiveType.REAL), new LustreVar("out", PrimitiveType.BOOL), bodyExprs));                                
                 break;
             }             
+            default:
+                LOGGER.log(Level.SEVERE, "Unsupported library node type: {0}", nodeName);
+                break;
+        }                
+        return nodeName;
+    }
+
+    
+    /**
+     * @param blkNode
+     * @return The name of library Lustre node corresponding to the input JsonNode
+     */
+    protected String getOrCreateLustreLibNode(JsonNode blkNode) {
+        String path     = blkNode.get(PATH).asText();
+        String nodeName = path.replace(File.separator,"_");
+        String blkType  = blkNode.get(BLOCKTYPE).asText();
+        
+        switch(blkType) {         
             case ABS: {
                 LustreType  outType = getBlockOutportType(blkNode);
                 
@@ -1173,6 +1168,48 @@ public class J2LTranslator {
         return false;        
     }
     
+    
+    
+    protected void tryLiftingExprTypes(List<LustreExpr> inExprs, List<String> inHandles, Map<String, JsonNode> handleToBlkNodeMap) {
+        Object[] results = getTheHighestType(inHandles, handleToBlkNodeMap);
+        
+        if(((Boolean)results[0])) {
+            LustreType highestType = (LustreType)results[1];
+            
+            for(int i = 0; i < inHandles.size(); i++) {
+                LustreType nodeType = getBlockOutportType(handleToBlkNodeMap.get(inHandles.get(i)));
+
+                if((nodeType == PrimitiveType.BOOL) && (highestType == PrimitiveType.INT)) {
+                    inExprs.set(i, new NodeCallExpr(getOrCreateLustreLibNode(BOOLTOINT), inExprs.get(i)));
+                } else if((nodeType == PrimitiveType.BOOL) && (highestType == PrimitiveType.REAL)) {
+                    inExprs.set(i, new NodeCallExpr(getOrCreateLustreLibNode(BOOLTOREAL), inExprs.get(i)));
+                } else if((nodeType == PrimitiveType.INT) && (highestType == PrimitiveType.REAL)) {
+                    LOGGER.log(Level.WARNING, "UNSUPPORTED: lifting int type to real type!");
+                }
+            }            
+        }
+    }
+    
+    protected void tryLoweringExprTypes(List<LustreExpr> inExprs, List<String> inHandles, Map<String, JsonNode> handleToBlkNodeMap) {
+        Object[] results = getTheLowestType(inHandles, handleToBlkNodeMap);        
+        if(((Boolean)results[0])) {
+            LustreType lowestType = (LustreType)results[1];
+            
+            for(int i = 0; i < inHandles.size(); i++) {
+                LustreType nodeType = getBlockOutportType(handleToBlkNodeMap.get(inHandles.get(i)));
+
+                if((nodeType == PrimitiveType.INT) && (lowestType == PrimitiveType.BOOL)) {
+                    inExprs.set(i, new NodeCallExpr(getOrCreateLustreLibNode(INTTOBOOL), inExprs.get(i)));
+                } else if((nodeType == PrimitiveType.REAL) && (nodeType == PrimitiveType.BOOL)) {
+                    inExprs.set(i, new NodeCallExpr(getOrCreateLustreLibNode(REALTOBOOL), inExprs.get(i)));
+                } else if((nodeType == PrimitiveType.REAL) && (nodeType == PrimitiveType.INT)) {
+                    LOGGER.log(Level.WARNING, "UNSUPPORTED: cannot lower real type to int type!");
+                }
+            }            
+        }
+    } 
+        
+    
     protected boolean isIfActionSubsystem(JsonNode node) {
         if(node != null) {
             if(node.has(BLOCKTYPE)) {
@@ -1214,8 +1251,11 @@ public class J2LTranslator {
         return constExpr;
     }    
     
-    protected LustreType getTheHighestType(List<String> handles, Map<String, JsonNode> handleToBlkNodeMap) {        
-        LustreType highestType = null;
+    protected Object[] getTheHighestType(List<String> handles, Map<String, JsonNode> handleToBlkNodeMap) {        
+        LustreType highestType      = null;
+        boolean    hasDiscrepancy   = false;
+        Object[] results = new Object[2];
+        
         
         if(handles != null && handles.size() > 0) {
              highestType = getBlockOutportType(handleToBlkNodeMap.get(handles.get(0)));
@@ -1224,12 +1264,38 @@ public class J2LTranslator {
                  LustreType hType = getBlockOutportType(handleToBlkNodeMap.get(handles.get(i)));
                  
                  if(highestType.compareTo(hType) < 0) {
-                     highestType = hType;
+                     highestType    = hType;
+                     hasDiscrepancy = true;
                  }
              }
         }
-        return highestType;
-    }   
+        results[0] = hasDiscrepancy;
+        results[1] = highestType;
+        return results;
+    }
+    
+    protected Object[] getTheLowestType(List<String> handles, Map<String, JsonNode> handleToBlkNodeMap) {        
+        LustreType lowestType       = null;
+        boolean    hasDiscrepancy   = false;
+        Object[] results = new Object[2];
+        
+        
+        if(handles != null && handles.size() > 0) {
+             lowestType = getBlockOutportType(handleToBlkNodeMap.get(handles.get(0)));
+             
+             for(int i = 1; i < handles.size(); i++) {
+                 LustreType lType = getBlockOutportType(handleToBlkNodeMap.get(handles.get(i)));
+                 
+                 if(lowestType.compareTo(lType) > 0) {
+                     lowestType     = lType;
+                     hasDiscrepancy = true;
+                 }
+             }
+        }
+        results[0] = hasDiscrepancy;
+        results[1] = lowestType;
+        return results;
+    }    
     
     /**
      * 
