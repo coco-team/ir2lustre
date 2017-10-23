@@ -38,11 +38,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.Stack;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.parboiled.Parboiled;
 import static org.parboiled.errors.ErrorUtils.printParseErrors;
 import org.parboiled.parserunners.RecoveringParseRunner;
@@ -466,7 +463,8 @@ public class J2LTranslator {
             if(blkType.toLowerCase().equals(LOGIC) || blkType.toLowerCase().equals(RELATIONALOP) || blkType.equals(MATH)) {
                 blkType = blkNode.get(OPERATOR).asText();
             }
-            // For the merge block, we need to translate it in a special way
+            // Since the MERGE block always bundles with other blocks (IF, IfActionSubsystem and etc.),
+            // the inputs to the MERGE block need to be handled differently.
             if(!blkType.equals(MERGE)) {
                 LustreType highestType = getTheHighestType(inHandles, handleToBlkNodeMap);
                 
@@ -740,6 +738,8 @@ public class J2LTranslator {
                     }
                     break;
                 }
+                // In Simulink, IF block is always used with IfActionSubsystem and MERGE blocks. So the IF block is always
+                // translated together with IfActionSubsystem and MERGE blocks. 
                 case IF: {
                     break;
                 }
@@ -959,63 +959,7 @@ public class J2LTranslator {
         
         return lusExpr;
     }
-    
-    protected boolean isIfBlock(JsonNode node) {
-        if(node != null) {
-            if(node.has(BLOCKTYPE) && node.get(BLOCKTYPE).asText().equals(IF)) {
-                return true;
-            }                        
-        }
-        return false;        
-    }
-    
-    protected boolean isIfActionSubsystem(JsonNode node) {
-        if(node != null) {
-            if(node.has(BLOCKTYPE)) {
-                if(node.get(BLOCKTYPE).asText().equals(SUBSYSTEM)) {
-                    Iterator<Entry<String, JsonNode>> contentFields = node.get(CONTENT).fields();  
 
-                    while(contentFields.hasNext()) {
-                        JsonNode fieldNode = contentFields.next().getValue();
-
-                        if(fieldNode.has(BLOCKTYPE) && fieldNode.get(BLOCKTYPE).asText().equals(ACTIONPORT)) {
-                            return true;
-                        }
-                    }
-                }
-            }            
-        }
-        return false;
-    }
-
-    protected LustreExpr getLustreConst(String value, LustreType type) {
-        LustreExpr constExpr = null;
-        
-        if(isValidConst(value)) {
-            if(type == PrimitiveType.REAL) {
-                if(!value.contains(".")) {
-                    value = value + ".0";
-                }
-                constExpr = new RealExpr(new BigDecimal(value));
-            } else if(type == PrimitiveType.INT) {
-                constExpr = new IntExpr(new BigInteger(value));
-            } else if(type == PrimitiveType.BOOL) {
-                constExpr = new BooleanExpr(value);
-            } else {
-                LOGGER.log(Level.SEVERE, "Unsupported constant datatype: {0}", type);
-            }            
-        } else {
-            LOGGER.log(Level.SEVERE, "Unexpected constant value: {0}", value);
-        } 
-        return constExpr;
-    }
-    
-    protected LustreType getSwitchCondType(JsonNode switchBlk) {        
-        List<String>        types   = convertJsonValuesToList(switchBlk.get(PORTDATATYPE).get(INPORT));
-        Iterator<JsonNode>  connIt  = switchBlk.get(CONNECTIVITY).elements(); 
-        // The switch condition is the second port in the port connectivity
-        return getLustreTypeFromStrRep(types.get(connIt.next().get(TYPE).asInt()));
-    }
     
     /**
      * @param blkNode
@@ -1146,7 +1090,7 @@ public class J2LTranslator {
                 LustreExpr          rhsExpr     = null;             
                 VarIdExpr           outVarExpr  = new VarIdExpr("out");
                 int                 numOfInputs = blkNode.get(INPUTS).asInt();                
-                List<LustreType>    inTypes     = getBlockInportType(blkNode);
+                List<LustreType>    inTypes     = getBlockInportTypes(blkNode);
                 List<LustreVar>     inputVars   = new ArrayList<>();
                 List<LustreVar>     outputVars  = Arrays.asList(new LustreVar("out", outType));
                 List<VarIdExpr>     inExprs     = new ArrayList<>();
@@ -1210,7 +1154,65 @@ public class J2LTranslator {
         
         return nodeName;
     }
+
+    /*************************************************************************************************/
+    /*************************************** Utility Functions ***************************************/
+    /*************************************************************************************************/
     
+    
+    /**
+     * @param node
+     * @return true if node is a IF block otherwise false
+     */    
+    protected boolean isIfBlock(JsonNode node) {
+        if(node != null) {
+            if(node.has(BLOCKTYPE) && node.get(BLOCKTYPE).asText().equals(IF)) {
+                return true;
+            }                        
+        }
+        return false;        
+    }
+    
+    protected boolean isIfActionSubsystem(JsonNode node) {
+        if(node != null) {
+            if(node.has(BLOCKTYPE)) {
+                if(node.get(BLOCKTYPE).asText().equals(SUBSYSTEM)) {
+                    Iterator<Entry<String, JsonNode>> contentFields = node.get(CONTENT).fields();  
+
+                    while(contentFields.hasNext()) {
+                        JsonNode fieldNode = contentFields.next().getValue();
+
+                        if(fieldNode.has(BLOCKTYPE) && fieldNode.get(BLOCKTYPE).asText().equals(ACTIONPORT)) {
+                            return true;
+                        }
+                    }
+                }
+            }            
+        }
+        return false;
+    }
+
+    protected LustreExpr getLustreConst(String value, LustreType type) {
+        LustreExpr constExpr = null;
+        
+        if(isValidConst(value)) {
+            if(type == PrimitiveType.REAL) {
+                if(!value.contains(".")) {
+                    value = value + ".0";
+                }
+                constExpr = new RealExpr(new BigDecimal(value));
+            } else if(type == PrimitiveType.INT) {
+                constExpr = new IntExpr(new BigInteger(value));
+            } else if(type == PrimitiveType.BOOL) {
+                constExpr = new BooleanExpr(value);
+            } else {
+                LOGGER.log(Level.SEVERE, "Unsupported constant datatype: {0}", type);
+            }            
+        } else {
+            LOGGER.log(Level.SEVERE, "Unexpected constant value: {0}", value);
+        } 
+        return constExpr;
+    }    
     
     protected LustreType getTheHighestType(List<String> handles, Map<String, JsonNode> handleToBlkNodeMap) {        
         LustreType highestType = null;
@@ -1268,6 +1270,14 @@ public class J2LTranslator {
         return lusType;
     }
     
+    
+    protected LustreType getSwitchCondType(JsonNode switchBlk) {        
+        List<String>        types   = convertJsonValuesToList(switchBlk.get(PORTDATATYPE).get(INPORT));
+        Iterator<JsonNode>  connIt  = switchBlk.get(CONNECTIVITY).elements(); 
+        // The switch condition is the second port in the port connectivity
+        return getLustreTypeFromStrRep(types.get(connIt.next().get(TYPE).asInt()));
+    }    
+    
     private List<String> convertJsonValuesToList(JsonNode values) {
         List<String> strValues = new ArrayList<>();
         
@@ -1287,7 +1297,18 @@ public class J2LTranslator {
         return getLustreTypeFromStrRep(blkNode.get(PORTDATATYPE).get(OUTPORT).asText());
     }
     
-    protected List<LustreType> getBlockInportType(JsonNode blkNode) {
+    protected List<LustreType> getBlockOutportTypes(JsonNode blkNode) {
+        List<LustreType>    types       = new ArrayList<>();
+        List<String>        typeStrs    = convertJsonValuesToList(blkNode.get(PORTDATATYPE).get(OUTPORT));        
+        
+        for(String typeStr : typeStrs) {
+            types.add(getLustreTypeFromStrRep(typeStr));
+        }
+        
+        return types;
+    }    
+    
+    protected List<LustreType> getBlockInportTypes(JsonNode blkNode) {
         List<LustreType>    types       = new ArrayList<>();
         List<String>        typeStrs    = convertJsonValuesToList(blkNode.get(PORTDATATYPE).get(INPORT));        
         
