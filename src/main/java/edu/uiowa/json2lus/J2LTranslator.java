@@ -259,9 +259,9 @@ public class J2LTranslator {
      */
     protected LustreNode translateSubsystemNode(JsonNode subsystemNode) {   
         String lusNodeName = sanitizeName(subsystemNode.equals(this.topLevelNode) ? this.topNodeName : subsystemNode.get(NAME).asText()); 
-        if(isPropertyBlk(subsystemNode)) {
-            lusNodeName = this.topNodeName + "_" + lusNodeName;
-        }
+//        if(isPropertyBlk(subsystemNode)) {
+//            lusNodeName = this.topNodeName + "_" + lusNodeName;
+//        }
         LOGGER.log(Level.INFO, "Start translating the subsystem block: {0}", lusNodeName);        
         
         List<LustreEq>      props           = new ArrayList<>();
@@ -367,7 +367,7 @@ public class J2LTranslator {
         locals.addAll(this.auxNodeLocalVars);
         this.auxNodeEqs.clear();
         this.auxNodeLocalVars.clear();
-        return new LustreNode(lusNodeName, inputs, outputs, locals, equations, props);
+        return new LustreNode(subsystemNode.equals(this.topLevelNode), lusNodeName, inputs, outputs, locals, equations, props);
     }
     
     /**
@@ -404,9 +404,9 @@ public class J2LTranslator {
                             
                             // Prefix the name of a property subsystem block with the top-level node
                             // Not sure: maybe need to prefix with its parent subsystem node name
-                            if(rhsExpr instanceof NodeCallExpr) {
-                                ((NodeCallExpr)rhsExpr).setNodeName(this.topNodeName+"_"+getBlkName(srcBlkNode));
-                            }
+//                            if(rhsExpr instanceof NodeCallExpr) {
+//                                ((NodeCallExpr)rhsExpr).setNodeName(this.topNodeName+"_"+getBlkName(srcBlkNode));
+//                            }
                             propEqs.add(new LustreEq(outVarIdExprs, rhsExpr));
                         } else {
                             LOGGER.log(Level.SEVERE, "Unsupported property block type: {0}!", srcBlkType);
