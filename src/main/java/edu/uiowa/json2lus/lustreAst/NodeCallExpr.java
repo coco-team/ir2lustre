@@ -13,7 +13,7 @@ import java.util.List;
  * @author Paul Meng
  */
 public class NodeCallExpr extends LustreExpr {
-    public final String             nodeName;
+    public String                   nodeName;
     public final List<LustreExpr>   parameters;
     
     public NodeCallExpr(String nodeName, List<LustreExpr> args) {
@@ -24,7 +24,11 @@ public class NodeCallExpr extends LustreExpr {
     public NodeCallExpr(String nodeName, LustreExpr ... args) {
         this.nodeName   = nodeName;
         this.parameters = Arrays.asList(args);
-    }    
+    }  
+    
+    public void setNodeName(String name) {
+        this.nodeName = name;
+    }
 
     @Override
     public void accept(LustreAstVisitor visitor) {

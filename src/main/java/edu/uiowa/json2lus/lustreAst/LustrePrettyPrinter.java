@@ -214,9 +214,8 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
         mergeExpr.clock.accept(this);
         sb.append(NL);
         for(int i = 0; i < mergeExpr.exprs.size(); i++) {
-            sb.append("          (");
+            sb.append("          ");
             mergeExpr.exprs.get(i).accept(this);
-            sb.append(")");
             sb.append(NL);            
         }
         sb.append(")");

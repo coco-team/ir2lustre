@@ -49,12 +49,12 @@ import org.parboiled.support.ParsingResult;
  *
  * @author Paul Meng
  */
-public class J2LTranslator {
+public class J2LTranslator {    
+    /** The top-level node name */
+    public  String topNodeName;    
+    
     /** The path of the input JSON file */
     public  final String inputPath;
-    
-    /** Assumption: The file name is also the top-level model name */
-    public  final String modelName;
     
     /** Logger */
     private static final Logger LOGGER = Logger.getLogger(J2LTranslator.class.getName());
@@ -121,12 +121,15 @@ public class J2LTranslator {
     private final String ELSEIFEXPRS    = "ElseIfExpressions";
             
     /** Blocks information */
+    private final String META           = "meta";
     private final String NAME           = "Name";
     private final String TYPE           = "Type";
     private final String PATH           = "Path";
     private final String VALUE          = "Value";
     private final String LOGIC          = "logic";    
     private final String HANDLE         = "Handle";
+    private final String ENSURES        = "ensures";
+    
     private final String INPORT         = "Inport";    
     private final String OUTPORT        = "Outport";    
     private final String CONTENT        = "Content";    
@@ -135,12 +138,13 @@ public class J2LTranslator {
     private final String DSTBLOCK       = "DstBlock";
     private final String BLOCKTYPE      = "BlockType";
     private final String SUBSYSTEM      = "SubSystem"; 
-    private final String ACTIONPORT     = "ActionPort";
+    private final String ACTIONPORT     = "ActionPort";                
     private final String TERMINATOR     = "Terminator";
     private final String LINEHANDLES    = "LineHandles";     
     private final String CONNECTIVITY   = "PortConnectivity";
     private final String RELATIONALOP   = "relationaloperator";
     private final String PORTDATATYPE   = "CompiledPortDataTypes";    
+    private final String ANNOTATIONTYPE = "AnnotationType";
     
     /** Lustre nodes name for type conversions */
     private final String BOOLTOINT      = "bool_to_int";
@@ -170,7 +174,7 @@ public class J2LTranslator {
         this.auxNodeEqs         = new ArrayList<>();
         this.auxNodeLocalVars   = new ArrayList<>();        
         this.lustreProgram      = new LustreProgram();
-        this.modelName          = inputPath.toLowerCase().endsWith(".json") ? 
+        this.topNodeName          = inputPath.toLowerCase().endsWith(".json") ? 
                                     inputPath.substring(inputPath.lastIndexOf(File.separator)+1, inputPath.lastIndexOf("."))
                                     : inputPath.substring(inputPath.lastIndexOf(File.separator)+1);                            
     }
@@ -200,14 +204,23 @@ public class J2LTranslator {
         } catch (IOException ex) {
             Logger.getLogger(J2LTranslator.class.getName()).log(Level.SEVERE, null, ex);
         }
-
-        if(rootNode != null && rootNode.has(this.modelName)) {
-            JsonNode topNode = rootNode.get(this.modelName);
-            this.topLevelNode = topNode;
-            collectSubsytemBlocksInfo(topNode);               
+        if(rootNode != null) {
+            Iterator<Entry<String, JsonNode>> nodes = rootNode.fields(); 
+            
+            while(nodes.hasNext()) {
+                Map.Entry<String, JsonNode> field = nodes.next(); 
+                if(!field.getKey().equals(META)) {
+                    this.topLevelNode   = field.getValue();
+                    this.topNodeName    = field.getKey();
+                }              
+            }
+            if(this.topLevelNode != null) {
+                collectSubsytemBlocksInfo(this.topLevelNode);               
+            } else {
+                LOGGER.log(Level.SEVERE, "Unexpected: no top level node is found in the JSON file!");                
+            }
         } else {
-            LOGGER.log(Level.SEVERE, "We are assuming that the root node in the JSON model is the same as the input file name!");
-            LOGGER.log(Level.SEVERE, "But we did not find a such field: {0}!", this.modelName);
+            LOGGER.log(Level.SEVERE, "Unexpected: unable to parse the input JSON file!");
         }   
     }
 
@@ -217,7 +230,7 @@ public class J2LTranslator {
      */    
     protected void collectSubsytemBlocksInfo(JsonNode subsystemNode) {
         if(subsystemNode != null && !this.subsystemNodes.contains(subsystemNode) && subsystemNode.has(CONTENT)) {
-            LOGGER.log(Level.INFO, "Found a subsystem block: {0}  ", sanitizeName(subsystemNode.equals(this.topLevelNode) ? this.modelName:subsystemNode.get(NAME).asText()));            
+            LOGGER.log(Level.INFO, "Found a subsystem block: {0}  ", sanitizeName(subsystemNode.equals(this.topLevelNode) ? this.topNodeName:subsystemNode.get(NAME).asText()));            
             
             this.subsystemNodes.add(subsystemNode);
             Iterator<Entry<String, JsonNode>> nodes = subsystemNode.get(CONTENT).fields();                         
@@ -235,7 +248,7 @@ public class J2LTranslator {
                
             }
         } else {
-            LOGGER.log(Level.SEVERE, "Cannot find the Cocosim model: {0} content definition in the input JSON file!", this.modelName);
+            LOGGER.log(Level.SEVERE, "Cannot find the Cocosim model: {0} content definition in the input JSON file!", this.topNodeName);
         }       
     }        
     
@@ -245,7 +258,10 @@ public class J2LTranslator {
      * @return The Lustre node corresponding to the input subsystem JSON node
      */
     protected LustreNode translateSubsystemNode(JsonNode subsystemNode) {   
-        String lusNodeName = sanitizeName(subsystemNode.equals(this.topLevelNode) ? this.modelName : subsystemNode.get(NAME).asText());                        
+        String lusNodeName = sanitizeName(subsystemNode.equals(this.topLevelNode) ? this.topNodeName : subsystemNode.get(NAME).asText()); 
+        if(isPropertyBlk(subsystemNode)) {
+            lusNodeName = this.topNodeName + "_" + lusNodeName;
+        }
         LOGGER.log(Level.INFO, "Start translating the subsystem block: {0}", lusNodeName);        
         
         List<LustreEq>      props           = new ArrayList<>();
@@ -356,7 +372,7 @@ public class J2LTranslator {
     
     /**
      * 
-     * @param propNode
+     * @param propNode is a terminator node (the input to the terminator is a subsystem block defining a property)
      * @param subsystemNode
      * @param blkNodeToSrcBlkHandlesMap
      * @param blkNodeToDstBlkHandlesMap
@@ -385,6 +401,12 @@ public class J2LTranslator {
                             }
                             
                             LustreExpr rhsExpr = translateBlock(srcBlkHdl, subsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap);
+                            
+                            // Prefix the name of a property subsystem block with the top-level node
+                            // Not sure: maybe need to prefix with its parent subsystem node name
+                            if(rhsExpr instanceof NodeCallExpr) {
+                                ((NodeCallExpr)rhsExpr).setNodeName(this.topNodeName+"_"+getBlkName(srcBlkNode));
+                            }
                             propEqs.add(new LustreEq(outVarIdExprs, rhsExpr));
                         } else {
                             LOGGER.log(Level.SEVERE, "Unsupported property block type: {0}!", srcBlkType);
@@ -1357,7 +1379,16 @@ public class J2LTranslator {
             strValues.add(values.asText());
         }
         return strValues;
-    }  
+    }
+    
+    protected boolean isPropertyBlk(JsonNode blkNode) {
+        if(blkNode.has(ANNOTATIONTYPE)) {
+            if(blkNode.get(ANNOTATIONTYPE).asText().equals(ENSURES)) {
+                return true;
+            }
+        }
+        return false;
+    }
     
     protected LustreType getBlockOutportType(JsonNode blkNode) {
         return getLustreTypeFromStrRep(blkNode.get(PORTDATATYPE).get(OUTPORT).asText());
@@ -1384,6 +1415,18 @@ public class J2LTranslator {
         
         return types;
     }  
+    
+    
+    protected String getBlkName(JsonNode node) {
+        if(node.equals(this.topLevelNode)) {
+            return this.topNodeName;
+        } else if(node.has(NAME)) {
+            return node.get(NAME).asText();
+        } else {
+            LOGGER.log(Level.SEVERE, "Unexpected: the input block does not have a name!");
+        }
+        return "";
+    }    
     
     protected boolean isNum(String str) {
         return str.matches("^[-+]?\\d+(\\.\\d+)?$");
