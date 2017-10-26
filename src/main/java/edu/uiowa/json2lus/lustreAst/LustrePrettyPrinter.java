@@ -102,12 +102,13 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
 
     @Override
     public void visit(IteExpr expr) {
-        sb.append(" if ");
+        sb.append(" (if ");
         expr.ifExpr.accept(this);
         sb.append(" then ");
         expr.thenExpr.accept(this);
         sb.append(" else ");
         expr.elseExpr.accept(this);
+        sb.append(")");
     }
 
     @Override

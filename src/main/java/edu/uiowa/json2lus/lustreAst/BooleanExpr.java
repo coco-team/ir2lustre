@@ -18,13 +18,7 @@ public class BooleanExpr extends LustreExpr {
     }
     
     public BooleanExpr(String value) {
-        if(value.toLowerCase().equals("true")) {
-            this.value = true;
-        } else if(value.toLowerCase().equals("false")) { 
-            this.value = false;
-        } else {
-            this.value = true;
-        }
+        this.value = value.toLowerCase().equals("true") || !value.toLowerCase().equals("0");
     }    
 
     @Override
