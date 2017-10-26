@@ -259,9 +259,7 @@ public class J2LTranslator {
      */
     protected LustreNode translateSubsystemNode(JsonNode subsystemNode) {   
         String lusNodeName = sanitizeName(subsystemNode.equals(this.topLevelNode) ? this.topNodeName : subsystemNode.get(NAME).asText()); 
-//        if(isPropertyBlk(subsystemNode)) {
-//            lusNodeName = this.topNodeName + "_" + lusNodeName;
-//        }
+        
         LOGGER.log(Level.INFO, "Start translating the subsystem block: {0}", lusNodeName);        
         
         List<LustreEq>      props           = new ArrayList<>();
@@ -334,13 +332,12 @@ public class J2LTranslator {
                         outportNodes.add(contBlkNode);
                         break;
                     }
-                    case TERMINATOR: {
-                        propsNodes.add(contBlkNode);
-                        break;
-                    }
                     default:
                         break;
-                }                 
+                }
+                if(isPropertyBlk(contBlkNode)) {
+                    propsNodes.add(contBlkNode);
+                }
             }            
         }
         
@@ -372,54 +369,33 @@ public class J2LTranslator {
     
     /**
      * 
-     * @param propNode is a terminator node (the input to the terminator is a subsystem block defining a property)
+     * @param propBlk is subsystem block
      * @param subsystemNode
      * @param blkNodeToSrcBlkHandlesMap
      * @param blkNodeToDstBlkHandlesMap
      * @param handleToBlkNodeMap
      * @return A list of property equations
      */
-    protected List<LustreEq> translatePropEquation(JsonNode propNode, JsonNode subsystemNode, Map<JsonNode, List<String>> blkNodeToSrcBlkHandlesMap, Map<JsonNode, List<String>> blkNodeToDstBlkHandlesMap, Map<String, JsonNode> handleToBlkNodeMap) {
+    protected List<LustreEq> translatePropEquation(JsonNode propBlk, JsonNode subsystemNode, Map<JsonNode, List<String>> blkNodeToSrcBlkHandlesMap, Map<JsonNode, List<String>> blkNodeToDstBlkHandlesMap, Map<String, JsonNode> handleToBlkNodeMap) {
         List<LustreEq> propEqs = new ArrayList<>();
-        
-        if(blkNodeToSrcBlkHandlesMap.containsKey(propNode)) {
-            List<String> srcBlkHandles = blkNodeToSrcBlkHandlesMap.get(propNode);
-            
-            for(String srcBlkHdl : srcBlkHandles) {
-                if(handleToBlkNodeMap.containsKey(srcBlkHdl)) {
-                    JsonNode srcBlkNode = handleToBlkNodeMap.get(srcBlkHdl);
-                    
-                    if(srcBlkNode.has(BLOCKTYPE)) {
-                        String srcBlkType = srcBlkNode.get(BLOCKTYPE).asText();
-                        
-                        if(srcBlkType.equals(SUBSYSTEM)) {
-                            List<VarIdExpr> outVarIdExprs   = new ArrayList<>();
-                            List<JsonNode>  outportNodes    = getBlksFromSubSystem(srcBlkNode, OUTPORT);
-                            
-                            for(JsonNode outNode : outportNodes) {
-                                outVarIdExprs.add(new VarIdExpr(srcBlkNode.get(NAME).asText()+"_"+outNode.get(NAME).asText()));
-                            }
-                            
-                            LustreExpr rhsExpr = translateBlock(srcBlkHdl, subsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap);
-                            
-                            // Prefix the name of a property subsystem block with the top-level node
-                            // Not sure: maybe need to prefix with its parent subsystem node name
-//                            if(rhsExpr instanceof NodeCallExpr) {
-//                                ((NodeCallExpr)rhsExpr).setNodeName(this.topNodeName+"_"+getBlkName(srcBlkNode));
-//                            }
-                            propEqs.add(new LustreEq(outVarIdExprs, rhsExpr));
-                        } else {
-                            LOGGER.log(Level.SEVERE, "Unsupported property block type: {0}!", srcBlkType);
-                        }
-                    }
-                } else {
-                    LOGGER.log(Level.SEVERE, "Unexpected: No block node was found with handle: {0}!", srcBlkHdl);
-                }                
-            }            
-        } else {
-            LOGGER.log(Level.WARNING, "Unexpected: No src blocks connect to the terminator : {0}!", propNode.get(NAME).asText());
+
+        if(propBlk.has(BLOCKTYPE)) {
+            String srcBlkType = propBlk.get(BLOCKTYPE).asText();
+
+            if(srcBlkType.equals(SUBSYSTEM)) {
+                List<VarIdExpr> outVarIdExprs   = new ArrayList<>();
+                List<JsonNode>  outportNodes    = getBlksFromSubSystem(propBlk, OUTPORT);
+
+                for(JsonNode outNode : outportNodes) {
+                    outVarIdExprs.add(new VarIdExpr(propBlk.get(NAME).asText()+"_"+outNode.get(NAME).asText()));
+                }
+
+                LustreExpr rhsExpr = translateBlock(getBlkHandle(propBlk), subsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap);                            
+                propEqs.add(new LustreEq(outVarIdExprs, rhsExpr));
+            } else {
+                LOGGER.log(Level.SEVERE, "Unsupported property block type: {0}!", srcBlkType);
+            }
         }        
-        
         return propEqs;
     } 
     
@@ -1426,7 +1402,16 @@ public class J2LTranslator {
             LOGGER.log(Level.SEVERE, "Unexpected: the input block does not have a name!");
         }
         return "";
-    }    
+    }  
+    
+    protected String getBlkHandle(JsonNode node) {
+        if(node.has(HANDLE)) {
+            return node.get(HANDLE).asText();
+        } else {
+            LOGGER.log(Level.SEVERE, "Unexpected: the input block does not have a handle!");
+        }
+        return "";
+    }      
     
     protected boolean isNum(String str) {
         return str.matches("^[-+]?\\d+(\\.\\d+)?$");
