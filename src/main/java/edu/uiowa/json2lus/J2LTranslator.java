@@ -171,6 +171,7 @@ public class J2LTranslator {
     /**
      * Constructor
      * @param inputPath
+     * @param multProps
      */
     public J2LTranslator(String inputPath, boolean multProps) {  
         this.multProps          = multProps;
@@ -186,6 +187,25 @@ public class J2LTranslator {
                                     inputPath.substring(inputPath.lastIndexOf(File.separator)+1, inputPath.lastIndexOf("."))
                                     : inputPath.substring(inputPath.lastIndexOf(File.separator)+1);                            
     }
+    
+    /**
+     * Constructor
+     * @param inputPath
+     */
+    public J2LTranslator(String inputPath) {  
+        this.multProps          = false;
+        this.inputPath          = inputPath;            
+        this.libNodeNameMap     = new HashMap<>();
+        this.subsystemNodes     = new HashSet<>();
+        this.subsystemPropsMap  = new HashMap<>();
+        this.auxHdlToPreExprMap = new HashMap<>();
+        this.auxNodeEqs         = new ArrayList<>();
+        this.auxNodeLocalVars   = new ArrayList<>();        
+        this.lustreProgram      = new LustreProgram();
+        this.topNodeName          = inputPath.toLowerCase().endsWith(".json") ? 
+                                    inputPath.substring(inputPath.lastIndexOf(File.separator)+1, inputPath.lastIndexOf("."))
+                                    : inputPath.substring(inputPath.lastIndexOf(File.separator)+1);                            
+    }    
     
     /**
      * Execute the translation process 
