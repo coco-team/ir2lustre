@@ -94,11 +94,11 @@ public class Main {
             File jsonFile = new File(jsonFilePath);
             
             if(!jsonFile.exists()) {
-                Logger.getLogger(Main.class.getName()).log(Level.SEVERE, "The input JSON file does not exist!");
+                Logger.getLogger(Main.class.getName()).log(Level.SEVERE, "The input JSON file does not exist: {0}", jsonFilePath);
                 return false;
             }
             if(!jsonFile.canRead()) {
-                Logger.getLogger(Main.class.getName()).log(Level.SEVERE, "The input JSON file cannot be read!");
+                Logger.getLogger(Main.class.getName()).log(Level.SEVERE, "The input JSON file cannot be read: {0}", jsonFilePath);
                 return false;                
             }
         }

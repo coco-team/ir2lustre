@@ -513,16 +513,23 @@ public class J2LTranslator {
     protected LustreExpr translateBlock(String blkHandle, JsonNode parentSubsystemNode, Map<JsonNode, List<String>> blkNodeToSrcBlkHdlsMap,  Map<JsonNode, List<String>> blkNodeToDstBlkHdlsMap, Map<String, JsonNode> hdlToBlkNodeMap, Set<String> visitedPreHdls) {
         LustreExpr  blkExpr     = null;
         JsonNode    blkNode     = null;
-        
-        if(this.auxHdlToPreExprMap.containsKey(blkHandle)) {
-            return this.auxHdlToPreExprMap.get(blkHandle);
-        }          
+                 
         if(hdlToBlkNodeMap.containsKey(blkHandle)) {
             blkNode = hdlToBlkNodeMap.get(blkHandle);
         } else {
             LOGGER.log(Level.SEVERE, "Unexpected: no block in the model with handle {0}", blkHandle);
         }
-        
+//        if(blkNodeToDstBlkHdlsMap.containsKey(blkNode)) {
+//            List<String> dstHdls = blkNodeToDstBlkHdlsMap.get(blkNode);
+//            
+//            for(String hdl : dstHdls) {
+//                JsonNode dstNode = hdlToBlkNodeMap.get(hdl);
+//                
+//                if(dstNode.get(BLOCKTYPE).asText().equals(OUTPORT)) {
+//                    return new VarIdExpr(getBlkName(dstNode));
+//                }
+//            }
+//        }        
         if(blkNode != null && blkNode.has(BLOCKTYPE)) {
             String              blkType     = blkNode.get(BLOCKTYPE).asText();            
             List<LustreExpr>    inExprs     = new ArrayList<>();            
