@@ -56,6 +56,8 @@ public class J2LTranslator {
     /** The path of the input JSON file */
     public  final String inputPath;
     
+    public  boolean multProps;
+    
     /** Logger */
     private static final Logger LOGGER = Logger.getLogger(J2LTranslator.class.getName());
     
@@ -170,7 +172,8 @@ public class J2LTranslator {
      * Constructor
      * @param inputPath
      */
-    public J2LTranslator(String inputPath) {        
+    public J2LTranslator(String inputPath, boolean multProps) {  
+        this.multProps          = multProps;
         this.inputPath          = inputPath;            
         this.libNodeNameMap     = new HashMap<>();
         this.subsystemNodes     = new HashSet<>();
@@ -192,7 +195,7 @@ public class J2LTranslator {
     public LustreProgram execute() {
         collectSubsytemBlocksInfo();
         for(JsonNode node : this.subsystemNodes) {
-            this.lustreProgram.addNode(translateSubsystemNode(node));
+            this.lustreProgram.addNodes(translateSubsystemNode(node));
         }
         return this.lustreProgram;
     }    
@@ -262,7 +265,7 @@ public class J2LTranslator {
      * @param subsystemNode
      * @return The Lustre node corresponding to the input subsystem JSON node
      */
-    protected LustreNode translateSubsystemNode(JsonNode subsystemNode) {   
+    protected List<LustreNode> translateSubsystemNode(JsonNode subsystemNode) {   
         String lusNodeName = sanitizeName(subsystemNode.equals(this.topLevelNode) ? this.topNodeName : subsystemNode.get(NAME).asText()); 
         
         LOGGER.log(Level.INFO, "Start translating the subsystem block: {0}", lusNodeName);        
@@ -272,8 +275,10 @@ public class J2LTranslator {
         List<LustreVar>     locals          = new ArrayList<>();
         List<LustreVar>     outputs         = new ArrayList<>();
         List<LustreEq>      equations       = new ArrayList<>();
-        Map<Integer, JsonNode> inports       = new HashMap<>();
-        Map<Integer, JsonNode> outports      = new HashMap<>();
+        List<LustreNode>    lusNodes        = new ArrayList<>();
+        Map<Integer, JsonNode> inports      = new HashMap<>();
+        Map<Integer, JsonNode> outports     = new HashMap<>();
+        
                                         
         /** Terminator node in the input subsystem block */
         List<JsonNode>                      propsNodes                  = new ArrayList<>();   
@@ -351,22 +356,67 @@ public class J2LTranslator {
             JsonNode outportBlk = outports.get(i);
             outputs.add(new LustreVar(getBlkName(outportBlk), getLustreTypeFromStrRep(outportBlk.get(PORTDATATYPE).get(INPORT).asText())));
             equations.add(translateOutportEquation(outportBlk, subsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap));                    
-        }        
-        for(JsonNode propNode : propsNodes) {
-            List<LustreEq> propEqs = translatePropEquation(propNode, subsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap);
-            for(LustreEq eq : propEqs) {
-                for(VarIdExpr var : eq.getLhs()) {
-                    locals.add(new LustreVar(var.id, PrimitiveType.BOOL));
-                }
-            }
-            props.addAll(propEqs);            
-        }
+        }   
         equations.addAll(this.auxNodeEqs);
         locals.addAll(this.auxNodeLocalVars);
         this.auxNodeEqs.clear();
         this.auxNodeLocalVars.clear();
         this.auxHdlToPreExprMap.clear();
-        return new LustreNode(subsystemNode.equals(this.topLevelNode), lusNodeName, inputs, outputs, locals, equations, props);
+
+        return processProperties(propsNodes, subsystemNode, lusNodeName, inputs, outputs, locals, equations, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap);
+    }
+    
+    protected List<LustreNode> processProperties(List<JsonNode> propNodes, JsonNode subsystemNode, String lusNodeName, List<LustreVar> inputs, List<LustreVar> outputs, List<LustreVar> locals, List<LustreEq> equations, Map<JsonNode, List<String>> blkNodeToSrcBlkHandlesMap, Map<JsonNode, List<String>> blkNodeToDstBlkHandlesMap, Map<String, JsonNode> handleToBlkNodeMap) {
+        List<LustreNode> lusNodes = new ArrayList<>();  
+        
+        if(propNodes.size() > 1 && !this.multProps) {
+            for(JsonNode propNode: propNodes) {
+                String          newName     = lusNodeName;
+                List<LustreEq>  props       = new ArrayList<>();
+                List<LustreVar> cInputs     = new ArrayList<>();        
+                List<LustreVar> cLocals     = new ArrayList<>();
+                List<LustreVar> cOutputs    = new ArrayList<>();
+                List<LustreEq>  cEquations  = new ArrayList<>();
+
+                for(LustreVar in : inputs) {
+                    cInputs.add(in);
+                }
+                for(LustreVar out : outputs) {
+                    cOutputs.add(out);
+                }            
+                for(LustreVar local : locals) {
+                    cLocals.add(local);
+                }
+                for(LustreEq eq : equations) {
+                    cEquations.add(eq);
+                }
+                LustreEq propEq = translatePropEquation(propNode, subsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap);
+                for(VarIdExpr var : propEq.getLhs()) {
+                    cLocals.add(new LustreVar(var.id, PrimitiveType.BOOL));
+                }
+                if(propEq.getRhs() instanceof NodeCallExpr) {
+                    newName += "_"+((NodeCallExpr)propEq.getRhs()).nodeName;
+                }
+                props.add(propEq);            
+                lusNodes.add(new LustreNode(subsystemNode.equals(this.topLevelNode), newName, cInputs, cOutputs, cLocals, cEquations, props));            
+            }               
+        } else {
+            String          newName = lusNodeName;
+            List<LustreEq>  props   = new ArrayList<>();            
+            
+            for(JsonNode propNode : propNodes) {
+                LustreEq propEq = translatePropEquation(propNode, subsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap);
+                for(VarIdExpr var : propEq.getLhs()) {
+                    locals.add(new LustreVar(var.id, PrimitiveType.BOOL));
+                }
+                if(propEq.getRhs() instanceof NodeCallExpr) {
+                    newName += "_"+((NodeCallExpr)propEq.getRhs()).nodeName;
+                }                
+                props.add(propEq);            
+            }   
+            lusNodes.add(new LustreNode(subsystemNode.equals(this.topLevelNode), newName, inputs, outputs, locals, equations, props));            
+        } 
+        return lusNodes;
     }
     
     /**
@@ -376,10 +426,10 @@ public class J2LTranslator {
      * @param blkNodeToSrcBlkHandlesMap
      * @param blkNodeToDstBlkHandlesMap
      * @param handleToBlkNodeMap
-     * @return A list of property equations
+     * @return A property equation
      */
-    protected List<LustreEq> translatePropEquation(JsonNode propBlk, JsonNode subsystemNode, Map<JsonNode, List<String>> blkNodeToSrcBlkHandlesMap, Map<JsonNode, List<String>> blkNodeToDstBlkHandlesMap, Map<String, JsonNode> handleToBlkNodeMap) {
-        List<LustreEq> propEqs = new ArrayList<>();
+    protected LustreEq translatePropEquation(JsonNode propBlk, JsonNode subsystemNode, Map<JsonNode, List<String>> blkNodeToSrcBlkHandlesMap, Map<JsonNode, List<String>> blkNodeToDstBlkHandlesMap, Map<String, JsonNode> handleToBlkNodeMap) {
+        LustreEq propEq = null;
 
         if(propBlk.has(BLOCKTYPE)) {
             String srcBlkType = propBlk.get(BLOCKTYPE).asText();
@@ -390,15 +440,13 @@ public class J2LTranslator {
 
                 for(JsonNode outNode : outportNodes) {
                     outVarIdExprs.add(new VarIdExpr(getBlkName(propBlk)+"_"+sanitizeName(outNode.get(NAME).asText())));
-                }
-
-                LustreExpr rhsExpr = translateBlock(getBlkHandle(propBlk), subsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap, new HashSet<String>());                            
-                propEqs.add(new LustreEq(outVarIdExprs, rhsExpr));
+                }              
+                propEq = new LustreEq(outVarIdExprs, translateBlock(getBlkHandle(propBlk), subsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap, new HashSet<String>()));
             } else {
                 LOGGER.log(Level.SEVERE, "Unsupported property block type: {0}!", srcBlkType);
             }
         }        
-        return propEqs;
+        return propEq;
     } 
     
     /**
@@ -438,6 +486,7 @@ public class J2LTranslator {
      * @param blkNodeToSrcBlkHdlsMap
      * @param blkNodeToDstBlkHdlsMap
      * @param hdlToBlkNodeMap
+     * @param visitedPreHdls
      * @return The Lustre expression corresponding to the input JSON block node
      */
 

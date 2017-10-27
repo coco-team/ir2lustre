@@ -63,7 +63,6 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
     @Override
     public void visit(LustreNode node) {
         sb.append("node ").append(node.name);
-        if(node.isMain) {sb.append("_observer");}
         sb.append("(").append(NL);
         declVariables(node.inputVars);
         sb.append(")").append(NL);

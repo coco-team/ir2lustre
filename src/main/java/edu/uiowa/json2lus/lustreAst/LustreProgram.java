@@ -34,6 +34,10 @@ public class LustreProgram extends LustreAst {
         this.nodes.add(node);
     }
     
+    public void addNodes(List<LustreNode> nodes) {
+        this.nodes.addAll(nodes);
+    }    
+    
     public void addEnumDef(LustreEnumType enumDef) {
         this.typesDef.add(enumDef);
     }
