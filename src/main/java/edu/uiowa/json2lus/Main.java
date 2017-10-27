@@ -53,7 +53,7 @@ public class Main {
             if(cl.hasOption('o')) {
                 lusFilePath = cl.getOptionValue('o');
             } 
-            if(cl.hasOption('s')) {
+            if(cl.hasOption('m')) {
                 multProps = true;
             }             
             if(lusFilePath == null || !lusFilePath.endsWith(".lus")) {
