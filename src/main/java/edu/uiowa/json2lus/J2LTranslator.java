@@ -386,6 +386,14 @@ public class J2LTranslator {
         return processProperties(propsNodes, subsystemNode, lusNodeName, inputs, outputs, locals, equations, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap);
     }
     
+    /**
+     * @param outportNodes
+     * @param subsystemNode
+     * @param blkNodeToSrcBlkHandlesMap
+     * @param blkNodeToDstBlkHandlesMap
+     * @param handleToBlkNodeMap
+     * @return A list of lustre equations corresponding to the outport nodes
+     */    
     protected List<LustreEq> translateOutportEquations(List<JsonNode> outportNodes, JsonNode subsystemNode, Map<JsonNode, List<String>> blkNodeToSrcBlkHandlesMap, Map<JsonNode, List<String>> blkNodeToDstBlkHandlesMap, Map<String, JsonNode> handleToBlkNodeMap) {
         List<LustreEq>          eqs                 = new ArrayList<>();
         Set<JsonNode>           hasGroupped         = new HashSet<>();
@@ -421,6 +429,20 @@ public class J2LTranslator {
         return eqs;
     }
     
+    /**
+     * 
+     * @param propNodes
+     * @param subsystemNode
+     * @param lusNodeName
+     * @param inputs
+     * @param outputs
+     * @param locals
+     * @param equations
+     * @param blkNodeToSrcBlkHandlesMap
+     * @param blkNodeToDstBlkHandlesMap
+     * @param handleToBlkNodeMap
+     * @return a list of Lustre nodes based on properties (one property per node or multiple properties per node)
+     */
     protected List<LustreNode> processProperties(List<JsonNode> propNodes, JsonNode subsystemNode, String lusNodeName, List<LustreVar> inputs, List<LustreVar> outputs, List<LustreVar> locals, List<LustreEq> equations, Map<JsonNode, List<String>> blkNodeToSrcBlkHandlesMap, Map<JsonNode, List<String>> blkNodeToDstBlkHandlesMap, Map<String, JsonNode> handleToBlkNodeMap) {
         List<LustreNode> lusNodes = new ArrayList<>();  
         
