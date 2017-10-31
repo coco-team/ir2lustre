@@ -278,7 +278,7 @@ public class J2LTranslator {
         } else {
             LOGGER.log(Level.SEVERE, "Cannot find the Cocosim model: {0} content definition in the input JSON file!", this.topNodeName);
         }       
-    }        
+    }    
     
     /**
      * 
@@ -374,9 +374,9 @@ public class J2LTranslator {
         }
         for(int i = 0; i < outports.size(); i++) {
             JsonNode outportBlk = outports.get(i);
-            outputs.add(new LustreVar(getBlkName(outportBlk), getLustreTypeFromStrRep(outportBlk.get(PORTDATATYPE).get(INPORT).asText())));
-            equations.add(translateOutportEquation(outportBlk, subsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap));                    
+            outputs.add(new LustreVar(getBlkName(outportBlk), getLustreTypeFromStrRep(outportBlk.get(PORTDATATYPE).get(INPORT).asText())));            
         }   
+        equations.addAll(translateOutportEquations(new ArrayList<>(outports.values()), subsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap));                    
         equations.addAll(this.auxNodeEqs);
         locals.addAll(this.auxNodeLocalVars);
         this.auxNodeEqs.clear();
@@ -384,6 +384,41 @@ public class J2LTranslator {
         this.auxHdlToPreExprMap.clear();
 
         return processProperties(propsNodes, subsystemNode, lusNodeName, inputs, outputs, locals, equations, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap);
+    }
+    
+    protected List<LustreEq> translateOutportEquations(List<JsonNode> outportNodes, JsonNode subsystemNode, Map<JsonNode, List<String>> blkNodeToSrcBlkHandlesMap, Map<JsonNode, List<String>> blkNodeToDstBlkHandlesMap, Map<String, JsonNode> handleToBlkNodeMap) {
+        List<LustreEq>          eqs                 = new ArrayList<>();
+        Set<JsonNode>           hasGroupped         = new HashSet<>();
+        List<List<JsonNode>>    grouppedOutports    = new ArrayList<>();        
+        
+        for(int i = 0; i < outportNodes.size(); i++) {
+            JsonNode iPort = outportNodes.get(i);
+
+            if(!hasGroupped.contains(iPort)) {                
+                List<JsonNode>  group = new ArrayList<>();
+
+                group.add(iPort);
+                hasGroupped.add(iPort);
+                for(int j = i+1; j < outportNodes.size(); j++) {
+                    JsonNode jPort = outportNodes.get(j);
+
+                    if(!hasGroupped.contains(jPort)) {
+                        if(blkNodeToSrcBlkHandlesMap.containsKey(iPort) && blkNodeToSrcBlkHandlesMap.containsKey(jPort)) {
+                            if(blkNodeToSrcBlkHandlesMap.get(iPort).equals(blkNodeToSrcBlkHandlesMap.get(jPort))) {
+                                group.add(jPort);
+                                hasGroupped.add(jPort);
+                            }                            
+                        }
+                    }
+                }  
+                grouppedOutports.add(group);
+            }
+        }       
+        for(List<JsonNode> gOutports : grouppedOutports) {
+            eqs.add(translateOutportEquation(gOutports, subsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap));                                                
+        }
+        
+        return eqs;
     }
     
     protected List<LustreNode> processProperties(List<JsonNode> propNodes, JsonNode subsystemNode, String lusNodeName, List<LustreVar> inputs, List<LustreVar> outputs, List<LustreVar> locals, List<LustreEq> equations, Map<JsonNode, List<String>> blkNodeToSrcBlkHandlesMap, Map<JsonNode, List<String>> blkNodeToDstBlkHandlesMap, Map<String, JsonNode> handleToBlkNodeMap) {
@@ -471,31 +506,44 @@ public class J2LTranslator {
     
     /**
      * 
-     * @param outportNode
+     * @param outportNodes
      * @param subsystemNode
      * @param blkNodeToSrcBlkHandlesMap
      * @param blkNodeToDstBlkHandlesMap
      * @param handleToBlkNodeMap
      * @return Outport equation
      */
-    protected LustreEq translateOutportEquation(JsonNode outportNode, JsonNode subsystemNode, Map<JsonNode, List<String>> blkNodeToSrcBlkHandlesMap, Map<JsonNode, List<String>> blkNodeToDstBlkHandlesMap, Map<String, JsonNode> handleToBlkNodeMap) {
-        LustreEq    eq          = null;
-        VarIdExpr   varIdExpr   = new VarIdExpr(getBlkName(outportNode));        
+    protected LustreEq translateOutportEquation(List<JsonNode> outportNodes, JsonNode subsystemNode, Map<JsonNode, List<String>> blkNodeToSrcBlkHandlesMap, Map<JsonNode, List<String>> blkNodeToDstBlkHandlesMap, Map<String, JsonNode> handleToBlkNodeMap) {
+        LustreEq eq = null;
         
-        if(blkNodeToSrcBlkHandlesMap.containsKey(outportNode)) {
-            List<String> srcBlkHandles = blkNodeToSrcBlkHandlesMap.get(outportNode);
-            
-            if(srcBlkHandles.size() == 1) {
-                eq = new LustreEq(varIdExpr, translateBlock(false, srcBlkHandles.get(0), subsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap, new HashSet<String>()));
-            } else if(srcBlkHandles.size() > 1) {
-                LOGGER.log(Level.SEVERE, "Unexpected: Multiple different src blocks connect to a same outport: {0}!", outportNode.get(NAME).asText());
+        if(outportNodes.size() == 1) {
+            JsonNode    outportNode = outportNodes.get(0);
+            VarIdExpr   varIdExpr   = new VarIdExpr(getBlkName(outportNode));        
+
+            if(blkNodeToSrcBlkHandlesMap.containsKey(outportNode)) {
+                List<String> srcBlkHandles = blkNodeToSrcBlkHandlesMap.get(outportNode);
+
+                if(srcBlkHandles.size() == 1) {
+                    eq = new LustreEq(varIdExpr, translateBlock(false, srcBlkHandles.get(0), subsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap, new HashSet<String>()));
+                } else if(srcBlkHandles.size() > 1) {
+                    LOGGER.log(Level.SEVERE, "Unexpected: Multiple different src blocks connect to a same outport: {0}!", outportNode.get(NAME).asText());
+                } else {
+                    LOGGER.log(Level.SEVERE, "Unexpected: No src blocks connect to the outport: {0}!", outportNode.get(NAME).asText());
+                }
             } else {
-                LOGGER.log(Level.SEVERE, "Unexpected: No src blocks connect to the outport: {0}!", outportNode.get(NAME).asText());
+                LOGGER.log(Level.WARNING, "Unexpected: No src blocks connect to the outport: {0}!", outportNode.get(NAME).asText());
+            }            
+        } else if(outportNodes.size() > 1) {
+            // Need to make sure the order of outports is correct
+            List<VarIdExpr>     orderedOutportVars  = new ArrayList<>();
+            List<String>        srcBlkHandles       = blkNodeToSrcBlkHandlesMap.get(outportNodes.get(0));
+            List<String>        dstBlkHandes        = blkNodeToDstBlkHandlesMap.get(handleToBlkNodeMap.get(srcBlkHandles.get(0)));
+                        
+            for(String hdl : dstBlkHandes) {
+                orderedOutportVars.add(new VarIdExpr(getBlkName(handleToBlkNodeMap.get(hdl))));
             }
-        } else {
-            LOGGER.log(Level.WARNING, "Unexpected: No src blocks connect to the outport: {0}!", outportNode.get(NAME).asText());
-        }
-        
+            eq = new LustreEq(orderedOutportVars, translateBlock(false, srcBlkHandles.get(0), subsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap, new HashSet<String>()));
+        }        
         return eq;
     }   
 
@@ -1465,6 +1513,27 @@ public class J2LTranslator {
         }
         return strValues;
     }
+    
+    protected List<String> getBlkOutportHandles(JsonNode blkNode) {
+        List<String> outportHdls = new ArrayList<>();
+
+        if(blkNode.has(CONNECTIVITY)) {
+            JsonNode        portConns       = blkNode.get(CONNECTIVITY);
+
+            if(portConns.isArray()) {
+                Iterator<JsonNode> portConnIt = portConns.elements();
+
+                while(portConnIt.hasNext()) {
+                    JsonNode connNode = portConnIt.next();
+
+                    outportHdls.addAll(convertJsonValuesToList(connNode.get(DSTBLOCK)));
+                }
+            } else {
+                outportHdls.addAll(convertJsonValuesToList(portConns.get(DSTBLOCK)));            
+            }              
+        }      
+        return outportHdls;
+    }    
     
     protected boolean isPropertyBlk(JsonNode blkNode) {
         if(blkNode.has(ANNOTATIONTYPE)) {
