@@ -844,9 +844,13 @@ public class J2LTranslator {
                     }
                     break;
                 }                
-                case MINMAX: {
-                    tryLiftingExprTypes(inExprs, inHandles, hdlToBlkNodeMap);
-                    blkExpr = new NodeCallExpr(getOrCreateLustreLibNode(blkNode), inExprs);
+                case MINMAX: {                    
+                    if(inExprs.size() == 1) {
+                        blkExpr = inExprs.get(0);
+                    } else if(inExprs.size() > 1) {
+                        tryLiftingExprTypes(inExprs, inHandles, hdlToBlkNodeMap);
+                        blkExpr = new NodeCallExpr(getOrCreateLustreLibNode(blkNode), inExprs);
+                    }
                     break;
                 }
                 case SWITCH: {
@@ -1437,12 +1441,23 @@ public class J2LTranslator {
         
         if(isValidConst(value)) {
             if(type == PrimitiveType.REAL) {
-                if(!value.contains(".")) {
-                    value += ".0";
+                String newVal = value;
+                if(value.toLowerCase().equals("true")) {
+                    newVal = "1.0";
+                } else if(value.toLowerCase().equals("false")) {
+                    newVal = "0.0";
+                } else if(!value.contains(".")) {
+                    newVal += ".0";
                 }
-                constExpr = new RealExpr(new BigDecimal(value));
+                constExpr = new RealExpr(new BigDecimal(newVal));
             } else if(type == PrimitiveType.INT) {
-                constExpr = new IntExpr(new BigInteger(value));
+                String newVal = value;
+                if(value.toLowerCase().equals("true")) {
+                    newVal = "1";
+                } else if(value.toLowerCase().equals("false")) {
+                    newVal = "0";
+                }
+                constExpr = new IntExpr(new BigInteger(newVal));
             } else if(type == PrimitiveType.BOOL) {
                 constExpr = new BooleanExpr(value);
             } else {
@@ -1666,7 +1681,7 @@ public class J2LTranslator {
     }  
     
     protected String sanitizeName(String name) {
-        return name.trim().replace(" ", "_").replace("\n", "_");
+        return name.trim().replace(" ", "_").replace("\n", "_").replace("=", "_").replace(">", "_").replace("<", "_");
     }
     
     protected List<JsonNode> getBlksFromSubSystem(JsonNode subsystemNode, String blkType) {
