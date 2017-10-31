@@ -567,7 +567,7 @@ public class J2LTranslator {
             eq = new LustreEq(orderedOutportVars, translateBlock(false, srcBlkHandles.get(0), subsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap, new HashSet<String>()));
         }        
         return eq;
-    }   
+    }                  
 
     /**
      * 
@@ -631,21 +631,22 @@ public class J2LTranslator {
                     break;
                 } 
                 case GTE: {
-                    tryLiftingExprTypes(inExprs, inHandles, hdlToBlkNodeMap);
+                    enforceCorrectTyping(inExprs, inHandles, hdlToBlkNodeMap);
                     blkExpr = new BinaryExpr(inExprs.get(0), BinaryExpr.Op.GTE, inExprs.get(1));                                       
                     break;
                 } 
                 case LTE: {  
-                    tryLiftingExprTypes(inExprs, inHandles, hdlToBlkNodeMap);
+                    enforceCorrectTyping(inExprs, inHandles, hdlToBlkNodeMap);
                     blkExpr = new BinaryExpr(inExprs.get(0), BinaryExpr.Op.LTE, inExprs.get(1));                                       
                     break;
                 }  
                 case GT: { 
-                    tryLiftingExprTypes(inExprs, inHandles, hdlToBlkNodeMap);
+                    enforceCorrectTyping(inExprs, inHandles, hdlToBlkNodeMap);
                     blkExpr = new BinaryExpr(inExprs.get(0), BinaryExpr.Op.GT, inExprs.get(1));                                       
                     break;
                 }  
-                case LT: {                                                            
+                case LT: {  
+                    enforceCorrectTyping(inExprs, inHandles, hdlToBlkNodeMap);
                     blkExpr = new BinaryExpr(inExprs.get(0), BinaryExpr.Op.LT, inExprs.get(1));                                       
                     break;
                 }                  
@@ -1338,11 +1339,36 @@ public class J2LTranslator {
         if(node != null) {
             if(node.has(BLOCKTYPE) && node.get(BLOCKTYPE).asText().equals(IF)) {
                 return true;
-            }                        
+            }                                  
         }
         return false;        
     }
     
+    protected void enforceCorrectTyping(List<LustreExpr> inExprs, List<String> inHandles, Map<String, JsonNode> handleToBlkNodeMap) {
+        Object[] results = getTheHighestType(inHandles, handleToBlkNodeMap);
+        
+        if(((Boolean)results[0])) {
+            LustreType highestType = (LustreType)results[1];
+            
+            for(int i = 0; i < inHandles.size(); i++) {
+                LustreType nodeType = getBlkOutportType(handleToBlkNodeMap.get(inHandles.get(i)));
+
+                if((nodeType == PrimitiveType.BOOL) && (highestType == PrimitiveType.INT)) {
+                    inExprs.set(i, new NodeCallExpr(getOrCreateLustreLibNode(BOOLTOINT), inExprs.get(i)));
+                } else if((nodeType == PrimitiveType.BOOL) && (highestType == PrimitiveType.REAL)) {
+                    inExprs.set(i, new NodeCallExpr(getOrCreateLustreLibNode(BOOLTOREAL), inExprs.get(i)));
+                } else if((nodeType == PrimitiveType.INT) && (highestType == PrimitiveType.REAL)) {
+                    inExprs.set(i, new NodeCallExpr(getOrCreateLustreLibNode(INTTOREAL), inExprs.get(i)));
+                } else {
+                    LOGGER.log(Level.SEVERE, "Unsupported type conversion: {0} to {1}", new Object[]{nodeType, highestType});
+                }
+            }            
+        } else if(getBlkOutportType(handleToBlkNodeMap.get(inHandles.get(0))) == PrimitiveType.BOOL) {            
+            for(int i = 0; i < inHandles.size(); i++) {
+                inExprs.set(i, new NodeCallExpr(getOrCreateLustreLibNode(BOOLTOINT), inExprs.get(i)));
+            }
+        }        
+    }    
     
     
     protected void tryLiftingExprTypes(List<LustreExpr> inExprs, List<String> inHandles, Map<String, JsonNode> handleToBlkNodeMap) {
@@ -1412,7 +1438,7 @@ public class J2LTranslator {
         if(isValidConst(value)) {
             if(type == PrimitiveType.REAL) {
                 if(!value.contains(".")) {
-                    value = value + ".0";
+                    value += ".0";
                 }
                 constExpr = new RealExpr(new BigDecimal(value));
             } else if(type == PrimitiveType.INT) {
