@@ -860,18 +860,10 @@ public class J2LTranslator {
                                        
                     if(condType == PrimitiveType.BOOL) {
                         condExpr = inExprs.get(1);
-                    } else if(condType == PrimitiveType.REAL || condType == PrimitiveType.INT) {
-                        LustreExpr  condRhsExpr     = null;
+                    } else {                        
                         String      threshold       = blkNode.get(THRESHOLD).asText();
-                        
-                        if(condType == PrimitiveType.REAL) {
-                            if(!threshold.contains(".")) {
-                                threshold += ".0";
-                            }
-                            condRhsExpr = new RealExpr(new BigDecimal(threshold));
-                        } else {
-                            condRhsExpr = new IntExpr(new BigInteger(threshold));
-                        }
+                        LustreExpr  condRhsExpr     = getLustreConst(threshold, condType);
+
                         switch(criteria) {
                             case FSTCRIT: {
                                 condExpr = new BinaryExpr(inExprs.get(1), BinaryExpr.Op.GTE, condRhsExpr);
@@ -888,9 +880,7 @@ public class J2LTranslator {
                             default:
                                 break;
                         }
-                    } else {
-                        LOGGER.log(Level.SEVERE, "UNSUPPORTED condition type: {0}", condType);
-                    }
+                    } 
                     blkExpr = new IteExpr(condExpr, inExprs.get(0), inExprs.get(2));
                     break;
                 }               
