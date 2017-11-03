@@ -14,29 +14,48 @@ import java.util.List;
  */
 public class LustreProgram extends LustreAst {
     public List<LustreNode> nodes;
+    public List<Contract> contracts;
     public List<LustreEnumType> typesDef;
     
-    public LustreProgram() {
+    public LustreProgram() {        
         this.nodes      = new ArrayList<>();
+        this.contracts  = new ArrayList<>();
         this.typesDef   = new ArrayList<>();
     }
     
     public LustreProgram(List<LustreNode> nodes) {
-        this.nodes = nodes;
+        this.nodes      = nodes;  
+        this.contracts  = new ArrayList<>();
+        this.typesDef   = new ArrayList<>();        
     } 
 
     public LustreProgram(List<LustreNode> nodes, List<LustreEnumType> enums) {
         this.nodes      = nodes;
         this.typesDef   = enums;
+        this.contracts  = new ArrayList<>();        
     }     
+    
+    public LustreProgram(List<LustreNode> nodes, List<LustreEnumType> enums, List<Contract> contracts) {
+        this.nodes      = nodes;
+        this.typesDef   = enums;
+        this.contracts  = contracts;        
+    }    
     
     public void addNode(LustreNode node) {
         this.nodes.add(node);
     }
     
+    public void addContract(Contract contract) {
+        this.contracts.add(contract);
+    }    
+    
     public void addNodes(List<LustreNode> nodes) {
         this.nodes.addAll(nodes);
-    }    
+    }  
+    
+    public void addContracts(List<Contract> contracts) {
+        this.contracts.addAll(contracts);
+    }      
     
     public void addEnumDef(LustreEnumType enumDef) {
         this.typesDef.add(enumDef);

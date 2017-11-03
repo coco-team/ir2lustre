@@ -9,7 +9,9 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -18,7 +20,8 @@ import java.util.logging.Logger;
  * @author Paul Meng
  */
 public class LustrePrettyPrinter implements LustreAstVisitor{
-    private static final String NL = System.getProperty("line.separator");    
+    private static final String NL  = System.getProperty("line.separator");    
+    private static final String TAB = "  ";
     
     StringBuilder sb = new StringBuilder();
     
@@ -55,6 +58,13 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
             sb.append(NL);
         }        
         sb.append(NL);
+        
+        for(Contract contract : program.contracts) {
+            contract.accept(this);sb.append(NL);
+        }
+        
+        sb.append(NL);
+        System.out.println(sb.toString());
         for(LustreNode node : program.nodes) {
             node.accept(this);sb.append(NL).append(NL);
         }
@@ -167,7 +177,49 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
 
     @Override
     public void visit(Contract contract) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        sb.append("contract ").append(contract.name);
+        sb.append(" (").append(NL);
+        declVariables(contract.inputs);
+        sb.append(")").append(NL);
+        sb.append("returns (").append(NL);
+        declVariables(contract.outputs);
+        sb.append(");").append(NL);
+        sb.append("let").append(NL);
+        
+        if(!contract.localVars.isEmpty()) {
+            sb.append("var ").append(NL);
+            declVariables(contract.localVars);
+            sb.append(";").append(NL);
+        }
+        for(LustreExpr assume : contract.assumptions) {
+            sb.append(TAB).append("assume ");assume.accept(this);sb.append(";").append(NL);
+        }
+        for(LustreExpr assume : contract.guarantees) {
+            sb.append(TAB).append("guarantee ");assume.accept(this);sb.append(";").append(NL);
+        }
+        Set<String> modes = new HashSet<>();
+        modes.addAll(contract.modeToEnsures.keySet());
+        modes.addAll(contract.modeToRequires.keySet());
+        
+        for(String mode : modes) {
+            sb.append(TAB).append("mode ").append(mode).append(" (").append(NL);
+            if(contract.modeToRequires.containsKey(mode)) {
+                for(LustreExpr require : contract.modeToRequires.get(mode)) {
+                    sb.append(TAB).append(TAB).append("require ");
+                    require.accept(this);
+                    sb.append(";").append(NL);
+                }
+            }
+            if(contract.modeToEnsures.containsKey(mode)) {
+                for(LustreExpr ensure : contract.modeToEnsures.get(mode)) {
+                    sb.append(TAB).append(TAB).append("ensure ");
+                    ensure.accept(this);
+                    sb.append(";").append(NL);
+                }
+            }            
+            sb.append(TAB).append(");").append(NL);
+        }
+        sb.append("tel").append(NL);
     }
     
     @Override
