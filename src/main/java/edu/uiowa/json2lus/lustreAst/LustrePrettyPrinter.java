@@ -59,12 +59,11 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
         }        
         sb.append(NL);
         
-        for(Contract contract : program.contracts) {
+        for(LustreContract contract : program.contracts) {
             contract.accept(this);sb.append(NL);
         }
         
-        sb.append(NL);
-        System.out.println(sb.toString());
+        sb.append(NL);        
         for(LustreNode node : program.nodes) {
             node.accept(this);sb.append(NL).append(NL);
         }
@@ -176,7 +175,7 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
     }
 
     @Override
-    public void visit(Contract contract) {
+    public void visit(LustreContract contract) {
         sb.append("contract ").append(contract.name);
         sb.append(" (").append(NL);
         declVariables(contract.inputs);
@@ -222,11 +221,6 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
         sb.append("tel").append(NL);
     }
     
-    @Override
-    public void visit(LustreContract contract) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
     @Override
     public void visit(LustreEq equation) {
         if(equation.lhs.size() > 1) {

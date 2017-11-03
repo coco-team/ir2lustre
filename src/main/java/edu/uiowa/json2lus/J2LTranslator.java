@@ -10,7 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.uiowa.json2lus.ExprParser.AstNode;
 import edu.uiowa.json2lus.lustreAst.BinaryExpr;
 import edu.uiowa.json2lus.lustreAst.BooleanExpr;
-import edu.uiowa.json2lus.lustreAst.Contract;
+import edu.uiowa.json2lus.lustreAst.LustreContract;
 import edu.uiowa.json2lus.lustreAst.IntExpr;
 import edu.uiowa.json2lus.lustreAst.IteExpr;
 import edu.uiowa.json2lus.lustreAst.LustreAst;
@@ -237,8 +237,8 @@ public class J2LTranslator {
             for(LustreAst ast : translateSubsystemNode(node)) {
                 if(ast instanceof LustreNode) {
                     this.lustreProgram.addNode((LustreNode)ast);
-                } else if(ast instanceof Contract) {
-                    this.lustreProgram.addContract((Contract)ast);
+                } else if(ast instanceof LustreContract) {
+                    this.lustreProgram.addContract((LustreContract)ast);
                 }
             }            
         }
@@ -343,7 +343,7 @@ public class J2LTranslator {
                 }                
             }
         }
-        contracts.add(new Contract(contractName, assumptions, guarantees, inputs, outputs, modeToRequires, modeToEnsures));
+        contracts.add(new LustreContract(contractName, assumptions, guarantees, inputs, outputs, modeToRequires, modeToEnsures));
         return contracts;
     }    
     

@@ -18,9 +18,8 @@ public interface LustreAstVisitor {
     public void visit(BooleanExpr expr);    
     public void visit(NodeCallExpr expr);         
     public void visit(LustreNode node);
-    public void visit(Contract contract);    
+    public void visit(LustreContract contract);    
     public void visit(LustreProgram program); 
-    public void visit(LustreContract contract);
     public void visit(LustreEq equation);
     public void visit(LustreVar var);
     public void visit(VarIdExpr varId);

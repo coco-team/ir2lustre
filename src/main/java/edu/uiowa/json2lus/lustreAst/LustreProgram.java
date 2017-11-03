@@ -14,7 +14,7 @@ import java.util.List;
  */
 public class LustreProgram extends LustreAst {
     public List<LustreNode> nodes;
-    public List<Contract> contracts;
+    public List<LustreContract> contracts;
     public List<LustreEnumType> typesDef;
     
     public LustreProgram() {        
@@ -35,7 +35,7 @@ public class LustreProgram extends LustreAst {
         this.contracts  = new ArrayList<>();        
     }     
     
-    public LustreProgram(List<LustreNode> nodes, List<LustreEnumType> enums, List<Contract> contracts) {
+    public LustreProgram(List<LustreNode> nodes, List<LustreEnumType> enums, List<LustreContract> contracts) {
         this.nodes      = nodes;
         this.typesDef   = enums;
         this.contracts  = contracts;        
@@ -45,7 +45,7 @@ public class LustreProgram extends LustreAst {
         this.nodes.add(node);
     }
     
-    public void addContract(Contract contract) {
+    public void addContract(LustreContract contract) {
         this.contracts.add(contract);
     }    
     
@@ -53,7 +53,7 @@ public class LustreProgram extends LustreAst {
         this.nodes.addAll(nodes);
     }  
     
-    public void addContracts(List<Contract> contracts) {
+    public void addContracts(List<LustreContract> contracts) {
         this.contracts.addAll(contracts);
     }      
     
