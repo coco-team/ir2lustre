@@ -165,7 +165,7 @@ public class J2LTranslator {
     private final String CONTRACTBLKTYPE = "ContractBlockType";    
     
     
-    /** Lustre nodes name for type conversions */
+    /** Lustre node names for type conversions */
     private final String BOOLTOINT      = "bool_to_int";
     private final String INTTOBOOL      = "int_to_bool";    
     private final String BOOLTOREAL     = "bool_to_real";
@@ -262,14 +262,14 @@ public class J2LTranslator {
             
             while(nodes.hasNext()) {
                 Map.Entry<String, JsonNode> field = nodes.next(); 
+                
                 if(!field.getKey().equals(META)) {
                     this.topLevelNode   = field.getValue();
                     this.topNodeName    = field.getKey();
+                    collectSubsytemBlocksInfo(this.topLevelNode);               
                 }              
             }
-            if(this.topLevelNode != null) {
-                collectSubsytemBlocksInfo(this.topLevelNode);               
-            } else {
+            if(this.topLevelNode == null) {
                 LOGGER.log(Level.SEVERE, "Unexpected: no top level node is found in the JSON file!");                
             }
         } else {
@@ -283,9 +283,9 @@ public class J2LTranslator {
      */    
     protected void collectSubsytemBlocksInfo(JsonNode subsystemNode) {
         if(subsystemNode != null && !this.subsystemNodes.contains(subsystemNode) && subsystemNode.has(CONTENT)) {
-            LOGGER.log(Level.INFO, "Found a subsystem block: {0}  ", sanitizeName(subsystemNode.equals(this.topLevelNode) ? this.topNodeName:subsystemNode.get(NAME).asText()));            
-            
             this.subsystemNodes.add(subsystemNode);
+            
+            LOGGER.log(Level.INFO, "Found a subsystem block: {0}  ", sanitizeName(subsystemNode.equals(this.topLevelNode) ? this.topNodeName:subsystemNode.get(NAME).asText()));
             Iterator<Entry<String, JsonNode>> nodes = subsystemNode.get(CONTENT).fields();                         
             
             while(nodes.hasNext()) {
@@ -303,8 +303,8 @@ public class J2LTranslator {
         }       
     }    
     
-    protected List<LustreAst> translateContractSubsystemNode(JsonNode contractNode, JsonNode validatorBlkNode, List<LustreVar> inputs, List<LustreVar> outputs, Map<JsonNode, List<String>> blkNodeToSrcBlkHdlsMap, Map<JsonNode, List<String>> blkNodeToDstBlkHdlsMap, Map<String, JsonNode> hdlToBlkNodeMap) {
-        String contractName = sanitizeName(contractNode.equals(this.topLevelNode) ? this.topNodeName : contractNode.get(NAME).asText()); 
+    protected List<LustreAst> translateContractNode(JsonNode contractNode, JsonNode validatorBlkNode, List<LustreVar> inputs, List<LustreVar> outputs, Map<JsonNode, List<String>> blkNodeToSrcBlkHdlsMap, Map<JsonNode, List<String>> blkNodeToDstBlkHdlsMap, Map<String, JsonNode> hdlToBlkNodeMap) {
+        String contractName = sanitizeName(contractNode.equals(this.topLevelNode) ? this.topNodeName : getQualifiedBlkName(contractNode)); 
         LOGGER.log(Level.INFO, "Start translating the contract block: {0}", contractName);
         
         List<LustreAst>                 contracts       = new ArrayList<>();        
@@ -350,10 +350,14 @@ public class J2LTranslator {
     /**
      * 
      * @param subsystemNode
-     * @return The Lustre node corresponding to the input subsystem JSON node
+     * @return The Lustre node or contract corresponding to the input subsystem JSON node
      */
     protected List<LustreAst> translateSubsystemNode(JsonNode subsystemNode) {
-        String lusNodeName = sanitizeName(subsystemNode.equals(this.topLevelNode) ? this.topNodeName : subsystemNode.get(NAME).asText()); 
+        if(isContractInternalBlk(subsystemNode)) {
+            return new ArrayList<>();
+        }
+        
+        String lusNodeName = sanitizeName(subsystemNode.equals(this.topLevelNode) ? this.topNodeName : getQualifiedBlkName(subsystemNode)); 
         
         LOGGER.log(Level.INFO, "Start translating the subsystem block: {0}", lusNodeName);        
         
@@ -367,6 +371,7 @@ public class J2LTranslator {
         Map<Integer, JsonNode>  outports        = new HashMap<>();
         
         JsonNode                            validatorBlk                = null;
+        List<JsonNode>                      contractNodes               = new ArrayList<>();   
         /** Terminator node in the input subsystem block */
         List<JsonNode>                      propsNodes                  = new ArrayList<>();   
         /** Outport nodes in the input subsystem block */
@@ -434,21 +439,23 @@ public class J2LTranslator {
                 if(isPropertyBlk(contBlkNode)) {
                     propsNodes.add(contBlkNode);
                 }
+                if(isContractBlk(contBlkNode)) {
+                    contractNodes.add(contBlkNode);
+                }
             }            
         }
         for(int i = 0; i < inports.size(); i++) {
             if(inports.containsKey(i)) {
                 JsonNode inportBlk = inports.get(i);
-                inputs.add(new LustreVar(getBlkName(inportBlk), getBlkOutportType(inportBlk)));                 
+                inputs.add(new LustreVar(getQualifiedBlkName(inportBlk), getBlkOutportType(inportBlk)));                 
             }           
         }
         for(int i = 0; i < outports.size(); i++) {
             JsonNode outportBlk = outports.get(i);
-            outputs.add(new LustreVar(getBlkName(outportBlk), getLustreTypeFromStrRep(outportBlk.get(PORTDATATYPE).get(INPORT).asText())));            
+            outputs.add(new LustreVar(getQualifiedBlkName(outportBlk), getLustreTypeFromStrRep(outportBlk.get(PORTDATATYPE).get(INPORT).asText())));            
         }   
-        
         if(isContractBlk(subsystemNode)) {            
-            return translateContractSubsystemNode(subsystemNode, validatorBlk, inputs, outputs, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap);
+            return translateContractNode(subsystemNode, validatorBlk, inputs, outputs, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap);
         } else {
             equations.addAll(translateOutportEquations(new ArrayList<>(outports.values()), subsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap));                    
             equations.addAll(this.auxNodeEqs);
@@ -594,7 +601,7 @@ public class J2LTranslator {
                 List<JsonNode>  outportNodes    = getBlksFromSubSystem(propBlk, OUTPORT);
 
                 for(JsonNode outNode : outportNodes) {
-                    outVarIdExprs.add(new VarIdExpr(getBlkName(propBlk)+"_"+sanitizeName(outNode.get(NAME).asText())));
+                    outVarIdExprs.add(new VarIdExpr(getQualifiedBlkName(propBlk)+"_"+getQualifiedBlkName(outNode)));
                 }              
                 propEq = new LustreEq(outVarIdExprs, translateBlock(true, getBlkHandle(propBlk), subsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap, new HashSet<String>()));
             } else {
@@ -620,18 +627,18 @@ public class J2LTranslator {
             JsonNode    outportNode = outportNodes.get(0);       
 
             if(blkNodeToSrcBlkHandlesMap.containsKey(outportNode)) {
-                VarIdExpr       varIdExpr       = new VarIdExpr(getBlkName(outportNode));                 
+                VarIdExpr       varIdExpr       = new VarIdExpr(getQualifiedBlkName(outportNode));                 
                 List<String>    srcBlkHandles   = blkNodeToSrcBlkHandlesMap.get(outportNode);
 
                 if(srcBlkHandles.size() == 1 && !srcBlkHandles.get(0).equals("-1")) {
                     eq = new LustreEq(varIdExpr, translateBlock(false, srcBlkHandles.get(0), subsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap, new HashSet<String>()));
                 } else if(srcBlkHandles.size() > 1) {
-                    LOGGER.log(Level.SEVERE, "Unexpected: Multiple different src blocks connect to a same outport: {0}!", getBlkName(outportNode));
+                    LOGGER.log(Level.SEVERE, "Unexpected: Multiple different src blocks connect to a same outport: {0}!", getQualifiedBlkName(outportNode));
                 } else {
-                    LOGGER.log(Level.SEVERE, "Unexpected: No src blocks connect to the outport: {0}!", getBlkName(outportNode));
+                    LOGGER.log(Level.SEVERE, "Unexpected: No src blocks connect to the outport: {0}!", getQualifiedBlkName(outportNode));
                 }
             } else {
-                LOGGER.log(Level.WARNING, "Unexpected: No src blocks connect to the outport: {0}!", getBlkName(outportNode));
+                LOGGER.log(Level.WARNING, "Unexpected: No src blocks connect to the outport: {0}!", getQualifiedBlkName(outportNode));
             }            
         } else if(outportNodes.size() > 1) {
             // Need to make sure the order of outports is correct
@@ -640,7 +647,7 @@ public class J2LTranslator {
             List<String>        dstBlkHandes        = blkNodeToDstBlkHandlesMap.get(handleToBlkNodeMap.get(srcBlkHandles.get(0)));
                         
             for(String hdl : dstBlkHandes) {
-                orderedOutportVars.add(new VarIdExpr(getBlkName(handleToBlkNodeMap.get(hdl))));
+                orderedOutportVars.add(new VarIdExpr(getQualifiedBlkName(handleToBlkNodeMap.get(hdl))));
             }
             eq = new LustreEq(orderedOutportVars, translateBlock(false, srcBlkHandles.get(0), subsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap, new HashSet<String>()));
         }        
@@ -675,7 +682,7 @@ public class J2LTranslator {
                 JsonNode dstNode = hdlToBlkNodeMap.get(hdl);
                 
                 if(dstNode.get(BLOCKTYPE).asText().equals(OUTPORT)) {
-                    return new VarIdExpr(getBlkName(dstNode));
+                    return new VarIdExpr(getQualifiedBlkName(dstNode));
                 }
             }
         }        
@@ -792,7 +799,7 @@ public class J2LTranslator {
                 case MOD: {
                     for(String hdl : inHandles) {
                         if(getBlkOutportType(hdlToBlkNodeMap.get(hdl)) == PrimitiveType.REAL) {
-                            LOGGER.log(Level.SEVERE, "Unexpected: input {0} to MOD operator is REAL type!", getBlkName(hdlToBlkNodeMap.get(hdl)));
+                            LOGGER.log(Level.SEVERE, "Unexpected: input {0} to MOD operator is REAL type!", getQualifiedBlkName(hdlToBlkNodeMap.get(hdl)));
                         }
                     }
                     blkExpr = inExprs.get(0);
@@ -847,12 +854,13 @@ public class J2LTranslator {
                     }
                     break;
                 }
-                case SUBSYSTEM: {    
-                    blkExpr = new NodeCallExpr(sanitizeName(blkNode.get(NAME).asText()), inExprs);
+                case SUBSYSTEM: {
+                    
+                    blkExpr = new NodeCallExpr(getQualifiedBlkName(blkNode), inExprs);
                     break;
                 }
                 case INPORT: {
-                    blkExpr = new VarIdExpr(blkNode.get(NAME).asText());
+                    blkExpr = new VarIdExpr(getQualifiedBlkName(blkNode));
                     break;
                 }
                 case CONSTANT: {
@@ -967,7 +975,7 @@ public class J2LTranslator {
                     if(this.auxHdlToPreExprMap.containsKey(blkHandle)) {
                         blkExpr = this.auxHdlToPreExprMap.get(blkHandle);
                     } else {
-                        String      varName     = sanitizeName(getBlkName(blkNode));     
+                        String      varName     = getQualifiedBlkName(blkNode);     
                         VarIdExpr   preVarId    = new VarIdExpr(varName);
                         
                         if(!visitedPreHdls.contains(blkHandle)) { 
@@ -1032,7 +1040,7 @@ public class J2LTranslator {
                                         srcExprs.add(translateBlock(isPropBlk, srcHandle, parentSubsystemNode, blkNodeToSrcBlkHdlsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, visitedPreHdls));
                                     }
                                 }
-                                hdlActSysExprMap.put(entry.getKey(), new NodeCallExpr(sanitizeName(actSubsystemNode.get(NAME).asText()), srcExprs));
+                                hdlActSysExprMap.put(entry.getKey(), new NodeCallExpr(getQualifiedBlkName(actSubsystemNode), srcExprs));
                             }                            
                         }                        
                     }
@@ -1076,11 +1084,11 @@ public class J2LTranslator {
             }
             // The number of condition expressions is one less than the number of branches
             if(condStrExprs.size() == hdlActSysExprMap.size()-1) {
-                LustreExpr condEnumExpr = null;                
-                condExprs = convertIteCondExprs(condStrExprs, inExprs);
-                List<String>    enumValues     = new ArrayList<>();
-                List<VarIdExpr> enumValueExprs = new ArrayList<>();                
-                
+                LustreExpr      condEnumExpr    = null;                
+                List<String>    enumValues      = new ArrayList<>();
+                List<VarIdExpr> enumValueExprs  = new ArrayList<>();                
+
+                condExprs = convertIteCondExprs(condStrExprs, inExprs);                
                 for(int i = 0; i <= condExprs.size(); i++){
                     String val = CONDENUM+(COUNT++);
                     enumValues.add(val);
@@ -1402,7 +1410,6 @@ public class J2LTranslator {
     /*************************************** Utility Functions ***************************************/
     /*************************************************************************************************/
     
-    
     /**
      * @param node
      * @return true if node is a IF block otherwise false
@@ -1415,6 +1422,20 @@ public class J2LTranslator {
         }
         return false;        
     }
+    
+    
+    protected boolean isContractInternalBlk(JsonNode node) {
+        if(node != null) {
+            if(node.has(BLOCKTYPE) && node.get(BLOCKTYPE).asText().equals(SUBSYSTEM)) {
+                if(node.has(CONTRACTBLKTYPE)) {
+                    String blkType = node.get(CONTRACTBLKTYPE).asText();                    
+                    return blkType.equals(MODE) || blkType.equals(ENSURE) ||
+                           blkType.equals(REQUIRE) || blkType.equals(ASSUME) || blkType.equals(GUARANTEE);
+                }
+            }
+        }
+        return false;        
+    }    
     
     protected boolean isContractBlk(JsonNode node) {
         if(node != null) {
@@ -1789,6 +1810,16 @@ public class J2LTranslator {
         }
         return "";
     }  
+    protected String getQualifiedBlkName(JsonNode node) {
+        if(node.equals(this.topLevelNode)) {
+            return this.topNodeName;
+        } else if(node.has(PATH)) {
+            return sanitizeName(node.get(PATH).asText());
+        } else {
+            LOGGER.log(Level.SEVERE, "Unexpected: the input block does not have a name!");
+        }
+        return "";
+    }      
     
     protected String getBlkHandle(JsonNode node) {
         if(node.has(HANDLE)) {
@@ -1826,7 +1857,8 @@ public class J2LTranslator {
     }  
     
     protected String sanitizeName(String name) {
-        return name.trim().replace(" ", "_").replace("\n", "_").replace("=", "_").replace(">", "_").replace("<", "_");
+        return name.trim().replace(" ", "_").replace("\n", "_").replace("=", "_")
+                .replace(">", "_").replace("<", "_").replace("/", "_").replace("\\", "_");
     }
     
     protected List<JsonNode> getBlksFromSubSystem(JsonNode subsystemNode, String blkType) {

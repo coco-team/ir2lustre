@@ -6,7 +6,10 @@
 package edu.uiowa.json2lus.lustreAst;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  *
@@ -16,30 +19,43 @@ public class LustreProgram extends LustreAst {
     public List<LustreNode> nodes;
     public List<LustreContract> contracts;
     public List<LustreEnumType> typesDef;
+    public Map<String, List<String>> nodeContractsMap;
     
     public LustreProgram() {        
-        this.nodes      = new ArrayList<>();
-        this.contracts  = new ArrayList<>();
-        this.typesDef   = new ArrayList<>();
+        this.nodes              = new ArrayList<>();
+        this.contracts          = new ArrayList<>();
+        this.typesDef           = new ArrayList<>();
+        this.nodeContractsMap   = new HashMap<>();
     }
     
     public LustreProgram(List<LustreNode> nodes) {
-        this.nodes      = nodes;  
-        this.contracts  = new ArrayList<>();
-        this.typesDef   = new ArrayList<>();        
+        this.nodes              = nodes;  
+        this.contracts          = new ArrayList<>();
+        this.typesDef           = new ArrayList<>();   
+        this.nodeContractsMap   = new HashMap<>();
     } 
 
     public LustreProgram(List<LustreNode> nodes, List<LustreEnumType> enums) {
-        this.nodes      = nodes;
-        this.typesDef   = enums;
-        this.contracts  = new ArrayList<>();        
+        this.nodes              = nodes;
+        this.typesDef           = enums;
+        this.contracts          = new ArrayList<>();   
+        this.nodeContractsMap   = new HashMap<>();
     }     
     
     public LustreProgram(List<LustreNode> nodes, List<LustreEnumType> enums, List<LustreContract> contracts) {
-        this.nodes      = nodes;
-        this.typesDef   = enums;
-        this.contracts  = contracts;        
+        this.nodes              = nodes;
+        this.typesDef           = enums;
+        this.contracts          = contracts;        
+        this.nodeContractsMap   = new HashMap<>();
     }    
+    
+    public void attachNodeContract(String node, String contract) {
+        if(this.nodeContractsMap.containsKey(node)) {
+            this.nodeContractsMap.get(node).add(contract);
+        } else {
+            this.nodeContractsMap.put(node, Arrays.asList(contract));
+        }
+    }
     
     public void addNode(LustreNode node) {
         this.nodes.add(node);

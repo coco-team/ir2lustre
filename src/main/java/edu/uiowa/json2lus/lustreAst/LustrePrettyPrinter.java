@@ -193,9 +193,12 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
         for(LustreExpr assume : contract.assumptions) {
             sb.append(TAB).append("assume ");assume.accept(this);sb.append(";").append(NL);
         }
+        sb.append(NL);
         for(LustreExpr assume : contract.guarantees) {
             sb.append(TAB).append("guarantee ");assume.accept(this);sb.append(";").append(NL);
         }
+        sb.append(NL);
+        
         Set<String> modes = new HashSet<>();
         modes.addAll(contract.modeToEnsures.keySet());
         modes.addAll(contract.modeToRequires.keySet());
@@ -216,7 +219,7 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
                     sb.append(";").append(NL);
                 }
             }            
-            sb.append(TAB).append(");").append(NL);
+            sb.append(TAB).append(");").append(NL).append(NL);
         }
         sb.append("tel").append(NL);
     }
