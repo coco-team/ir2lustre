@@ -9,8 +9,11 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -24,6 +27,8 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
     private static final String TAB = "  ";
     
     StringBuilder sb = new StringBuilder();
+    Map<String, Set<String>> nodeContractsMap = new HashMap<>();
+    
     
     public void printLustreProgramToFile(String path) {
         Logger.getLogger(LustrePrettyPrinter.class.getName()).log(Level.INFO, "****************************************************");
@@ -53,20 +58,35 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
     
     @Override
     public void visit(LustreProgram program) {
+        this.nodeContractsMap = program.nodeContractsMap;
+        List<LustreNode> cNodes = new ArrayList<>();
+        
         for(LustreEnumType enumType : program.typesDef) {
             enumType.accept(this);
             sb.append(NL);
         }        
+        
+        sb.append(NL);
+              
+        for(LustreNode node : program.nodes) {
+            if(!nodeContractsMap.containsKey(node.name)) {
+                node.accept(this);sb.append(NL).append(NL);
+            } else {
+                cNodes.add(node);
+            }
+        }
+        
         sb.append(NL);
         
         for(LustreContract contract : program.contracts) {
             contract.accept(this);sb.append(NL);
-        }
+        }  
         
-        sb.append(NL);        
-        for(LustreNode node : program.nodes) {
+        sb.append(NL);
+              
+        for(LustreNode node : cNodes) {
             node.accept(this);sb.append(NL).append(NL);
-        }
+        }        
     }    
 
     @Override
@@ -77,8 +97,31 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
         sb.append(")").append(NL);
         sb.append("returns (").append(NL);
         declVariables(node.outputVars);
-        sb.append(");").append(NL);
+        sb.append(");").append(NL);        
         
+        if(this.nodeContractsMap.containsKey(node.name)) {
+            sb.append(NL);
+            sb.append("(*@contract ");
+            for(String contract : this.nodeContractsMap.get(node.name)) {
+                sb.append("import ").append(contract).append("(");
+                for(int i = 0; i< node.inputVars.size(); i++) {
+                    sb.append(node.inputVars.get(i).name);
+                    if(i < node.inputVars.size()-1) {
+                        sb.append(", ");
+                    }
+                }                
+                sb.append(")");
+                sb.append(" returns (");
+                for(int i = 0; i< node.outputVars.size(); i++) {
+                    sb.append(node.outputVars.get(i).name);
+                    if(i < node.outputVars.size()-1) {
+                        sb.append(", ");
+                    }
+                }                  
+                sb.append(");");
+            }
+            sb.append("*)").append(NL).append(NL);            
+        }        
         if(!node.localVars.isEmpty()) {
             sb.append("var ").append(NL);
             declVariables(node.localVars);
