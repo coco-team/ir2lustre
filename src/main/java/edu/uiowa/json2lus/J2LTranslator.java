@@ -147,24 +147,24 @@ public class J2LTranslator {
     private final String ENSURES        = "ensures";
     
     
-    private final String INPORT         = "Inport";    
-    private final String OUTPORT        = "Outport";    
-    private final String CONTENT        = "Content";    
-    private final String OPERATOR       = "Operator";
-    private final String MASKTYPE       = "MaskType";
-    private final String SRCBLOCK       = "SrcBlock";
-    private final String DSTBLOCK       = "DstBlock";
-    private final String BLOCKTYPE      = "BlockType";
-    private final String SUBSYSTEM      = "SubSystem"; 
-    private final String ACTIONPORT     = "ActionPort";                
-    private final String TERMINATOR     = "Terminator";
-    private final String LINEHANDLES    = "LineHandles";     
-    private final String CONNECTIVITY   = "PortConnectivity";
-    private final String RELATIONALOP   = "relationaloperator";
-    private final String PORTDATATYPE   = "CompiledPortDataTypes";    
-    private final String ANNOTATIONTYPE = "AnnotationType";
-    private final String CONTRACTBLKTYPE = "ContractBlockType";    
-    private final String COMPARETOZERO  = "Compare To Zero";    
+    private final String INPORT             = "Inport";    
+    private final String OUTPORT            = "Outport";    
+    private final String CONTENT            = "Content";    
+    private final String OPERATOR           = "Operator";
+    private final String MASKTYPE           = "MaskType";
+    private final String SRCBLOCK           = "SrcBlock";
+    private final String DSTBLOCK           = "DstBlock";
+    private final String BLOCKTYPE          = "BlockType";
+    private final String SUBSYSTEM          = "SubSystem"; 
+    private final String ACTIONPORT         = "ActionPort";                
+    private final String TERMINATOR         = "Terminator";
+    private final String LINEHANDLES        = "LineHandles";     
+    private final String CONNECTIVITY       = "PortConnectivity";
+    private final String RELATIONALOP       = "relationaloperator";
+    private final String PORTDATATYPE       = "CompiledPortDataTypes";    
+    private final String COMPARETOZERO      = "Compare To Zero";
+    private final String ANNOTATIONTYPE     = "AnnotationType";
+    private final String CONTRACTBLKTYPE    = "ContractBlockType";            
     private final String COMPARETOCONSTANT  = "Compare To Constant";    
     
     
@@ -236,6 +236,7 @@ public class J2LTranslator {
      */    
     public LustreProgram execute() {
         collectSubsytemBlocksInfo();
+        // Ensure a bottom-up translation to avoid forward reference issue
         for(int i = this.subsystemNodes.size()-1; i >= 0; i--) {
             for(LustreAst ast : translateSubsystemNode(this.subsystemNodes.get(i))) {
                 if(ast instanceof LustreNode) {
@@ -244,8 +245,6 @@ public class J2LTranslator {
                     this.lustreProgram.addContract((LustreContract)ast);
                 }
             }              
-        }
-        for(JsonNode node : this.subsystemNodes) {          
         }
         return this.lustreProgram;
     }    
@@ -308,6 +307,17 @@ public class J2LTranslator {
         }       
     }    
     
+    /**
+     * 
+     * @param contractNode
+     * @param validatorBlkNode
+     * @param inputs
+     * @param outputs
+     * @param blkNodeToSrcBlkHdlsMap
+     * @param blkNodeToDstBlkHdlsMap
+     * @param hdlToBlkNodeMap
+     * @return A list of contracts corresponding to the contract node
+     */    
     protected List<LustreAst> translateContractNode(JsonNode contractNode, JsonNode validatorBlkNode, List<LustreVar> inputs, List<LustreVar> outputs, Map<JsonNode, List<String>> blkNodeToSrcBlkHdlsMap, Map<JsonNode, List<String>> blkNodeToDstBlkHdlsMap, Map<String, JsonNode> hdlToBlkNodeMap) {
         String contractName = getQualifiedBlkName(contractNode); 
         LOGGER.log(Level.INFO, "Start translating the contract block: {0}", contractName);
@@ -366,27 +376,7 @@ public class J2LTranslator {
         contracts.add(new LustreContract(contractName, assumptions, guarantees, newInputs, outputs, modeToRequires, modeToEnsures));
         return contracts;
     }   
-    
-    protected boolean isUserDefinedSubsystemBlk(String hdl) {
-        if(hdl != null) {
-            for(JsonNode subsystemNode : this.subsystemNodes) {
-                if(subsystemNode.has(HANDLE)) {
-                    if(subsystemNode.get(HANDLE).asText().equals(hdl)) {
-                        if(subsystemNode.has(MASKTYPE)) {
-                            String maskType = subsystemNode.get(MASKTYPE).asText();
-                            if(!maskType.equals(COMPARETOZERO) && !maskType.equals(COMPARETOCONSTANT)) {
-                                return true;
-                            }
-                        } else {
-                            return true;    
-                        }                        
-                    }
-                }
-            }
-        }
-        return false;
-    }
-    
+   
     /**
      * 
      * @param subsystemNode
@@ -406,7 +396,6 @@ public class J2LTranslator {
         List<LustreVar>         locals          = new ArrayList<>();
         List<LustreVar>         outputs         = new ArrayList<>();
         List<LustreEq>          equations       = new ArrayList<>();
-        List<LustreNode>        lusNodes        = new ArrayList<>();
         Map<Integer, JsonNode>  inports         = new HashMap<>();
         Map<Integer, JsonNode>  outports        = new HashMap<>();
         
@@ -431,37 +420,31 @@ public class J2LTranslator {
             JsonNode                    contBlkNode     = contField.getValue();
             
             if(contBlkNode.has(BLOCKTYPE)) {
+                String blkType = contBlkNode.get(BLOCKTYPE).asText();
+                
                 if(contBlkNode.has(HANDLE)) {
                     handleToBlkNodeMap.put(contBlkNode.get(HANDLE).asText(), contBlkNode);
+                } else {
+                    LOGGER.log(Level.SEVERE, "Unexpected: A block does not have a handle!");
                 }
-
-                // Top-level subsystem block does not have port connectivity field
-                populateConnectivities(contBlkNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap);                                                             
-
-                switch(contBlkNode.get(BLOCKTYPE).asText()) {
-                    case INPORT: {
-                        inports.put(getBlkPortPosition(contBlkNode), contBlkNode);
-                        break;
-                    }
-                    case OUTPORT: {
-                        outports.put(getBlkPortPosition(contBlkNode), contBlkNode);
-                        break;
-                    }
-                    default:
-                        break;
-                }
-                if(isContractBlk(contBlkNode)) {
-                    contractNodes.add(contBlkNode);
-                }
-                if(isValidatorBlk(contBlkNode)) {
-                    validatorBlk = contBlkNode;
-                }
-                if(isPropertyBlk(contBlkNode)) {
+                if(blkType.equals(INPORT)) {
+                    inports.put(getBlkPortPosition(contBlkNode), contBlkNode);
+                } else if(blkType.equals(OUTPORT)) {
+                    outports.put(getBlkPortPosition(contBlkNode), contBlkNode);
+                } else if(isPropertyBlk(contBlkNode)) {
                     propsNodes.add(contBlkNode);
-                }
+                } else if(isContractBlk(contBlkNode)) {
+                    contractNodes.add(contBlkNode);
+                } else if(isValidatorBlk(contBlkNode)) {
+                    validatorBlk = contBlkNode;
+                } 
+                // Top-level subsystem block does not have port connectivity field
+                populateConnectivities(contBlkNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap);                
             }            
         }
-        populateConnectivities(subsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap);        
+        populateConnectivities(subsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap);
+        
+        // Ensure the positions of input and output are correct
         for(int i = 0; i < inports.size(); i++) {
             if(inports.containsKey(i)) {
                 JsonNode inportBlk = inports.get(i);
@@ -487,6 +470,11 @@ public class J2LTranslator {
         }                
     }
     
+    /**
+     * Connect nodes with their contracts based on the inports of the contract
+     * @param contractNodes
+     * @param blkNodeToSrcBlkHandlesMap
+     */
     protected void attachContractsToNode(List<JsonNode> contractNodes, Map<JsonNode, List<String>> blkNodeToSrcBlkHandlesMap) {
         if(contractNodes != null) {
             for(JsonNode contractNode : contractNodes) {
@@ -521,6 +509,12 @@ public class J2LTranslator {
         }
     }   
     
+    /**
+     * Populate the two maps with the source and destination handles of the input node
+     * @param node
+     * @param blkNodeToSrcBlkHandlesMap
+     * @param blkNodeToDstBlkHandlesMap
+     */
     protected void populateConnectivities(JsonNode node, Map<JsonNode, List<String>> blkNodeToSrcBlkHandlesMap, Map<JsonNode, List<String>> blkNodeToDstBlkHandlesMap) {
         if(node.has(CONNECTIVITY)) {
             JsonNode        portConns       = node.get(CONNECTIVITY);
@@ -1503,6 +1497,31 @@ public class J2LTranslator {
         return false;        
     }
     
+    /**
+     * This is to check whether the input handle is the handle of some user-defined subsystem node
+     * @param hdl
+     * @return 
+     */
+    protected boolean isUserDefinedSubsystemBlk(String hdl) {
+        if(hdl != null) {
+            for(JsonNode subsystemNode : this.subsystemNodes) {
+                if(subsystemNode.has(HANDLE)) {
+                    if(subsystemNode.get(HANDLE).asText().equals(hdl)) {
+                        if(subsystemNode.has(MASKTYPE)) {
+                            String maskType = subsystemNode.get(MASKTYPE).asText();
+                            if(!maskType.equals(COMPARETOZERO) && !maskType.equals(COMPARETOCONSTANT)) {
+                                return true;
+                            }
+                        } else {
+                            return true;    
+                        }                        
+                    }
+                }
+            }
+        }
+        return false;
+    }
+        
     
     protected boolean isContractInternalBlk(JsonNode node) {
         if(node != null) {
