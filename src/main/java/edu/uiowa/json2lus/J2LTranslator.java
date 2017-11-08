@@ -117,6 +117,7 @@ public class J2LTranslator {
     private final String MINMAX         = "MinMax";    
     private final String MEMORY         = "Memory";
     
+    private final String ARROW          = "Arrow";
     private final String PRODUCT        = "Product";
     private final String CONSTANT       = "Constant";        
     private final String FUNCTION       = "Function";    
@@ -165,7 +166,8 @@ public class J2LTranslator {
     private final String COMPARETOZERO      = "Compare To Zero";
     private final String ANNOTATIONTYPE     = "AnnotationType";
     private final String CONTRACTBLKTYPE    = "ContractBlockType";            
-    private final String COMPARETOCONSTANT  = "Compare To Constant";    
+    private final String COMPARETOCONSTANT  = "Compare To Constant";
+    private final String LUSTREOPERATORBLK  = "LustreOperatorBlock";    
     
     
     /** Lustre node names for type conversions */
@@ -293,8 +295,7 @@ public class J2LTranslator {
             Iterator<Entry<String, JsonNode>> nodes = subsystemNode.get(CONTENT).fields();                         
             
             while(nodes.hasNext()) {
-                Map.Entry<String, JsonNode> field       = nodes.next(); 
-                JsonNode                    fieldNode   = field.getValue();
+                JsonNode fieldNode = nodes.next().getValue();
                 
                 if(fieldNode.has(BLOCKTYPE)) {
                     if(fieldNode.get(BLOCKTYPE).asText().equals(SUBSYSTEM)) {                        
@@ -749,6 +750,9 @@ public class J2LTranslator {
         } else {
             LOGGER.log(Level.SEVERE, "Unexpected: no block in the model with handle {0}", blkHandle);
         }
+        
+        // This is to simplify the translation for the case where the block node connect with an outport.
+        // So instead of translating the outport's definition, we will directly use the outport variable.
         if(blkNodeToDstBlkHdlsMap.containsKey(blkNode) && isPropBlk) {
             List<String> dstHdls = blkNodeToDstBlkHdlsMap.get(blkNode);
             
@@ -767,9 +771,13 @@ public class J2LTranslator {
             
             if(blkNodeToSrcBlkHdlsMap.containsKey(blkNode)) {
                 inHandles = blkNodeToSrcBlkHdlsMap.get(blkNode);
+            } else {
+                LOGGER.log(Level.SEVERE, "Unexpected: ");
             }
             if(blkType.toLowerCase().equals(LOGIC) || blkType.toLowerCase().equals(RELATIONALOP) || blkType.equals(MATH)) {
                 blkType = blkNode.get(OPERATOR).asText();
+            } else if(blkNode.has(LUSTREOPERATORBLK)){
+                blkType = blkNode.get(LUSTREOPERATORBLK).asText();
             }
             // Since the MERGE block always bundles with other blocks (IF, IfActionSubsystem and etc.),
             // the inputs to the MERGE block need to be handled differently.
@@ -1013,6 +1021,10 @@ public class J2LTranslator {
                     }
                     break;
                 }
+                case ARROW: {
+                    blkExpr = new BinaryExpr(inExprs.get(0), BinaryExpr.Op.ARROW, inExprs.get(1));
+                    break;
+                }
                 case SWITCH: {
                     LustreExpr  condExpr    = null;
                     String      criteria    = blkNode.get(CRITERIA).asText();
@@ -1073,8 +1085,8 @@ public class J2LTranslator {
                     }
                     break;
                 }
-                // In Simulink, IF block is always used with IfActionSubsystem and MERGE blocks. So the IF block is always
-                // translated together with IfActionSubsystem and MERGE blocks. 
+                // In Simulink, we translated together IF block with IfActionSubsystem and MERGE blocks together.
+                // Todo: Need to consider the case that IF block used with IfActionSubsystem together.
                 case IF: {
                     break;
                 }
