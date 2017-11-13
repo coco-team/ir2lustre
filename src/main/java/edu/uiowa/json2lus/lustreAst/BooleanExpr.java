@@ -18,7 +18,17 @@ public class BooleanExpr extends LustreExpr {
     }
     
     public BooleanExpr(String value) {
-        this.value = value.toLowerCase().equals("true") || !value.toLowerCase().equals("0");
+        if(value.contains(".")) {
+            String rhs = value.substring(value.indexOf(".")+1).trim();
+            
+            if(Integer.parseInt(rhs) == 0) {
+                this.value = Integer.parseInt(value.substring(0, value.indexOf("."))) != 0;
+            } else {
+                this.value = true;
+            }            
+        } else {
+            this.value = value.toLowerCase().equals("true") || Integer.parseInt(value.toLowerCase()) != 0;
+        }
     }    
 
     @Override

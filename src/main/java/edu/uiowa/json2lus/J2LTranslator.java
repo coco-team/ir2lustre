@@ -1932,10 +1932,19 @@ public class J2LTranslator {
                 constExpr = new RealExpr(new BigDecimal(newVal));
             } else if(type == PrimitiveType.INT) {
                 String newVal = value;
+                
                 if(value.toLowerCase().equals("true")) {
                     newVal = "1";
                 } else if(value.toLowerCase().equals("false")) {
                     newVal = "0";
+                } else if(value.contains(".")) {
+                    String rhs = value.substring(value.indexOf(".")+1).trim();
+                    
+                    if(Integer.parseInt(rhs) == 0) {
+                        newVal = value.substring(0, value.indexOf("."));
+                    } else {
+                        LOGGER.log(Level.SEVERE, "Unexpected integer constant: {0}", value);
+                    }
                 }
                 constExpr = new IntExpr(new BigInteger(newVal));
             } else if(type == PrimitiveType.BOOL) {
