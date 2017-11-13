@@ -325,5 +325,21 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
         }
         sb.append("};");
     }
+
+    @Override
+    public void visit(TupleExpr tupExpr) {
+        if(tupExpr.elements.size() == 1) {
+            tupExpr.elements.get(0).accept(this);
+        } else {
+            sb.append("(");
+            for(int i = 0; i < tupExpr.elements.size(); i++) {
+                tupExpr.elements.get(i).accept(this);
+                if(i < tupExpr.elements.size()-1) {
+                    sb.append(", ");
+                }
+            }
+            sb.append(")");
+        }
+    }
     
 }

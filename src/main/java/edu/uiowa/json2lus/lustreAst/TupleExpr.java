@@ -1,0 +1,27 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package edu.uiowa.json2lus.lustreAst;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ *
+ * @author Paul Meng
+ */
+public class TupleExpr extends LustreExpr {
+    List<LustreExpr> elements;
+    
+    public TupleExpr(List<? extends LustreExpr> elements) {
+        this.elements = (List<LustreExpr>) elements;
+    }
+
+    @Override
+    public void accept(LustreAstVisitor visitor) {
+        visitor.visit(this);
+    }
+    
+}

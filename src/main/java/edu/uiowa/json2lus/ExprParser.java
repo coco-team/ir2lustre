@@ -91,7 +91,7 @@ public class ExprParser extends BaseParser<AstNode> {
     }  
     
     Rule Primary() {
-        return FirstOf(ParExpression(), InputVar());
+        return FirstOf(ParExpression(), InputVar(), Numeral());
     }
     
     Rule ParExpression() {
@@ -100,6 +100,14 @@ public class ExprParser extends BaseParser<AstNode> {
 
     Rule InputVar() {
         return Sequence(Literal(), push(new AstNode(matchOrDefault(null))));
+    }
+    
+    Rule Numeral() {
+        return Sequence(Number(), push(new AstNode(matchOrDefault(null))));
+    }
+
+    Rule Number() {
+        return Sequence(WhiteSpace(), OneOrMore(CharRange('0', '9'), Optional(".", ZeroOrMore(CharRange('0', '9'))), WhiteSpace())).suppressSubnodes();
     }
     
     Rule Literal() {

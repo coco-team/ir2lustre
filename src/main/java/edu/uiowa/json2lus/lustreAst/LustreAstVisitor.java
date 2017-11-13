@@ -25,4 +25,6 @@ public interface LustreAstVisitor {
     public void visit(VarIdExpr varId);
     public void visit(MergeExpr mergeExpr);
     public void visit(LustreEnumType enumType);
+
+    public void visit(TupleExpr aThis);
 }
