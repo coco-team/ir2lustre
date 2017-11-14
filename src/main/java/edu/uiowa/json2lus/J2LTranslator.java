@@ -93,13 +93,21 @@ public class J2LTranslator {
     private final String NOT            = "NOT";
     
     /** Math operators */
+    private final String LOG            = "log";    
+    private final String EXP            = "exp";
     private final String SUM            = "Sum";
+    private final String POW            = "pow";
     private final String MOD            = "mod";    
     private final String ABS            = "Abs";
     private final String SQRT           = "Sqrt";
     private final String MATH           = "Math";
+    private final String LOG10          = "log10";
+    private final String LSQRT          = "sqrt";
     private final String RSQRT          = "rSqrt";
+    private final String TENTOU         = "10^u";        
+    private final String SQUARE         = "square";
     private final String SQRTOP         = "sqrt";
+    private final String RECIPROCAL     = "reciprocal";
     private final String SIGNEDSQRT     = "signedSqrt";
     private final String UNARYMINUS     = "UnaryMinus";
     
@@ -886,6 +894,51 @@ public class J2LTranslator {
                     blkExpr = new NodeCallExpr(getOrCreateLustreLibNode(blkNode), inExprs.get(0));                   
                     break;                    
                 }
+                case POW: {
+                    blkExpr = new NodeCallExpr(POW, inExprs);
+                    break;
+                }
+                case EXP: {
+                    blkExpr = new NodeCallExpr(EXP, inExprs);
+                    break;
+                } 
+                case LOG10: {
+                    blkExpr = new NodeCallExpr(LOG10, inExprs);
+                    break;
+                } 
+                case LOG: {
+                    blkExpr = new NodeCallExpr(LOG, inExprs);
+                    break;
+                }
+                case TENTOU: {
+                    List<LustreExpr> exprs = new ArrayList<>();
+                    
+                    if(getBlkOutportType(blkNode) == PrimitiveType.INT) {
+                        exprs.add(new IntExpr(new BigInteger("10")));
+                    } else if(getBlkOutportType(blkNode) == PrimitiveType.REAL) {
+                        exprs.add(new RealExpr(new BigDecimal("10.0")));
+                    }
+                    exprs.add(inExprs.get(0));
+                    blkExpr = new NodeCallExpr(POW, exprs);
+                    break;
+                }                
+                case SQUARE: {
+                    blkExpr = new BinaryExpr(inExprs.get(0), BinaryExpr.Op.MULTIPLY, inExprs.get(0));
+                    break;
+                }
+                case RECIPROCAL: {
+                    LustreType inType = getBlkOutportType(hdlToBlkNodeMap.get(inHandles.get(0)));
+                    
+                    if(inType == PrimitiveType.INT) {
+                        blkExpr = new BinaryExpr(new IntExpr(BigInteger.ONE), BinaryExpr.Op.DIVIDE, inExprs.get(0));
+                    } else if(inType == PrimitiveType.REAL) {
+                        blkExpr = new BinaryExpr(new RealExpr(new BigDecimal("1.0")), BinaryExpr.Op.DIVIDE, inExprs.get(0));
+                    } else {
+                        LOGGER.log(Level.SEVERE, "Unexpected input type to reciprocal operator: {0}", inType);
+                    }
+                    break;
+                }                
+                case LSQRT:
                 case SQRT: {
                     String op = blkNode.get(OPERATOR).asText();
                     
@@ -1560,6 +1613,9 @@ public class J2LTranslator {
         String nodeName = path.replace(File.separator,"_");
         String blkType  = blkNode.get(BLOCKTYPE).asText();
         
+        if(blkType.equals(MATH)) {
+            blkType = blkNode.get(OPERATOR).asText();
+        }
         switch(blkType) {         
             case ABS: {
                 LustreType  outType = getBlkOutportType(blkNode);
@@ -1590,6 +1646,7 @@ public class J2LTranslator {
                 this.lustreProgram.addNode(new LustreNode(nodeName, new LustreVar("in", outType), new LustreVar("out", outType), bodyExprs));                
                 break;
             } 
+            case SQRTOP:
             case SQRT: {
                 LustreType  outType = getBlkOutportType(blkNode);
                 
