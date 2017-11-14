@@ -948,11 +948,11 @@ public class J2LTranslator {
                             break;
                         }
                         case RSQRT: {
-                            blkExpr = new BinaryExpr(new RealExpr(BigDecimal.ONE), BinaryExpr.Op.DIVIDE, new NodeCallExpr(getOrCreateLustreLibNode(blkNode), inExprs.get(0)));
+                            blkExpr = new BinaryExpr(new RealExpr(new BigDecimal("1.0")), BinaryExpr.Op.DIVIDE, new NodeCallExpr(getOrCreateLustreLibNode(blkNode), inExprs.get(0)));
                             break;
                         }
                         case SIGNEDSQRT: {      
-                            blkExpr = new IteExpr(new BinaryExpr(inExprs.get(0), BinaryExpr.Op.GTE, new RealExpr(BigDecimal.ZERO)), new NodeCallExpr(getOrCreateLustreLibNode(blkNode), inExprs.get(0)), new UnaryExpr(UnaryExpr.Op.NEG, new NodeCallExpr(getOrCreateLustreLibNode(blkNode), inExprs.get(0))));
+                            blkExpr = new IteExpr(new BinaryExpr(inExprs.get(0), BinaryExpr.Op.GTE, new RealExpr(new BigDecimal("0.0"))), new NodeCallExpr(getOrCreateLustreLibNode(blkNode), inExprs.get(0)), new UnaryExpr(UnaryExpr.Op.NEG, new NodeCallExpr(getOrCreateLustreLibNode(blkNode), inExprs.get(0))));
                             break;
                         }
                         default:
@@ -1569,7 +1569,7 @@ public class J2LTranslator {
                 break;
             }
             case BOOLTOREAL: {
-                bodyExprs.add(new LustreEq(outVarExpr, new IteExpr(inVarExpr, new RealExpr(BigDecimal.ONE), new RealExpr(BigDecimal.ZERO))));
+                bodyExprs.add(new LustreEq(outVarExpr, new IteExpr(inVarExpr, new RealExpr(new BigDecimal("1.0")), new RealExpr(new BigDecimal("0.0")))));
                 this.libNodeNameMap.put(BOOLTOREAL, BOOLTOREAL);
                 this.lustreProgram.addNode(new LustreNode(nodeName, new LustreVar("in", PrimitiveType.BOOL), new LustreVar("out", PrimitiveType.REAL), bodyExprs));                                
                 break;
@@ -1581,7 +1581,7 @@ public class J2LTranslator {
                 break;
             } 
             case REALTOBOOL: {
-                bodyExprs.add(new LustreEq(outVarExpr, new IteExpr(new BinaryExpr(inVarExpr, BinaryExpr.Op.NEQ, new RealExpr(BigDecimal.ZERO)), new BooleanExpr(true), new BooleanExpr(false))));
+                bodyExprs.add(new LustreEq(outVarExpr, new IteExpr(new BinaryExpr(inVarExpr, BinaryExpr.Op.NEQ, new RealExpr(new BigDecimal("0.0"))), new BooleanExpr(true), new BooleanExpr(false))));
                 this.libNodeNameMap.put(REALTOBOOL, REALTOBOOL);
                 this.lustreProgram.addNode(new LustreNode(nodeName, new LustreVar("in", PrimitiveType.REAL), new LustreVar("out", PrimitiveType.BOOL), bodyExprs));                                
                 break;
