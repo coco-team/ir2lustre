@@ -404,7 +404,7 @@ public class J2LTranslator {
      * @return The Lustre node or contract corresponding to the input subsystem JSON node
      */
     protected List<LustreAst> translateSubsystemNode(JsonNode subsystemNode) {
-        if(isModeBlk(subsystemNode)) {
+        if(isModeBlk(subsystemNode) || isLustreOpBlk(subsystemNode)) {
             return new ArrayList<>();
         }
         
@@ -1783,7 +1783,18 @@ public class J2LTranslator {
         }
         return false;
     }
-        
+
+    protected boolean isLustreOpBlk(JsonNode node) {
+        if(node != null) {
+            if(node.has(BLOCKTYPE) && node.get(BLOCKTYPE).asText().equals(SUBSYSTEM)) {
+                if(node.has(LUSTREOPERATORBLK)) {
+                    String blkType = node.get(LUSTREOPERATORBLK).asText();
+                    return blkType.equals(ARROW);
+                }
+            }
+        }
+        return false;
+    }
     
     protected boolean isContractInternalBlk(JsonNode node) {
         if(node != null) {
