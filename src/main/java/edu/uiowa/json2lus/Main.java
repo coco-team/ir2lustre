@@ -64,6 +64,7 @@ public class Main {
                 LustrePrettyPrinter ppv         = new LustrePrettyPrinter();
 
                 ppv.printLustreProgramToFile(translator.execute(), lusFilePath);
+                translator.dumpMappingInfoToJsonFile(lusFilePath+".json");
             } else {
                 System.out.println("Please provide an input json file!\n");
             }
