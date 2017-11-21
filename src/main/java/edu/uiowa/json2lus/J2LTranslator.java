@@ -168,6 +168,7 @@ public class J2LTranslator {
     
     private final String HELD               = "held";
     private final String RESET              = "reset";
+    private final String ORIGIN         = "Origin_path";             
     private final String INPORT             = "Inport";    
     private final String OUTPORT            = "Outport";    
     private final String CONTENT            = "Content";    
@@ -180,7 +181,7 @@ public class J2LTranslator {
     private final String ACTIONPORT         = "ActionPort";                
     private final String TERMINATOR         = "Terminator";
     private final String INITSTATES         = "InitializeStates";        
-    private final String LINEHANDLES        = "LineHandles";     
+    private final String LINEHANDLES        = "LineHandles";         
     private final String IFACTIONBLK        = "IfActionBlock";        
     private final String CONNECTIVITY       = "PortConnectivity";
     private final String RELATIONALOP       = "relationaloperator";
@@ -200,7 +201,8 @@ public class J2LTranslator {
     private final String MODENAME       = "ModeName";        
     private final String PROPNAME       = "PropertyName";    
     private final String GUARANTEE      = "guarantee";
-    private final String CONTRACTNAME   = "ContractName";                
+    private final String ORIGINPATH     = "OriginPath";     
+    private final String CONTRACTNAME   = "ContractName";                             
     
     /** Lustre node names for type conversions */
     private final String BOOLTOINT      = "bool_to_int";
@@ -401,6 +403,7 @@ public class J2LTranslator {
             Map<String, String> mappingInfo = new LinkedHashMap<>();
             
             mappingInfo.put(HANDLE, inHdl);
+            mappingInfo.put(ORIGINPATH, inBlk.get(ORIGIN).asText());
             mappingInfo.put(CONTRACTNAME, contractName);
             
             if(isAssumeBlk(inBlk)) {
@@ -425,6 +428,7 @@ public class J2LTranslator {
                     
                     mappingInfo = new LinkedHashMap<>();
                     mappingInfo.put(HANDLE, modeInHdl);
+                    mappingInfo.put(ORIGINPATH, modeInBlk.get(ORIGIN).asText());                    
                     mappingInfo.put(CONTRACTNAME, contractName);
                     mappingInfo.put(MODENAME, modeName);
                     
@@ -705,6 +709,7 @@ public class J2LTranslator {
                 Map<String, String> mappingInfo = new LinkedHashMap<>(); 
                 
                 mappingInfo.put(HANDLE, propNode.get(HANDLE).asText());
+                mappingInfo.put(ORIGINPATH, propNode.get(ORIGIN).asText());
                 
                 for(LustreVar in : inputs) {
                     cInputs.add(in);
@@ -741,7 +746,8 @@ public class J2LTranslator {
                 Map<String, String> mappingInfo = new LinkedHashMap<>(); 
                 LustreEq propEq = translatePropEquation(propNode, subsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, hdlToBlkNodeMap);
                 
-                mappingInfo.put(HANDLE, propNode.get(HANDLE).asText());                
+                mappingInfo.put(HANDLE, propNode.get(HANDLE).asText());  
+                mappingInfo.put(ORIGINPATH, propNode.get(ORIGIN).asText());
                 
                 if(propEq.getRhs() instanceof NodeCallExpr) {
                     newName += "_"+((NodeCallExpr)propEq.getRhs()).nodeName;
