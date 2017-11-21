@@ -290,6 +290,10 @@ public class J2LTranslator {
     }
 
     public void dumpMappingInfoToJsonFile(String path) {
+        if(this.jsonMappingInfo.isEmpty()) {
+            LOGGER.log(Level.WARNING, "Nothing to dump: no mapping information was generated!");                        
+            return;
+        }
         ObjectMapper objectMapper = new ObjectMapper();
         
         try {
@@ -304,7 +308,7 @@ public class J2LTranslator {
             String          json    = objectMapper.writeValueAsString(this.jsonMappingInfo);
             bw.write(json);
             bw.close();
-            Logger.getLogger(LustrePrettyPrinter.class.getName()).log(Level.INFO, "A mapping information file was generated at: {0}", path);                        
+            LOGGER.log(Level.INFO, "A mapping information file was generated at: {0}", path);                        
         } catch (JsonProcessingException ex) {
             Logger.getLogger(J2LTranslator.class.getName()).log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
