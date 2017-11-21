@@ -533,12 +533,12 @@ public class J2LTranslator {
         for(int i = 0; i < inports.size(); i++) {
             if(inports.containsKey(i)) {
                 JsonNode inportBlk = inports.get(i);
-                inputs.add(new LustreVar(getQualifiedBlkName(inportBlk), getBlkOutportType(inportBlk)));                 
+                inputs.add(new LustreVar(getBlkName(inportBlk), getBlkOutportType(inportBlk)));                 
             }           
         }
         for(int i = 0; i < outports.size(); i++) {
             JsonNode outportBlk = outports.get(i);
-            outputs.add(new LustreVar(getQualifiedBlkName(outportBlk), getLustreTypeFromStrRep(outportBlk.get(PORTDATATYPE).get(INPORT).asText())));            
+            outputs.add(new LustreVar(getBlkName(outportBlk), getLustreTypeFromStrRep(outportBlk.get(PORTDATATYPE).get(INPORT).asText())));            
         }   
         if(isContractBlk(subsystemNode)) {            
             return translateContractNode(subsystemNode, validatorBlk, inputs, outputs, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap);
@@ -588,7 +588,7 @@ public class J2LTranslator {
                         }                        
                     }
                 } else {
-                    LOGGER.log(Level.SEVERE, "Found a ghost contract: {0}", getQualifiedBlkName(contractNode));
+                    LOGGER.log(Level.SEVERE, "Found a ghost contract: {0}", getBlkName(contractNode));
                 }
             }
         }
@@ -775,7 +775,7 @@ public class J2LTranslator {
                 List<JsonNode>  outportNodes    = getBlksFromSubSystemByType(propBlk, OUTPORT);
 
                 for(JsonNode outNode : outportNodes) {
-                    outVarIdExprs.add(new VarIdExpr(getQualifiedBlkName(propBlk)+"_"+getQualifiedBlkName(outNode)));
+                    outVarIdExprs.add(new VarIdExpr(getQualifiedBlkName(propBlk)+"_"+getBlkName(outNode)));
                 }              
                 propEq = new LustreEq(outVarIdExprs, translateBlock(true, getBlkHandle(propBlk), subsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap, new HashSet<String>()));
             } else {
@@ -802,18 +802,18 @@ public class J2LTranslator {
                 JsonNode    outportNode = outportNodes.get(0);       
 
                 if(blkNodeToSrcBlkHandlesMap.containsKey(outportNode)) {
-                    VarIdExpr       varIdExpr       = new VarIdExpr(getQualifiedBlkName(outportNode));                 
+                    VarIdExpr       varIdExpr       = new VarIdExpr(getBlkName(outportNode));                 
                     List<String>    srcBlkHandles   = blkNodeToSrcBlkHandlesMap.get(outportNode);
 
                     if(srcBlkHandles.size() == 1 && !srcBlkHandles.get(0).equals("-1")) {
                         eq = new LustreEq(varIdExpr, translateBlock(false, srcBlkHandles.get(0), subsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap, new HashSet<String>()));
                     } else if(srcBlkHandles.size() > 1) {
-                        LOGGER.log(Level.SEVERE, "Unexpected: Multiple different src blocks connect to a same outport: {0}!", getQualifiedBlkName(outportNode));
+                        LOGGER.log(Level.SEVERE, "Unexpected: Multiple different src blocks connect to a same outport: {0}!", getBlkName(outportNode));
                     } else {
-                        LOGGER.log(Level.SEVERE, "Unexpected: No src blocks connect to the outport: {0}!", getQualifiedBlkName(outportNode));
+                        LOGGER.log(Level.SEVERE, "Unexpected: No src blocks connect to the outport: {0}!", getBlkName(outportNode));
                     }
                 } else {
-                    LOGGER.log(Level.WARNING, "Unexpected: No src blocks connect to the outport: {0}!", getQualifiedBlkName(outportNode));
+                    LOGGER.log(Level.WARNING, "Unexpected: No src blocks connect to the outport: {0}!", getBlkName(outportNode));
                 }            
             } else if(outportNodes.size() > 1) {
                 // Need to make sure the order of outports is correct
@@ -823,7 +823,7 @@ public class J2LTranslator {
                 List<String>        dstBlkHdls          = blkNodeToDstBlkHandlesMap.get(srcBlk);
 
                 for(JsonNode outportNode : outportNodes) {
-                    orderedOutportVars.add(new VarIdExpr(getQualifiedBlkName(outportNode)));
+                    orderedOutportVars.add(new VarIdExpr(getBlkName(outportNode)));
                 }
                 if(isSubsystemBlock(srcBlk))
                 eq = new LustreEq(orderedOutportVars, translateBlock(false, srcBlkHdls.get(0), subsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap, new HashSet<String>()));
@@ -863,7 +863,7 @@ public class J2LTranslator {
                 JsonNode dstNode = hdlToBlkNodeMap.get(hdl);
                 
                 if(dstNode.get(BLOCKTYPE).asText().equals(OUTPORT)) {
-                    return new VarIdExpr(getQualifiedBlkName(dstNode));
+                    return new VarIdExpr(getBlkName(dstNode));
                 }
             }
         }        
@@ -1047,7 +1047,7 @@ public class J2LTranslator {
                 case MOD: {
                     for(String hdl : inHandles) {
                         if(getBlkOutportType(hdlToBlkNodeMap.get(hdl)) == PrimitiveType.REAL) {
-                            LOGGER.log(Level.SEVERE, "Unexpected: input {0} to MOD operator is REAL type!", getQualifiedBlkName(hdlToBlkNodeMap.get(hdl)));
+                            LOGGER.log(Level.SEVERE, "Unexpected: input {0} to MOD operator is REAL type!", getBlkName(hdlToBlkNodeMap.get(hdl)));
                         }
                     }
                     blkExpr = inExprs.get(0);
@@ -1108,7 +1108,7 @@ public class J2LTranslator {
                     break;
                 }
                 case INPORT: {
-                    blkExpr = new VarIdExpr(getQualifiedBlkName(blkNode));
+                    blkExpr = new VarIdExpr(getBlkName(blkNode));
                     break;
                 }
                 case CONSTANT: {
@@ -1236,7 +1236,7 @@ public class J2LTranslator {
                     if(this.auxHdlToPreExprMap.containsKey(blkHandle)) {
                         blkExpr = this.auxHdlToPreExprMap.get(blkHandle);
                     } else {
-                        String      varName     = getQualifiedBlkName(blkNode);     
+                        String      varName     = getBlkName(blkNode);     
                         VarIdExpr   preVarId    = new VarIdExpr(varName);
                         
                         if(!visitedPreHdls.contains(blkHandle)) { 
