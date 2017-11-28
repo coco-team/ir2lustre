@@ -168,7 +168,7 @@ public class J2LTranslator {
     
     private final String HELD               = "held";
     private final String RESET              = "reset";
-    private final String ORIGIN         = "Origin_path";             
+    private final String ORIGIN             = "Origin_path";             
     private final String INPORT             = "Inport";    
     private final String OUTPORT            = "Outport";    
     private final String CONTENT            = "Content";    
@@ -698,7 +698,8 @@ public class J2LTranslator {
     protected List<LustreAst> processProperties(List<JsonNode> propNodes, JsonNode subsystemNode, String lusNodeName, List<LustreVar> inputs, List<LustreVar> outputs, List<LustreVar> locals, List<LustreEq> equations, Map<JsonNode, List<String>> blkNodeToSrcBlkHandlesMap, Map<JsonNode, List<String>> blkNodeToDstBlkHandlesMap, Map<String, JsonNode> hdlToBlkNodeMap) {
         List<LustreAst>     lusNodes    = new ArrayList<>();
                                
-        if(propNodes.size() > 1 && !this.multProps) {            
+        if(!this.multProps) {   
+            lusNodes.add(new LustreNode(subsystemNode.equals(this.topLevelNode), lusNodeName, inputs, outputs, locals, equations, new ArrayList<LustreEq>()));                        
             for(JsonNode propNode: propNodes) {                
                 String              newName     = lusNodeName;
                 List<LustreEq>      props       = new ArrayList<>();
@@ -746,13 +747,12 @@ public class J2LTranslator {
                 Map<String, String> mappingInfo = new LinkedHashMap<>(); 
                 LustreEq propEq = translatePropEquation(propNode, subsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, hdlToBlkNodeMap);
                 
-                mappingInfo.put(HANDLE, propNode.get(HANDLE).asText());  
-                mappingInfo.put(ORIGINPATH, propNode.get(ORIGIN).asText());
-                
-                if(propEq.getRhs() instanceof NodeCallExpr) {
-                    newName += "_"+((NodeCallExpr)propEq.getRhs()).nodeName;
-                    mappingInfo.put(NODENAME, newName);
+                if(propEq.getLhs().size() != 1) {
+                    LOGGER.log(Level.SEVERE, "Unexpected: the number of output of an observer property block is unexpected: {0}", propEq.getLhs().size());
                 }                
+                mappingInfo.put(HANDLE, propNode.get(HANDLE).asText());  
+                mappingInfo.put(ORIGINPATH, propNode.get(ORIGIN).asText());                
+                mappingInfo.put(NODENAME, lusNodeName);
                 for(VarIdExpr var : propEq.getLhs()) {
                     locals.add(new LustreVar(var.id, PrimitiveType.BOOL));
                     mappingInfo.put(PROPNAME, var.id);
@@ -760,7 +760,7 @@ public class J2LTranslator {
                 props.add(propEq);            
                 this.jsonMappingInfo.add(mappingInfo);
             }   
-            lusNodes.add(new LustreNode(subsystemNode.equals(this.topLevelNode), newName, inputs, outputs, locals, equations, props));            
+            lusNodes.add(new LustreNode(subsystemNode.equals(this.topLevelNode), lusNodeName, inputs, outputs, locals, equations, props));            
         }         
         return lusNodes;
     }
@@ -835,8 +835,11 @@ public class J2LTranslator {
                 for(JsonNode outportNode : outportNodes) {
                     orderedOutportVars.add(new VarIdExpr(getBlkName(outportNode)));
                 }
-                if(isSubsystemBlock(srcBlk))
                 eq = new LustreEq(orderedOutportVars, translateBlock(false, srcBlkHdls.get(0), subsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap, new HashSet<String>()));
+                // Todo: need to consider the situation where multiple outports 
+                //       connect with the same block that only produces one output.
+                //       In this case, we could create a tuple expression with multiple 
+                //       block expression as tuple values.                
             }              
         }      
         return eq;
