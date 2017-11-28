@@ -19,7 +19,6 @@ import edu.uiowa.json2lus.lustreAst.LustreEnumType;
 import edu.uiowa.json2lus.lustreAst.LustreEq;
 import edu.uiowa.json2lus.lustreAst.LustreExpr;
 import edu.uiowa.json2lus.lustreAst.LustreNode;
-import edu.uiowa.json2lus.lustreAst.LustrePrettyPrinter;
 import edu.uiowa.json2lus.lustreAst.LustreProgram;
 import edu.uiowa.json2lus.lustreAst.LustreType;
 import edu.uiowa.json2lus.lustreAst.LustreVar;
