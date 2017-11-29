@@ -31,7 +31,6 @@ public class Main {
     public static void main(String[] args) {                  
         String              jsonFilePath    = null; 
         String              lusFilePath     = null;
-        boolean             multProps     = false;
         Options             opts            = constructOptions();               
         HelpFormatter       hf              = new HelpFormatter();        
         CommandLineParser   parser          = new DefaultParser();           
@@ -52,15 +51,12 @@ public class Main {
             } 
             if(cl.hasOption('o')) {
                 lusFilePath = cl.getOptionValue('o');
-            } 
-            if(cl.hasOption('m')) {
-                multProps = true;
             }             
             if(lusFilePath == null || !lusFilePath.endsWith(".lus")) {
                 lusFilePath = jsonFilePath+".lus";
             }               
             if(validateInput(jsonFilePath)) {
-                J2LTranslator       translator  = new J2LTranslator(jsonFilePath, multProps);                
+                J2LTranslator       translator  = new J2LTranslator(jsonFilePath);                
                 LustrePrettyPrinter ppv         = new LustrePrettyPrinter();
 
                 ppv.printLustreProgramToFile(translator.execute(), lusFilePath);
