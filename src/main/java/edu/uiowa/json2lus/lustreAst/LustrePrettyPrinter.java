@@ -132,15 +132,18 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
         for(LustreEq eq : node.bodyExprs) {
             sb.append("  ");eq.accept(this); sb.append(NL);
         }
-        for(LustreEq prop : node.propExprs) {
-            sb.append("  ");prop.accept(this); sb.append(NL);
-        }
+//        for(LustreEq prop : node.propExprs) {
+//            sb.append("  ");prop.accept(this); sb.append(NL);
+//        }
         if(!node.propExprs.isEmpty()) {
             sb.append(NL);
         }
         for(LustreEq prop : node.propExprs) {
             for(VarIdExpr propVarId : prop.lhs) {
-                sb.append("  ");sb.append("--%PROPERTY ").append(propVarId.id).append(";").append(NL);
+                sb.append("  ");sb.append("--%PROPERTY ")
+                  .append(" \"").append(propVarId.id).append("\" ");
+                prop.rhs.accept(this);
+                sb.append(";").append(NL);
             }
         }
         sb.append("tel;").append(NL).append(NL);        
