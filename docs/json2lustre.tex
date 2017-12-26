@@ -1,8 +1,8 @@
 % This is LLNCS.DOC the documentation file of
 % the LaTeX2e class from Springer-Verlag
 % for Lecture Notes in Computer Science, version 2.4
-\documentclass{llncs}
-\usepackage{llncsdoc}
+\documentclass{article}
+
 \usepackage{cite}
 \usepackage{listings}
 \usepackage{amssymb}
@@ -21,25 +21,36 @@
 
 
 \begin{document}
-\title{Translation from the JSON Format of CoCoSim models to Lustre Programs}
+\title{A Translation from the JSON Representation of CoCoSim models to Lustre Programs}
 
 \author{Baoluo Meng}
-\institute{The University of Iowa, Iowa City, IA 52242, USA}
+
 
 \maketitle
 
-This is to document the translation process from the JSON format of CocoSim model to its equivalent representation in Lustre.
+This is to document the translation process from the JSON representation of a CoCoSim model to its equivalent representation in Lustre.
 
 
-\section{CoCoSim Blocks in JSON}
+\section{JSON Representation of CoCoSim Blocks}
 
-CocoSim only support a sub-set of the blocks provided by the Simulink(c) toolset. Below is a list of the supported blocks and the limitations on their semantics if it applies. In the JSON representation of a CocoSim model, a block information is stored in a name -- value pair. The name attribute is the name of the block, and the value stores the actual information about the block. A name ``BlockType" inside value block can be used to distinguish different types of blocks. Another useful piece of data is the ``Handle" of a block, which is the unique identifier for that block and also used to be referred by other blocks. For example,  Figure~\ref{jsoninport} shows a snippet of an inport block definition in JSON, where ``In1" is the name of the block, ``Inport" is the type of block ``In1", and the unique identifier for ``In1" is ``4.0069580078125". Data type information is stored in the attribute ``Output" of ``CompiledPortDataTypes". Connectivity information can be found in ``PortConnectivity" attribute, where ``SrcBlock" shows the handle of an source block, whereas ``DstBlock" stores the handle of the destination block. 
+CoCoSim supports a subset of the blocks provided by the Simulink toolset. Figure~\ref{basicmapping}~\ref{mapping2}~\ref{mapping3}~\ref{mapping4} summarize the supported blocks and the limitations on their semantics if it applies. 
+
+A CoCoSim model is a visualization of a set of block declarations and their connectivities.
+The CoCoSim intermediate compiler takes as input a Simulink model and translate it into a JSON representation storing blocks and connectivities information. 
+The model information is stored as name -- value pairs in a JSON file. 
+The name attribute specifies the name of the block, and the value stores the actual information about the block such as block handle and block connectivities. 
+Each block is uniquely identified by its block handle.
+The ``BlockType" field specifies the type of a block. 
+For example, an inport block of a CoCoSim model has a ``BlockType" ``Inport".
+The blocks connectivity information is stored in the ``PortConnectivity" field, where ``SrcBlock" stores the handles of incoming blocks, whereas ``DstBlock" stores the handles of destination blocks. 
+Figure~\ref{jsoninport} shows a snippet of an inport block definition in JSON, 
+where ``In1" is the name of the block, ``Inport" is the type of block ``In1", and the unique identifier for ``In1" is ``4.0069580078125". Data type information is stored in the attribute ``Outport" of ``CompiledPortDataTypes". 
 
 \begin{figure}[ht]
 \begin{lstlisting}
       "In1": {
         "BlockType": "Inport",
-        "Handle": 4.0069580078125,
+        "Handle": 84.0001220703125,
         "PortConnectivity": {
           "DstBlock": 6.0001220703125,
           ...
@@ -206,7 +217,7 @@ The Zero-Pole block models a system that you define with the zeros, poles, and g
 \end{tabular}
 }
 \caption{A mapping from CocoSim to Lustre}
-\label{mapping}
+\label{mapping2}
 \end{figure}
 
 
@@ -273,7 +284,7 @@ Gain
 \end{tabular}
 }
 \caption{A mapping from CocoSim to Lustre}
-\label{mapping}
+\label{mapping3}
 \end{figure}
 
 
@@ -354,7 +365,7 @@ Combine multiple signals into single signal
 \end{tabular}
 }
 \caption{A mapping from CocoSim to Lustre}
-\label{mapping}
+\label{mapping4}
 \end{figure}
 
 \end{document}

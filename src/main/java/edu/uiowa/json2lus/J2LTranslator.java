@@ -1367,7 +1367,10 @@ public class J2LTranslator {
         if(index != null) {
             mappingInfo.put(INDEX, index);
         }
-        this.jsonMappingInfo.add(mappingInfo);
+        if(!mappingInfo.isEmpty()) {
+            this.jsonMappingInfo.add(mappingInfo);
+        }
+        
     }    
     
     protected String getInitilizeStates(JsonNode ifActionSubsystem) {
