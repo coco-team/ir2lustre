@@ -6,7 +6,6 @@
 package edu.uiowa.json2lus.lustreAst;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -18,9 +17,9 @@ import java.util.Set;
  * @author Paul Meng
  */
 public class LustreProgram extends LustreAst {
-    public List<LustreNode> nodes;
-    public List<LustreContract> contracts;
-    public List<LustreEnumType> typesDef;
+    public List<LustreNode>         nodes;
+    public List<LustreContract>     contracts;
+    public List<LustreEnumType>     typesDef;
     public Map<String, Set<String>> nodeContractsMap;
     
     public LustreProgram() {        

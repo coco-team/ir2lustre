@@ -16,14 +16,18 @@ public class LustreEq extends LustreAst {
     List<VarIdExpr> lhs;
     LustreExpr      rhs;
     
-    public LustreEq(List<VarIdExpr> lhs, LustreExpr rhs) {
-        this.lhs = lhs;
-        this.rhs = rhs;
-    }
     
-    public LustreEq(VarIdExpr lhs, LustreExpr rhs) {
+    public LustreEq(List<LustreExpr> lhs, LustreExpr rhs) {
         this.lhs = new ArrayList<>();
-        this.lhs.add(lhs);
+        for(LustreExpr var : lhs) {
+            this.lhs.add((VarIdExpr)var);
+        }
+        this.rhs = rhs;
+    } 
+    
+    public LustreEq(LustreExpr lhs, LustreExpr rhs) {
+        this.lhs = new ArrayList<>();
+        this.lhs.add((VarIdExpr)lhs);
         this.rhs = rhs;
     } 
     

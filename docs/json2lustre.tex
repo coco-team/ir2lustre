@@ -10,6 +10,9 @@
 \usepackage{amsmath}    
 \usepackage{algpseudocode}
 
+
+\usepackage{array}
+
 \usepackage{xcolor}
 
 \lstset{
@@ -21,7 +24,7 @@
 
 
 \begin{document}
-\title{A Translation from the JSON Representation of CoCoSim models to Lustre Programs}
+\title{A Translation from the JSON Representation of CoCoSim Models to Lustre Programs}
 
 \author{Baoluo Meng}
 
@@ -66,16 +69,123 @@ where ``In1" is the name of the block, ``Inport" is the type of block ``In1", an
 \label{jsoninport}
 \end{figure}
 
-\subsection{A mapping from basic CocoSim blocks to Lustre}
-Figure~\ref{basicmapping} shows a mapping form basic CoCoSim blocks to their equivalent representation in Lustre.
+\subsection{A mapping from basic CoCoSim blocks to Lustre programs}
+Figure~\ref{basicmapping} shows a mapping from basic CoCoSim blocks to their equivalent representation in Lustre.
 
+\paragraph{Subsystem, Inport, and Outport} 
+Subsystems allow you to create a hierarchical model comprising many layers. 
+A subsystem is a set of blocks that you replace with a single Subsystem block. 
+Subsystem consists of a set of inports and a set of outports, where outports are
+defined by using inports and other blocks. 
+In principle, almost all subsystems are translated into nodes in Lustre with inports being the 
+inputs and outports being the outputs except for the observer subsystems. 
+The order of inputs and outputs are maintained during the translation. 
+The hierarchical information about the model is translated into node calls.
+An exception would be the observer node.
+They are inlined in the calling node as property statements instead of translating them 
+as separate nodes.
+
+\*
+
+\indent \indent \indent \indent \textsf{-\ -\%PROPERTY ``property" property expression}
+
+\*
+
+
+\noindent The property is the output variable name and the expression is translated 
+by substituting the input and output variables by concrete ones.
+
+The translation is initiated by translating the outports backwardly. 
+Each outport is translated into an equation, where the outport is the output of the equation 
+and the left hand side is the definition of the output.
+They are translated recursively.
+Each expression is defined in terms of the following operators. 
+We will just describe the mappings of those operators in Lustre in the following paragraphs.
+
+\paragraph{Relational Operators} 
+Relational operators greater than, less than, equal to, not equal to, greater 
+than or equal to, and less than or equal to are translated into their counterparts 
+($>, <, =, <>, >=, <=$) in Lustre.
+
+
+\paragraph{Logical Operators} 
+Logical operators AND, OR, NOT and XOR are translated into Lustre operators 
+\textsf{and, or, not} and \textsf{xor}.
+Other logical operators NAND, NOR, and NXOR are represented by using Lustre 
+operators \textsf{not} and others.
+
+\paragraph{Mathematical Operators} 
+Mathematical operators sum, subtract, multiply, divide and mod are translated into 
+\textsf{+}, \textsf{-}, \textsf{*}, \textsf{div} and \textsf{mod} respectively.
+Operator Gain is translated into \textsf{*}. 
+Operator Abs is translated into a node Abs. 
+Operator Minmax is translated into a node Min or Max depending on the semantics of the subsystem. 
+Operator CompareToZero/Constant is translated into a node CompareToZero/Constant.
+
+\paragraph{Time Operators}
+Operators Memory and UnitDelay are translated into the same time operator \textsf{pre} with the 
+values of First and X0 as their initial conditions respectively.
+Since Memory and UnitDelay may have the circular dependency issue, we introduce local variables for the 
+portion of expression under \textsf{pre} to break the circular dependency if any. 
+
+\begin{figure}[t]
+\[
+\begin{array}{l@{\qquad}llll}
+ \text{constant} & c & := & 
+true \mid false
+ \\[0ex]
+ \text{number} & n & := & 
+ 1 \cdots 9 (.1 \cdots 9)
+ \\[0ex]
+  \text{literal} & v & := & 
+u n \mid n \mid c
+ \\[0ex]
+\text{unary expression} & e & := & 
+-\ e \mid \sim e \mid \sim b \mid v
+ \\[0ex]
+ \text{binary expression} & b & := & 
+e_1\ (>, <, >=, <=, ==, \sim=)\ e_2 
+ \\[0ex]
+\end{array}       
+\]
+\caption{The syntax for the conditional expresions}
+\label{fig:grammar}
+\end{figure}
+
+\paragraph{Conditional Operators}
+Operator SwitchCase is translated into \textsf{if $\cdots$ then $\cdots$ else if $\cdots$ then $\cdots$ }. 
+For the IF operator, the conditional expressions are translated separately using the
+expression parser \emph{ParBoiled} as the conditional expressions are in the string format. 
+The expressions are defined by the syntax in Figure~\ref{fig:grammar}.
+
+When parsing the expressions, the expression will be constructed as an abstract syntax tree. 
+As we traverse the abstract syntax tree, the variables will be substituted by the concrete expressions
+that are corresponding to.
+
+\subsubsection{Types}
+
+Types in CoCoSim models are loosely defined. 
+They can be mixed compared, i.e., an integer can be compared to a Boolean.
+However, Lustre language is strictly defined with types.
+To be better handle types in CoCoSim models, we define six auxiliary functions
+for converting typed variables and constants. 
+They are \textsf{bool\_to\_int, bool\_to\_real, int\_to\_bool, 
+real\_to\_bool, real\_to\_int} and \textsf{int\_to\_real}. 
+
+While translating expressions comparisons, if two expressions are compared, 
+their types will be lifted to the highest type. For example, if a Boolean variable \textsf{a} 
+is compared with an integer \textsf{b} for equality, \textsf{a} will be lifted to the integer 
+type and compared afterwards. 
+If an expression is typed with Integer or Real and it is treated as Boolean,  it will be lowered 
+to a Boolean by calling the function \textsf{int\_to\_bool} or \textsf{real\_to\_bool}.
+ 
 
 \begin{figure}[t]
 \centering
 {
 \begin{tabular}{lp{5cm}}
 \hline
-\textbf{CocoSim} & \textbf{Lustre}  \\
+\textbf{CoCoSim} & \textbf{Lustre}  \\
 \hline
 SubSystem & 
 Node
@@ -94,17 +204,13 @@ Abs (in) &
 Use library node Abs(in)
 \\
 
-AND, OR, NAND, NOR, XOR, NOT
+AND, OR, NAND, NOR, XOR, NXOR, NOT
 &
-and, or, not and, not or, xor, not
+and, or, not and, not or, xor, not xor, not
 \\
 
 Minmax &
 {Dynamically create minimum or maximum nodes}
-\\
-
-Switch &
-{Switch output between first input and third input based on value of second input}
 \\
 
 SwitchCase &
@@ -154,6 +260,19 @@ constant
 \label{basicmapping}
 \end{figure}
 
+
+\subsection{Translation of CoCoSim contracts}
+The Kind 2 contracts are added as additional features for modeling CoCoSim models.
+They are encapsulated in Subsystem blocks and are accessible by using customized 
+blocks.
+Since contracts are Subsystem, they are translated into Lustre nodes. 
+To distinguish the node type, we use the ``ContractBlockType" to indicate whether the block 
+is an \textsf{assume}, \textsf{guarantee}, \textsf{mode}, \textsf{requires}, or \textsf{ensures} block.
+The contract always returns a Boolean typed variable valid.
+The translation ignores the variable valid and construct the signature 
+of the contract by looking at the signature of the calling node.
+
+
 \subsection{Semantics of complex CoCoSim blocks}
 
 \begin{figure}[t]
@@ -163,7 +282,10 @@ constant
 \hline
 \textbf{CocoSim} & \textbf{Semantics}  \\
 \hline
+Switch &
+{Switch output between first input and third input based on value of second input}
 
+\\
 Mux &
 Combine several input signals into vector
 \\

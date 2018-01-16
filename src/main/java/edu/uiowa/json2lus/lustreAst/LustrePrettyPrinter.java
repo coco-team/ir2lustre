@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -66,7 +67,7 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
             sb.append(NL);
         }        
         
-        sb.append(NL);
+        sb.append(NL);                      
               
         for(LustreNode node : program.nodes) {
             if(!nodeContractsMap.containsKey(node.name)) {
@@ -82,7 +83,7 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
             contract.accept(this);sb.append(NL);
         }  
         
-        sb.append(NL);
+        sb.append(NL);          
               
         for(LustreNode node : cNodes) {
             node.accept(this);sb.append(NL).append(NL);
@@ -100,10 +101,15 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
         sb.append(");").append(NL);        
         
         if(this.nodeContractsMap.containsKey(node.name)) {
+            int s = 0;
+            Set<String>         contracts   = this.nodeContractsMap.get(node.name);
+            Iterator<String>    it          = contracts.iterator();
+            
             sb.append(NL);
             sb.append("(*@contract ");
-            for(String contract : this.nodeContractsMap.get(node.name)) {
-                sb.append("import ").append(contract).append("(");
+            
+            while(it.hasNext()) {
+                sb.append("import ").append(it.next()).append("(");
                 for(int i = 0; i< node.inputVars.size(); i++) {
                     sb.append(node.inputVars.get(i).name);
                     if(i < node.inputVars.size()-1) {
@@ -119,6 +125,10 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
                     }
                 }                  
                 sb.append(");");
+                if(s < contracts.size()-1) {
+                    sb.append(NL);
+                }
+                ++s;
             }
             sb.append("*)").append(NL).append(NL);            
         }        
@@ -132,9 +142,6 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
         for(LustreEq eq : node.bodyExprs) {
             sb.append("  ");eq.accept(this); sb.append(NL);
         }
-//        for(LustreEq prop : node.propExprs) {
-//            sb.append("  ");prop.accept(this); sb.append(NL);
-//        }
         if(!node.propExprs.isEmpty()) {
             sb.append(NL);
         }
@@ -231,10 +238,25 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
         sb.append(");").append(NL);
         sb.append("let").append(NL);
         
-        if(!contract.localVars.isEmpty()) {
-            sb.append("var ").append(NL);
-            declVariables(contract.localVars);
-            sb.append(";").append(NL);
+        if(!contract.localEqs.isEmpty()) {
+            for(LustreEq eq : contract.localEqs) {
+                sb.append("  var ");
+                for(VarIdExpr var : eq.lhs) {
+                    LustreVar lustVar = null;
+                    for(LustreVar v : contract.localVars) {
+                        if(var.id.equals(v.name)) {
+                            lustVar = v;
+                            break;
+                        }
+                    }
+                    if(lustVar != null) {
+                        sb.append(lustVar.name).append(" : ").append(lustVar.type).append(" ");
+                    }
+                }
+                sb.append(" = ");
+                eq.rhs.accept(this);
+                sb.append(";").append(NL).append(NL);
+            }
         }
         for(LustreExpr assume : contract.assumptions) {
             sb.append(TAB).append("assume ");assume.accept(this);sb.append(";").append(NL);
