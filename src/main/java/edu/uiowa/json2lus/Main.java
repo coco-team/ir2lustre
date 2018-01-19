@@ -90,6 +90,10 @@ public class Main {
         } else {
             File jsonFile = new File(jsonFilePath);
             
+            if(!jsonFile.isFile()) {
+                Logger.getLogger(Main.class.getName()).log(Level.SEVERE, "The input JSON file is not a file: {0}", jsonFilePath);
+                return false;
+            }
             if(!jsonFile.exists()) {
                 Logger.getLogger(Main.class.getName()).log(Level.SEVERE, "The input JSON file does not exist: {0}", jsonFilePath);
                 return false;
