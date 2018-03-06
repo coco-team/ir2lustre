@@ -10,10 +10,11 @@
 \usepackage{amsmath}    
 \usepackage{algpseudocode}
 
-
 \usepackage{array}
 
 \usepackage{xcolor}
+\usepackage{fullpage}
+\linespread{1.2}
 
 \lstset{
     string=[s]{"}{"},
@@ -47,7 +48,7 @@ The ``BlockType" field specifies the type of a block.
 For example, an inport block of a CoCoSim model has a ``BlockType" ``Inport".
 The blocks connectivity information is stored in the ``PortConnectivity" field, where ``SrcBlock" stores the handles of incoming blocks, whereas ``DstBlock" stores the handles of destination blocks. 
 Figure~\ref{jsoninport} shows a snippet of an inport block definition in JSON, 
-where ``In1" is the name of the block, ``Inport" is the type of block ``In1", and the unique identifier for ``In1" is ``4.0069580078125". Data type information is stored in the attribute ``Outport" of ``CompiledPortDataTypes". 
+where ``In1" is the name of the block, ``Inport" is the type of block ``In1", and the unique identifier for ``In1" is ``84.0001220703125". Data type information is stored in the attribute ``Outport" of ``CompiledPortDataTypes". 
 
 \begin{figure}[ht]
 \begin{lstlisting}
@@ -69,20 +70,21 @@ where ``In1" is the name of the block, ``Inport" is the type of block ``In1", an
 \label{jsoninport}
 \end{figure}
 
-\subsection{A mapping from basic CoCoSim blocks to Lustre programs}
+\subsection{A mapping from basic CoCoSim blocks to Lustre}
 Figure~\ref{basicmapping} shows a mapping from basic CoCoSim blocks to their equivalent representation in Lustre.
 
 \paragraph{Subsystem, Inport, and Outport} 
-Subsystems allow you to create a hierarchical model comprising many layers. 
-A subsystem is a set of blocks that you replace with a single Subsystem block. 
-Subsystem consists of a set of inports and a set of outports, where outports are
+Subsystems allow to create a hierarchical model comprising many layers. 
+A subsystem is a set of blocks that you replace with a single \textsf{Subsystem} block. 
+Subsystem normally consists of a set of inports and a set of outports, where outports are
 defined by using inports and other blocks. 
 In principle, almost all subsystems are translated into nodes in Lustre with inports being the 
-inputs and outports being the outputs except for the observer subsystems. 
+inputs and outports being the outputs except for the observer subsystems and other minor blocks. 
 The order of inputs and outputs are maintained during the translation. 
 The hierarchical information about the model is translated into node calls.
+
 An exception would be the observer node.
-They are inlined in the calling node as property statements instead of translating them 
+It will be inlined in the calling node as property statements instead of translating them 
 as separate nodes.
 
 \*
@@ -92,7 +94,7 @@ as separate nodes.
 \*
 
 
-\noindent The property is the output variable name and the expression is translated 
+\noindent The \textsf{property} is the output variable name and the expression is translated 
 by substituting the input and output variables by concrete ones.
 
 The translation is initiated by translating the outports backwardly. 
@@ -100,7 +102,7 @@ Each outport is translated into an equation, where the outport is the output of 
 and the left hand side is the definition of the output.
 They are translated recursively.
 Each expression is defined in terms of the following operators. 
-We will just describe the mappings of those operators in Lustre in the following paragraphs.
+We will describe the mappings of those operators in Lustre in the following paragraphs.
 
 \paragraph{Relational Operators} 
 Relational operators greater than, less than, equal to, not equal to, greater 
@@ -168,15 +170,15 @@ Types in CoCoSim models are loosely defined.
 They can be mixed compared, i.e., an integer can be compared to a Boolean.
 However, Lustre language is strictly defined with types.
 To be better handle types in CoCoSim models, we define six auxiliary functions
-for converting typed variables and constants. 
+for converting typed expressions.
 They are \textsf{bool\_to\_int, bool\_to\_real, int\_to\_bool, 
 real\_to\_bool, real\_to\_int} and \textsf{int\_to\_real}. 
 
 While translating expressions comparisons, if two expressions are compared, 
 their types will be lifted to the highest type. For example, if a Boolean variable \textsf{a} 
 is compared with an integer \textsf{b} for equality, \textsf{a} will be lifted to the integer 
-type and compared afterwards. 
-If an expression is typed with Integer or Real and it is treated as Boolean,  it will be lowered 
+type by calling the function \textsf{bool\_to\_int} and compared afterwards. 
+If an expression is typed with Integer or Real and it is used as Boolean in the model,  it will be lowered 
 to a Boolean by calling the function \textsf{int\_to\_bool} or \textsf{real\_to\_bool}.
  
 
@@ -261,17 +263,116 @@ constant
 \end{figure}
 
 
-\subsection{Translation of CoCoSim contracts}
+\subsection{The Translation of CoCoSim contracts}
 The Kind 2 contracts are added as additional features for modeling CoCoSim models.
-They are encapsulated in Subsystem blocks and are accessible by using customized 
+They are encapsulated in \textsf{Subsystem} blocks and are accessible by using customized 
 blocks.
-Since contracts are Subsystem, they are translated into Lustre nodes. 
-To distinguish the node type, we use the ``ContractBlockType" to indicate whether the block 
+To distinguish the node type, we use the ``ContractBlockType" to indicate whether a block 
 is an \textsf{assume}, \textsf{guarantee}, \textsf{mode}, \textsf{requires}, or \textsf{ensures} block.
-The contract always returns a Boolean typed variable valid.
-The translation ignores the variable valid and construct the signature 
+The contract always returns a Boolean typed variable \textsf{valid}.
+The translation ignores the variable \textsf{valid} and construct the signature 
 of the contract by looking at the signature of the calling node.
+The translation process of expressions is the same as described above. 
 
+\subsection{The Translation Algorithm}
+\begin{figure}
+\begin{algorithmic}
+\Function{\textbf{translate}}{Node rootNode}
+\Return{(LustreProgram P)}
+\State \textbf{let} subsystems = \{S $\mid$ S is a subsystem block $\land$ S $\in$ rootNode.fields\} \textbf{in}
+\State \textbf{for} subsystem : subsystems
+\State {\ \ \ \ } \textbf{let} ast = \textbf{translateSubsystem}(subsystem) \textbf{in}
+\State {\ \ \ \ } \textbf{if}  ast \textbf{instanceof} LustreNode \textbf{then}
+\State {\ \ \ \ \ \ \ \ } P.addNode(ast)
+\State {\ \ \ \ } \textbf{else}
+\State {\ \ \ \ \ \ \ \ } P.addContract(ast)
+\EndFunction
+\end{algorithmic}
+
+\begin{algorithmic}
+\Function{\textbf{translateSubsystem}}{Node subsystem}
+\Return{(LustreAst ast)}
+
+\State \textbf{let} inputs = \{\} \textbf{in}
+\State \textbf{let} props = \{\} \textbf{in}
+\State \textbf{let} outputs = \{\} \textbf{in}
+\State \textbf{let} contract = \{\} \textbf{in}
+\State \textbf{let} hdlToBlk = \{\} \textbf{in}
+\State \textbf{let} blkToSrcHdls = \{subsystem $\mapsto$ subsystem.getSrcHdls()\} \textbf{in}
+\State \textbf{let} blkToDstHdls = \{subsystem $\mapsto$ subsystem.getDstHdls()\} \textbf{in}
+\State \textbf{for} cntBlk : subsystem.contentFields()
+\State {\ \ \ \ }  blkToSrcHdls $\leftarrow$ \{cntBlk $\mapsto$ cntBlk.getSrcHdls()\};
+\State {\ \ \ \ }  blkToDstHdls $\leftarrow$ \{cntBlk $\mapsto$ cntBlk.getDstHdls()\};
+\State {\ \ \ \ } hdlToBlk $\leftarrow$ \{cntBlk.getHdl() $\mapsto$ cntBlk\};
+\State {\ \ \ \ } \textbf{match}  cntBlk.getBlkType() \textbf{with}
+\State {\ \ \ \ } $\mid$ PROP $\rightarrow$ props $\leftarrow$ cntBlk
+\State {\ \ \ \ } $\mid$ INPORT $\rightarrow$ inputs $\leftarrow$ \{\textbf{LustreVar}(cntBlk), contBlk\}
+\State {\ \ \ \ } $\mid$ OUTPORT $\rightarrow$ outputs $\leftarrow$ \{\textbf{LustreVar}(cntBlk), contBlk\}
+\State {\ \ \ \ } $\mid$ CONTRACT $\rightarrow$ contracts $\leftarrow$ cntBlk
+\State \textbf{if} subsystem.isContract() \textbf{then}
+\State {\ \ \ \ } \textbf{translateForContract}(subsystem, hdlToBlk, blkToSrcHdls, blkToDstHdls);
+\State \textbf{else}
+\State {\ \ \ \ } \textbf{translateForLusNode}(subsystem, inputs, outputs, props, contracts, hdlToBlk, blkToSrcHdls, 
+\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } blkToDstHdls);
+\EndFunction
+\end{algorithmic}
+\caption{The translation algorithm}
+\end{figure}
+
+
+\begin{figure}
+\begin{algorithmic}
+\Function{\textbf{translateForLusNode}}{Node subsystem, Map inputs, Map outputs, List props, List contracts, Map hdlToBlk, Map blkToSrcHdls, Map blkToDstHdls}
+\Return{(LustreAst ast)}
+\State \textbf{let} equations = \{\} in
+\State \textbf{for} (var, outputBlk) : outputs.values()
+\State {\ \ \ \ } equations $\leftarrow$ \textbf{LusEquation}(var, \textbf{translateBlock}(outputBlk));
+
+\EndFunction
+\end{algorithmic}
+\caption{The translation algorithm}
+\end{figure}
+
+\begin{figure}
+\begin{algorithmic}
+\Function{\textbf{translateBlock}}{Node blk, Map hdlToBlk, Map blkToSrcHdls, Map blkToDstHdls}
+\\
+\Return{(LustreAst ast)}
+\State \textbf{let} inExprs = \{\} \textbf{in}
+\State \textbf{let} blkType = blk.getBlkType() \textbf{in}
+\State \textbf{let} inHdls = blkToSrcHdl.get(blk) \textbf{in}
+\State \textbf{for} inHdl: inHdls
+\State {\ \ \ \ } inExprs $\leftarrow$ \textbf{translateBlock}(hdlToBlk.get(inHdl), hdlToBlk, blkToSrcHdls, blkToDstHdls);
+\State \textbf{match} blkType \textbf{with}
+\State $\mid$ NOT $\rightarrow$ \textbf{UnaryExpr}(NOT, inExprs[0]);
+\State $\mid$ AND $\rightarrow$ \textbf{BinaryExpr}(AND, inExprs);
+\State $\mid$ OR $\rightarrow$ \textbf{BinaryExpr}(OR, inExprs);
+\State $\mid$ XOR $\rightarrow$ \textbf{BinaryExpr}(XOR, inExprs);
+\State $\mid$ NAND $\rightarrow$ \textbf{BinaryExpr}(NAND, inExprs);
+\State $\mid$ NOR $\rightarrow$ \textbf{BinaryExpr}(NOR, inExprs);
+\State $\mid$ NXOR $\rightarrow$ \textbf{BinaryExpr}(NXOR, inExprs);
+\State $\mid$ SUM $\rightarrow$ \textbf{BinaryExpr}(SUM, inExprs);
+\State $\mid$ MOD $\rightarrow$ \textbf{BinaryExpr}(inExprs[0], MOD, inExprs[1]);
+\State $\mid$ EQ $\rightarrow$ \textbf{BinaryExpr}(inExprs[0], EQ, inExprs[1]);
+\State $\mid$ NEQ $\rightarrow$ \textbf{BinaryExpr}(inExprs[0], NEQ, inExprs[1]);
+\State $\mid$ GTE $\rightarrow$ \textbf{BinaryExpr}(inExprs[0], GTE, inExprs[1]);
+\State $\mid$ LTE $\rightarrow$ \textbf{BinaryExpr}(inExprs[0], LTE, inExprs[1]);
+\State $\mid$ GT $\rightarrow$ \textbf{BinaryExpr}(inExprs[0], GT, inExprs[1]);
+\State $\mid$ LT $\rightarrow$ \textbf{BinaryExpr}(inExprs[0], LT, inExprs[1]);
+
+\State $\mid$ UNARYMINUS $\rightarrow$ \textbf{UnaryExpr}(UNARYMINUS, inExprs[1]);
+\State $\mid$ COMPARETOCONST $\rightarrow$ \textbf{BinaryExpr}(inExprs[0], OP, \textbf{Constant});
+\State $\mid$ COMPARETOZERO $\rightarrow$ \textbf{BinaryExpr}(inExprs[0], OP, \textbf{Zero});
+\State $\mid$ SUBSYSTEM $\rightarrow$ \textbf{getBlkName}(blk)(inExprs);
+\State $\mid$ INPORT $\rightarrow$ \textbf{Constant}(\textbf{getBlkName}(blk));
+\State $\mid$ CONSTANT $\rightarrow$ \textbf{Constant}(\textbf{getValue}(blk));
+\State $\mid$ PRODUCT $\rightarrow$ \textbf{Expr}(PRODUCT, inExprs);
+\State $\mid$ ARROW $\rightarrow$ \textbf{BinaryExpr}(inExprs[0], ARROW, \textbf{Zero});
+\State $\mid$ MEMORY/UNITDELAY $\rightarrow$ \textbf{BinaryExpr}(init, PRE, inExprs[0]);
+\EndFunction
+\end{algorithmic}
+\caption{The translation algorithm}
+\end{figure}
 
 \subsection{Semantics of complex CoCoSim blocks}
 
