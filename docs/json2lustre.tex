@@ -339,77 +339,120 @@ The translation process of expressions is the same as described above.
 
 \subsection{The Translation Algorithm}
 
-We describe here the translation algorithm for the JSON model. 
+We describe here the translation algorithms for the JSON model in Figure~\ref{mainalgo}~\ref{mainalgo1}~\ref{node}~\ref{contract}~\ref{block}.
 
 
 \begin{figure}
 \begin{algorithmic}
-\Function{\textbf{translate}}{Node rootNode}
-\Return{(LustreProgram P)}
+\Function{\textbf{translate}}{\textbf{Node} rootNode}
+\\
+\Return{(\textbf{LustreProgram} P)}
 \State \textbf{let} subsystems = \{S $\mid$ S is a subsystem block $\land$ S $\in$ rootNode.fields\} \textbf{in}
 \State \textbf{for} subsystem : subsystems
 \State {\ \ \ \ } \textbf{let} ast = \textbf{translateSubsystem}(subsystem) \textbf{in}
 \State {\ \ \ \ } \textbf{if}  ast \textbf{instanceof} LustreNode \textbf{then}
-\State {\ \ \ \ \ \ \ \ } P.addNode(ast)
+\State {\ \ \ \ \ \ \ \ } P.\textbf{addNode}(ast)
 \State {\ \ \ \ } \textbf{else}
-\State {\ \ \ \ \ \ \ \ } P.addContract(ast)
+\State {\ \ \ \ \ \ \ \ } P.\textbf{addContract}(ast)
 \EndFunction
+\label{mainalgo}
 \end{algorithmic}
 
 \begin{algorithmic}
-\Function{\textbf{translateSubsystem}}{Node subsystem}
-\Return{(LustreAst ast)}
+\Function{\textbf{translateSubsystem}}{\textbf{Node} subsystem}
+\Return{(\textbf{LustreAst} ast)}
 
 \State \textbf{let} inputs = \{\} \textbf{in}
 \State \textbf{let} props = \{\} \textbf{in}
 \State \textbf{let} outputs = \{\} \textbf{in}
 \State \textbf{let} contract = \{\} \textbf{in}
 \State \textbf{let} hdlToBlk = \{\} \textbf{in}
-\State \textbf{let} blkToSrcHdls = \{subsystem $\mapsto$ subsystem.getSrcHdls()\} \textbf{in}
-\State \textbf{let} blkToDstHdls = \{subsystem $\mapsto$ subsystem.getDstHdls()\} \textbf{in}
-\State \textbf{for} cntBlk : subsystem.contentFields()
-\State {\ \ \ \ }  blkToSrcHdls $\leftarrow$ \{cntBlk $\mapsto$ cntBlk.getSrcHdls()\};
-\State {\ \ \ \ }  blkToDstHdls $\leftarrow$ \{cntBlk $\mapsto$ cntBlk.getDstHdls()\};
-\State {\ \ \ \ } hdlToBlk $\leftarrow$ \{cntBlk.getHdl() $\mapsto$ cntBlk\};
-\State {\ \ \ \ } \textbf{match}  cntBlk.getBlkType() \textbf{with}
-\State {\ \ \ \ } $\mid$ PROP $\rightarrow$ props $\leftarrow$ cntBlk
-\State {\ \ \ \ } $\mid$ INPORT $\rightarrow$ inputs $\leftarrow$ \{\textbf{LustreVar}(cntBlk), contBlk\}
-\State {\ \ \ \ } $\mid$ OUTPORT $\rightarrow$ outputs $\leftarrow$ \{\textbf{LustreVar}(cntBlk), contBlk\}
-\State {\ \ \ \ } $\mid$ CONTRACT $\rightarrow$ contracts $\leftarrow$ cntBlk
-\State \textbf{if} subsystem.isContract() \textbf{then}
-\State {\ \ \ \ } \textbf{translateForContract}(subsystem, hdlToBlk, blkToSrcHdls, blkToDstHdls);
+\State \textbf{let} blkToSrcHdls = \{subsystem $\mapsto$ subsystem.\textbf{getSrcHdls}()\} \textbf{in}
+\State \textbf{let} blkToDstHdls = \{subsystem $\mapsto$ subsystem.\textbf{getDstHdls}()\} \textbf{in}
+\State \textbf{for} cntBlk : subsystem.\textbf{contentFields}()
+\State {\ \ \ \ }  blkToSrcHdls $\leftarrow$ \{cntBlk $\mapsto$ cntBlk.\textbf{getSrcHdls}()\};
+\State {\ \ \ \ }  blkToDstHdls $\leftarrow$ \{cntBlk $\mapsto$ cntBlk.\textbf{getDstHdls}()\};
+\State {\ \ \ \ } hdlToBlk $\leftarrow$ \{cntBlk.\textbf{getHdl}() $\mapsto$ cntBlk\};
+\State {\ \ \ \ } \textbf{match}  cntBlk.\textbf{getBlkType}() \textbf{with}
+\State {\ \ \ \ } $\mid$ PROP $\rightarrow$ props $\leftarrow$ cntBlk;
+\State {\ \ \ \ } $\mid$ INPORT $\rightarrow$ inputs $\leftarrow$ \{\textbf{LustreVar}(cntBlk), contBlk\}; 
+\State {\ \ \ \ } $\mid$ OUTPORT $\rightarrow$ outputs $\leftarrow$ \{\textbf{LustreVar}(cntBlk), contBlk\};
+\State {\ \ \ \ } $\mid$ CONTRACT $\rightarrow$ contracts $\leftarrow$ cntBlk;
+\State {\ \ \ \ } $\mid$ VALIDATOR $\rightarrow$ validator $\leftarrow$ contBlk;
+\State \textbf{if} subsystem.\textbf{isContract}() \textbf{then}
+\State {\ \ \ \ } \textbf{translateForContract}(subsystem, validator, hdlToBlk, blkToSrcHdls, blkToDstHdls);
 \State \textbf{else}
-\State {\ \ \ \ } \textbf{translateForLusNode}(subsystem, inputs, outputs, props, contracts, hdlToBlk, blkToSrcHdls, 
-\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } blkToDstHdls);
+\State {\ \ \ \ } \textbf{translateForLusNode}(subsystem, inputs, outputs, props, contracts, hdlToBlk,
+\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } blkToSrcHdls, blkToDstHdls);
 \EndFunction
 \end{algorithmic}
+\label{mainalgo1}
 \caption{The translation algorithm}
 \end{figure}
 
 
 \begin{figure}
 \begin{algorithmic}
-\Function{\textbf{translateForLusNode}}{Node subsystem, Map inputs, Map outputs, List props, List contracts, Map hdlToBlk, Map blkToSrcHdls, Map blkToDstHdls}
-\Return{(LustreAst ast)}
-\State \textbf{let} equations = \{\} in
-\State \textbf{for} (var, outputBlk) : outputs.values()
+\Function{\textbf{translateForLusNode}}{\textbf{Node} subsystem, \textbf{Map} inputs, \textbf{Map} outputs, \textbf{List} props, \textbf{List} contracts, \textbf{Map} hdlToBlk, \textbf{Map} blkToSrcHdls, \textbf{Map} blkToDstHdls}
+\\
+\Return{(\textbf{LustreAst} ast)}
+\State \textbf{let} equations = \{\} \textbf{in}
+\State \textbf{for} (var, outputBlk) : outputs
 \State {\ \ \ \ } equations $\leftarrow$ \textbf{LusEquation}(var, \textbf{translateBlock}(outputBlk));
-
+\State \textbf{LustreNode}(inputs, outputs, props, contracts, equations);
 \EndFunction
 \end{algorithmic}
-\caption{The translateForLusNode algorithm}
+\label{node}
+\caption{The algorithm for translating the subsystem node to Lustre node}
+\end{figure}
+
+
+\begin{figure}
+\begin{algorithmic}
+\Function{\textbf{translateForLusContract}}{\textbf{JsonNode} contract, \textbf{JsonNode} validator, \textbf{Map} inputs, \textbf{Map} outputs, \textbf{List} props, \textbf{List} contracts, \textbf{Map} hdlToBlk, \textbf{Map} blkToSrcHdls, \textbf{Map} blkToDstHdls}
+\\
+\Return{(\textbf{LustreAst} ast)}
+\State \textbf{for} srcHdl : blkToSrcHdls.\textbf{get}(validatorBlk)
+\State {\ \ \ \ } \textbf{let} assumptions = \{\} \textbf{in}
+\State {\ \ \ \ } \textbf{let} guarantees = \{\} \textbf{in}
+\State {\ \ \ \ } \textbf{let} modeToRequires = \{\} \textbf{in}
+\State {\ \ \ \ } \textbf{let} modeToEnsures = \{\} \textbf{in}
+\State {\ \ \ \ } \textbf{let} srcBlk = hdlToBlk.\textbf{get}(srcHdl) \textbf{in}
+\State {\ \ \ \ } \textbf{match} srcBlk \textbf{with}
+\State {\ \ \ \ } $\mid$ \textbf{ASSUME} $\rightarrow$ assumptions $\leftarrow$ \textbf{translateBlock}(srcBlk, hdlToBlk, blkToSrcHdls, blkToDstHdls);
+\State {\ \ \ \ } $\mid$ \textbf{GUARANTEE} $\rightarrow$ guarantees $\leftarrow$ \textbf{translateBlock}(srcBlk, hdlToBlk, blkToSrcHdls, 
+\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \  } blkToDstHdls);
+\State {\ \ \ \ } $\mid$ \textbf{MODE} $\rightarrow$ \textbf{let} modeName = \textbf{getModeName}(srcBlk) \textbf{in}
+\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } \textbf{let} modeName = \textbf{getModeName}(srcBlk) \textbf{in}
+\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } \textbf{let} requires = \{\} \textbf{in}
+\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } \textbf{let} ensures = \{\} \textbf{in}
+\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } \textbf{for} modeInHdl : blkToSrcHdls.\textbf{get}(srcBlk) \textbf{in} 
+\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } \textbf{let} modeInBlk = hdlToBlk.\textbf{get}(modelInHdl) \textbf{in} 
+\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } \textbf{match} modeInBlk \textbf{with}
+\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } $\mid$ \textbf{REQUIRE} $\rightarrow$ requires $\leftarrow$ \textbf{translateBlock}(modeInBlk, hdlToBlk, blkToSrcHdls, 
+\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } blkToDstHdls);
+\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } $\mid$ \textbf{ENSURES} $\rightarrow$ ensure $\leftarrow$ \textbf{translateBlock}(modeInBlk, hdlToBlk, blkToSrcHdls, 
+\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } blkToDstHdls);
+\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } modeToRequires $\leftarrow$ \{modelName $\mapsto$ requires\};
+\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } modeToRequires $\leftarrow$ \{modelName $\mapsto$ requires\};
+\State \textbf{LustreContract}(\textbf{getBlkName}(contract), assumptions, guarantees, inputs, outputs, 
+\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } modeToRequires, modeToEnsures);
+\EndFunction
+\end{algorithmic}
+\label{contract}
+\caption{The algorithm for translating contract }
 \end{figure}
 
 \begin{figure}
 \begin{algorithmic}
-\Function{\textbf{translateBlock}}{Node blk, Map hdlToBlk, Map blkToSrcHdls, Map blkToDstHdls}
+\Function{\textbf{translateBlock}}{\textbf{Node} blk, \textbf{Map} hdlToBlk, \textbf{Map} blkToSrcHdls, \textbf{Map} blkToDstHdls}
 \\
-\Return{(LustreAst ast)}
+\Return{(\textbf{LustreAst} ast)}
 \State \textbf{let} inExprs = \{\} \textbf{in}
-\State \textbf{let} blkType = blk.getBlkType() \textbf{in}
-\State \textbf{let} inHdls = blkToSrcHdl.get(blk) \textbf{in}
+\State \textbf{let} blkType = blk.\textbf{getBlkType}() \textbf{in}
+\State \textbf{let} inHdls = blkToSrcHdl.\textbf{get}(blk) \textbf{in}
 \State \textbf{for} inHdl: inHdls
-\State {\ \ \ \ } inExprs $\leftarrow$ \textbf{translateBlock}(hdlToBlk.get(inHdl), hdlToBlk, blkToSrcHdls, blkToDstHdls);
+\State {\ \ \ \ } inExprs $\leftarrow$ \textbf{translateBlock}(hdlToBlk.\textbf{get}(inHdl), hdlToBlk, blkToSrcHdls, blkToDstHdls);
 \State \textbf{match} blkType \textbf{with}
 \State $\mid$ NOT $\rightarrow$ \textbf{UnaryExpr}(NOT, inExprs[0]);
 \State $\mid$ AND $\rightarrow$ \textbf{BinaryExpr}(AND, inExprs);
@@ -426,18 +469,22 @@ We describe here the translation algorithm for the JSON model.
 \State $\mid$ LTE $\rightarrow$ \textbf{BinaryExpr}(inExprs[0], LTE, inExprs[1]);
 \State $\mid$ GT $\rightarrow$ \textbf{BinaryExpr}(inExprs[0], GT, inExprs[1]);
 \State $\mid$ LT $\rightarrow$ \textbf{BinaryExpr}(inExprs[0], LT, inExprs[1]);
-
-\State $\mid$ UNARYMINUS $\rightarrow$ \textbf{UnaryExpr}(UNARYMINUS, inExprs[1]);
-\State $\mid$ COMPARETOCONST $\rightarrow$ \textbf{BinaryExpr}(inExprs[0], OP, \textbf{Constant});
-\State $\mid$ COMPARETOZERO $\rightarrow$ \textbf{BinaryExpr}(inExprs[0], OP, \textbf{Zero});
 \State $\mid$ SUBSYSTEM $\rightarrow$ \textbf{getBlkName}(blk)(inExprs);
 \State $\mid$ INPORT $\rightarrow$ \textbf{Constant}(\textbf{getBlkName}(blk));
 \State $\mid$ CONSTANT $\rightarrow$ \textbf{Constant}(\textbf{getValue}(blk));
 \State $\mid$ PRODUCT $\rightarrow$ \textbf{Expr}(PRODUCT, inExprs);
+\State $\mid$ UNARYMINUS $\rightarrow$ \textbf{UnaryExpr}(UNARYMINUS, inExprs[1]);
+\State $\mid$ COMPARETOCONST $\rightarrow$ \textbf{BinaryExpr}(inExprs[0], OP, \textbf{getConstant}(blkNode));
+\State $\mid$ COMPARETOZERO $\rightarrow$ \textbf{BinaryExpr}(inExprs[0], OP, \textbf{Zero});
+
 \State $\mid$ ARROW $\rightarrow$ \textbf{BinaryExpr}(inExprs[0], ARROW, \textbf{Zero});
+\State $\mid$ SWITCH $\rightarrow$  \textbf{let} threshHold = blkNode.\textbf{getThreshHold}() \textbf{in}
+\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } \textbf{let} condExpr = \textbf{BinaryExpr}(inExprs[1], GTE/GT/NEQ, threshHold) \textbf{in}
+\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } \textbf{IteExpr}(condExpr, inExprs[0], inExprs[2]);
 \State $\mid$ MEMORY/UNITDELAY $\rightarrow$ \textbf{BinaryExpr}(init, PRE, inExprs[0]);
 \EndFunction
 \end{algorithmic}
+\label{block}
 \caption{The translation algorithm}
 \end{figure}
 

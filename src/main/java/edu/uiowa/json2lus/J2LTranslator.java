@@ -1472,14 +1472,14 @@ public class J2LTranslator {
                 }
                 case SWITCH: {
                     LustreExpr  condExpr    = null;
-                    String      criteria    = blkNode.get(CRITERIA).asText();
                     LustreType  condType    = getSwitchCondType(blkNode);
                                        
                     if(condType == PrimitiveType.BOOL) {
                         condExpr = inExprs.get(1);
                     } else {                        
                         String      threshold       = blkNode.get(THRESHOLD).asText();
-                        LustreExpr  condRhsExpr     = getLustreConst(threshold, condType);
+                        String      criteria        = blkNode.get(CRITERIA).asText();                        
+                        LustreExpr  condRhsExpr     = getLustreConst(threshold, condType);                        
 
                         switch(criteria) {
                             case FSTCRIT: {
