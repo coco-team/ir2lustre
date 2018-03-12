@@ -9,11 +9,10 @@
 \usepackage{mathpartir}
 \usepackage{amsmath}    
 \usepackage{algpseudocode}
-
 \usepackage{array}
-
 \usepackage{xcolor}
 \usepackage{fullpage}
+\usepackage{graphicx}
 \linespread{1.2}
 
 \lstset{
@@ -42,39 +41,98 @@ CoCoSim supports a subset of the blocks provided by the Simulink toolset. Figure
 A CoCoSim model is a visualization of a set of block declarations and their connectivities.
 The CoCoSim intermediate compiler takes as input a Simulink model and translate it into a JSON representation storing blocks and connectivities information. 
 The model information is stored as name -- value pairs in a JSON file. 
-The name attribute specifies the name of the block, and the value stores the actual information about the block such as block handle and block connectivities. 
+The name attribute specifies the name of the block, and the value stores the actual data about the block such as block handle, block connectivities and so on. 
 Each block is uniquely identified by its block handle.
 The ``BlockType" field specifies the type of a block. 
-For example, an inport block of a CoCoSim model has a ``BlockType" ``Inport".
+%For example, an inport block of a CoCoSim model has a ``BlockType" ``Inport".
 The blocks connectivity information is stored in the ``PortConnectivity" field, where ``SrcBlock" stores the handles of incoming blocks, whereas ``DstBlock" stores the handles of destination blocks. 
-Figure~\ref{jsoninport} shows a snippet of an inport block definition in JSON, 
-where ``In1" is the name of the block, ``Inport" is the type of block ``In1", and the unique identifier for ``In1" is ``84.0001220703125". Data type information is stored in the attribute ``Outport" of ``CompiledPortDataTypes". 
+The ``Origin\_path" is the full path to the block in the CoCoSim model.
+The value of ``Ports" of inports or outports is the position index in the inputs or outputs. 
 
-\begin{figure}[ht]
-\begin{lstlisting}
-      "In1": {
-        "BlockType": "Inport",
-        "Handle": 84.0001220703125,
-        "PortConnectivity": {
-          "DstBlock": 6.0001220703125,
-          ...
-        }
-        "CompiledPortDataTypes": {
-          "Outport": "double"
-          ...
-        },
-        ...        
-      }
-\end{lstlisting}        
-\caption{A snippet of JSON representation of an inport block}
-\label{jsoninport}
+Figure~\ref{cocosimmodel} shows an overview of a CoCoSim model ``unsafe\_1\_PP" and Figure~\ref{jsoninport} shows a snippet of an overview its JSON representation. 
+``In1" and ``In2" are the names of the inport blocks, ``Inport" is the type of block ``In1", and the handle which is the unique identifier for ``In1" is ``77.0003662109375". 
+``Out1" is the outport of the block.
+The data type of ``In1" is stored in the attribute ``Outport" of ``CompiledPortDataTypes", which is Boolean. 
+Since ``In1" is an inport of top most node, it only has destination blocks. 
+The handles of its destination blocks are store as values \{79.0003662109375, 92.0008544921875\} in ``DstBlock" of ``PortConnectivity". 
+The ``Origin\_path" of ``In1" is ``unsafe\_1\_PP/In1".
+``In1" has a ports value of 1, meaning it is the first input. 
+Subsystem is a type of subsystem, which defines the relations among ``In1", ``In2", and ``Out1". 
+Safety is an observer block that defines a property in terms of inputs and outputs of the subsystem block ``unsafe\_1\_PP". 
+Safety\_term is a terminator block.
+
+Figure~\ref{jsonsafety} shows a snippet of the observer block ``safety" in JSON, which is a type of subsystem block with the annotation type ``ensures".
+It connects with ``SrcBlock" with handles \{77.0003662109375, 78.0003662109375, 920008544921875\}, which are the handles of inports ``In1" and ``In2" and outport ``Out1" of the calling node ``unsafe\_1\_PP",  and connects with ``DstBlock with handle ``91.000732421875", which is the handle of the terminator block. 
+
+Figure~\ref{cocosimsafety} shows the CoCoSim model of the observer block ``Safety" and Figure~\ref{jsonsafetybody} shows the blocks definition of the observer block body in JSON, including 
+three inports ``In1", ``In2", and ``Out1", an outport ``Safety", a logical operator ``AND", and a relational operator ``$>=$". 
+Based on the connectivities defined in the port connectivity, ``Safety" connects with the source block logical operator ``AND", the logical operator ``AND" connects with the source blocks relational operator ``$>=$" and the inport block ``Out1", and the relational operator ``$>=$" connects
+with the source block inports ``In1" and ``In2". 
+
+\begin{figure}[h]
+\begin{center}
+    \includegraphics[scale=0.28]{figures/safety000}
+\end{center}  
+  \caption{A CoCoSim Model}
+  \label{cocosimmodel}
+\end{figure}
+
+\begin{figure}[h]
+\begin{center}
+  \includegraphics[scale=0.5]{figures/in1}
+\end{center}  
+  \caption{A JSON snippet of the CoCoSim Model}
+  \label{jsoninport}
+\end{figure}
+
+\begin{figure}[h]
+\begin{center}
+  \includegraphics[scale=0.2]{figures/safety0}
+\end{center}  
+  \caption{A CoCoSim of the observer block safety}
+  \label{cocosimsafety}
+\end{figure}
+
+
+\begin{figure}[h]
+\begin{center}
+  \includegraphics[scale=0.5]{figures/safety}
+\end{center}  
+  \caption{A JSON snippet of the observer block safety}
+  \label{jsonsafety}
+\end{figure}
+
+\begin{figure}[h]
+\begin{center}
+  \includegraphics[scale=0.4]{figures/safety1}
+    \includegraphics[scale=0.4]{figures/safety2}
+  \includegraphics[scale=0.4]{figures/safety4}     
+    \includegraphics[scale=0.4]{figures/safety3}
+    \includegraphics[scale=0.4]{figures/safety5}      
+    \includegraphics[scale=0.4]{figures/safety6}       
+    
+\end{center}  
+  \caption{A JSON snippet of the body of the observer block safety}
+  \label{jsonsafetybody}
 \end{figure}
 
 \subsection{A mapping from basic CoCoSim blocks to Lustre}
-Figure~\ref{basicmapping} shows a mapping from basic CoCoSim blocks to their equivalent representation in Lustre.
+
+\begin{figure}[h]
+\begin{center}
+  \includegraphics[scale=0.4]{figures/lus0}
+  \includegraphics[scale=0.4]{figures/lus1}
+  \includegraphics[scale=0.4]{figures/lus2}  
+    
+\end{center}  
+  \caption{The translated Lustre programs for the CoCoSim model unsafe\_1\_PP}
+  \label{lus}
+\end{figure}
+
+Figure~\ref{basicmapping} shows a mapping from basic CoCoSim blocks to their equivalent representations in Lustre.
 
 \paragraph{Subsystem, Inport, and Outport} 
-Subsystems allow to create a hierarchical model comprising many layers. 
+Subsystems create a hierarchical model comprising many layers. 
 A subsystem is a set of blocks that you replace with a single \textsf{Subsystem} block. 
 Subsystem normally consists of a set of inports and a set of outports, where outports are
 defined by using inports and other blocks. 
@@ -98,11 +156,16 @@ as separate nodes.
 by substituting the input and output variables by concrete ones.
 
 The translation is initiated by translating the outports backwardly. 
-Each outport is translated into an equation, where the outport is the output of the equation 
+Each outport and its connected expressions are translated into an equation, where the outport is the output of the equation 
 and the left hand side is the definition of the output.
 They are translated recursively.
+Figure ~\ref{lus} shows the translated Lustre programs corresponding to the CoCoSim model ``unsafe\_1\_PP".
 Each expression is defined in terms of the following operators. 
 We will describe the mappings of those operators in Lustre in the following paragraphs.
+
+\paragraph{Subsystem} 
+Subsystems are translated as node calls. 
+
 
 \paragraph{Relational Operators} 
 Relational operators greater than, less than, equal to, not equal to, greater 
@@ -275,6 +338,10 @@ of the contract by looking at the signature of the calling node.
 The translation process of expressions is the same as described above. 
 
 \subsection{The Translation Algorithm}
+
+We describe here the translation algorithm for the JSON model. 
+
+
 \begin{figure}
 \begin{algorithmic}
 \Function{\textbf{translate}}{Node rootNode}
@@ -330,7 +397,7 @@ The translation process of expressions is the same as described above.
 
 \EndFunction
 \end{algorithmic}
-\caption{The translation algorithm}
+\caption{The translateForLusNode algorithm}
 \end{figure}
 
 \begin{figure}
