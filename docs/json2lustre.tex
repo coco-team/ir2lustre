@@ -62,12 +62,13 @@ Safety is an observer block that defines a property in terms of inputs and outpu
 Safety\_term is a terminator block.
 
 Figure~\ref{jsonsafety} shows a snippet of the observer block ``safety" in JSON, which is a type of subsystem block with the annotation type ``ensures".
-It connects with ``SrcBlock" with handles \{77.0003662109375, 78.0003662109375, 920008544921875\}, which are the handles of inports ``In1" and ``In2" and outport ``Out1" of the calling node ``unsafe\_1\_PP",  and connects with ``DstBlock with handle ``91.000732421875", which is the handle of the terminator block. 
+It connects with ``SrcBlock" with handles \{77.0003662109375, 78.0003662109375, 920008544921875\}, which are the handles of inports ``In1" and ``In2" and outport ``Out1" of the calling node ``unsafe\_1\_PP",  and connects with ``DstBlock with handle ``91.000732421875", which is the handle of the terminator block ``Safety\_term". 
 
 Figure~\ref{cocosimsafety} shows the CoCoSim model of the observer block ``Safety" and Figure~\ref{jsonsafetybody} shows the blocks definition of the observer block body in JSON, including 
 three inports ``In1", ``In2", and ``Out1", an outport ``Safety", a logical operator ``AND", and a relational operator ``$>=$". 
 Based on the connectivities defined in the port connectivity, ``Safety" connects with the source block logical operator ``AND", the logical operator ``AND" connects with the source blocks relational operator ``$>=$" and the inport block ``Out1", and the relational operator ``$>=$" connects
 with the source block inports ``In1" and ``In2". 
+They all together comprise the expression: Safety = Out1 AND (In1 $>=$ In2).
 
 \begin{figure}[h]
 \begin{center}
@@ -89,7 +90,7 @@ with the source block inports ``In1" and ``In2".
 \begin{center}
   \includegraphics[scale=0.2]{figures/safety0}
 \end{center}  
-  \caption{A CoCoSim of the observer block safety}
+  \caption{A CoCoSim model of the observer block safety}
   \label{cocosimsafety}
 \end{figure}
 
@@ -120,9 +121,9 @@ with the source block inports ``In1" and ``In2".
 
 \begin{figure}[h]
 \begin{center}
-  \includegraphics[scale=0.4]{figures/lus0}
-  \includegraphics[scale=0.4]{figures/lus1}
-  \includegraphics[scale=0.4]{figures/lus2}  
+  \includegraphics[scale=0.35]{figures/lus0}
+  \includegraphics[scale=0.35]{figures/lus1}
+  \includegraphics[scale=0.35]{figures/lus2}  
     
 \end{center}  
   \caption{The translated Lustre programs for the CoCoSim model unsafe\_1\_PP}
@@ -159,7 +160,7 @@ The translation is initiated by translating the outports backwardly.
 Each outport and its connected expressions are translated into an equation, where the outport is the output of the equation 
 and the left hand side is the definition of the output.
 They are translated recursively.
-Figure ~\ref{lus} shows the translated Lustre programs corresponding to the CoCoSim model ``unsafe\_1\_PP".
+Figure~\ref{lus} shows the Lustre programs translated from the CoCoSim model ``unsafe\_1\_PP".
 Each expression is defined in terms of the following operators. 
 We will describe the mappings of those operators in Lustre in the following paragraphs.
 
@@ -237,10 +238,9 @@ for converting typed expressions.
 They are \textsf{bool\_to\_int, bool\_to\_real, int\_to\_bool, 
 real\_to\_bool, real\_to\_int} and \textsf{int\_to\_real}. 
 
-While translating expressions comparisons, if two expressions are compared, 
-their types will be lifted to the highest type. For example, if a Boolean variable \textsf{a} 
-is compared with an integer \textsf{b} for equality, \textsf{a} will be lifted to the integer 
-type by calling the function \textsf{bool\_to\_int} and compared afterwards. 
+While translating expressions comparisons, if two different typed expressions, their types will be lifted to the highest type.
+If Boolean typed expressions are compared, they will be converted to integer and compare.
+For example, in the ``unsafe\_1\_PP" model, since the inputs In1 and In2 are Boolean types but we are comparing them, we need to lift their types to integer by wrapping them with \textsf{bool\_to\_int} and do the comparison afterwards. 
 If an expression is typed with Integer or Real and it is used as Boolean in the model,  it will be lowered 
 to a Boolean by calling the function \textsf{int\_to\_bool} or \textsf{real\_to\_bool}.
  
@@ -337,9 +337,68 @@ The translation ignores the variable \textsf{valid} and construct the signature
 of the contract by looking at the signature of the calling node.
 The translation process of expressions is the same as described above. 
 
+
+\begin{figure}[h]
+\begin{center}
+  \includegraphics[scale=0.2]{figures/contract}    
+\end{center}  
+  \caption{A CoCoSim model using contracts}
+  \label{contractmodel}
+\end{figure}
+
+\begin{figure}[h]
+\begin{center}
+  \includegraphics[scale=0.5]{figures/contract1}    
+\end{center}  
+  \caption{The contract body definition}
+  \label{contractdef}
+\end{figure}
+
+\begin{figure}[h]
+\begin{center}
+  \includegraphics[scale=0.4]{figures/jsoncontract}    
+\end{center}  
+  \caption{The overview of CoCoSim model bacterialPopulation in JSON}
+  \label{jsoncontract}
+\end{figure}
+
+\begin{figure}[h]
+\begin{center}
+  \includegraphics[scale=0.4]{figures/jsoncontractdef}    
+\end{center}  
+  \caption{The contract of bacterialPopulation in JSON}
+  \label{jsoncontractdef}
+\end{figure}
+
+\begin{figure}[h]
+\begin{center}
+  \includegraphics[scale=0.3]{figures/lusnodecon}    
+\end{center}  
+  \caption{The bacterialPopulation node with contract in Lustre}
+  \label{lusnodecon}
+\end{figure}
+
+\begin{figure}[h]
+\begin{center}
+  \includegraphics[scale=0.3]{figures/luscon}    
+\end{center}  
+  \caption{The bacterialPopulation contract in Lustre}
+  \label{luscon}
+\end{figure}
+
+Figure~\ref{contractmodel} shows a ``bacterialPopulation" model using a contract. 
+And the contract body definition is shown in Figure~\ref{contractdef}, where it has one assume, two guarantees, and three mode connecting to the validator block. 
+The validator block always has an outport valid. 
+Figure~\ref{jsoncontract} and Figure~\ref{jsoncontractdef} are the overview of CoCoSim model ``bacterialPopulation" and its contract definition in JSON respectively. 
+The Lustre programs translated from the JSON model of the bacterialPopulation are shown Figure ~\ref{lusnodecon}~\ref{luscon}.
+
+
+
+
+
 \subsection{The Translation Algorithm}
 
-We describe here the translation algorithms for the JSON model in Figure~\ref{mainalgo}~\ref{mainalgo11}~\ref{node1}~\ref{contract1}~\ref{block1}.
+We describe here the translation algorithms for the JSON model in Figure~\ref{mainalgo}~\ref{mainalgo1}~\ref{block}~\ref{node}~\ref{contract}.
 
 
 \begin{figure}
@@ -355,9 +414,12 @@ We describe here the translation algorithms for the JSON model in Figure~\ref{ma
 \State {\ \ \ \ } \textbf{else}
 \State {\ \ \ \ \ \ \ \ } P.\textbf{addContract}(ast)
 \EndFunction
-\label{mainalgo}
 \end{algorithmic}
+\label{mainalgo}
+\caption{The entry point for the translation algorithm}
+\end{figure}
 
+\begin{figure}
 \begin{algorithmic}
 \Function{\textbf{translateSubsystem}}{\textbf{Node} subsystem}
 \Return{(\textbf{LustreAst} ast)}
@@ -485,7 +547,7 @@ We describe here the translation algorithms for the JSON model in Figure~\ref{ma
 \EndFunction
 \end{algorithmic}
 \label{block}
-\caption{The translation algorithm}
+\caption{The algorithm for translating blocks}
 \end{figure}
 
 \subsection{Semantics of complex CoCoSim blocks}
