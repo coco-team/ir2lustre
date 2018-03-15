@@ -124,7 +124,7 @@ public class J2LTranslator {
 
     private final String U              = "u";
     private final String Y              = "y";
-    private final String X0             = "X0";
+    private final String X0             = "InitialCondition";
     private final String MAX            = "max";
     private final String MIN            = "min";
     private final String GAIN           = "Gain";
