@@ -35,11 +35,46 @@ This is to document the translation process from the JSON representation of a Co
 
 
 \section{JSON Representation of CoCoSim Blocks}
+\begin{figure}
+\begin{algorithmic}
+\State \textit{\textsf{``block name": \{ }}
+\State {\ \ \ \ } \textsf{\textbf{``Content"}: \{
+\State {\ \ \ \ \ \ \ \ } \textit{``block name": \{} 
+\State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``BlockType"}:  \textit{``Inport, Outport, Subsystem ..."} 
+\State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``CompiledPortDataTypes"}: \textit{``int, boolean, double ..."} 
+\State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``Origin\_path"}: \textit{``full path to the block"} 
+\State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``Port"}: \textit{``a number"} 
+\State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``Handle"}: \textit{``a number"} 		   
+\State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``PortConnectivity"}: \{ 
+\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``SrcBlock"}:[\textit{block handle, block handle, ...}], 
+\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``DstBlock"}:[\textit{block handle, block handle, ...}]		
+\State {\ \ \ \ \ \ \ \ \ \ \ \ }\}	
+\State {\ \ \ \ \ \ \ \ } \}
+\State {\ \ \ \ \ \ \ \ } \textit{``block name": \{} 
+\State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``BlockType"}:  \textit{``Inport, Outport, Subsystem ..."} 
+\State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``CompiledPortDataTypes"}: \textit{``int, boolean, double ..."} 
+\State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``Origin\_path"}: \textit{``full path to the block"} 
+\State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``Port"}: \textit{``a number"} 
+\State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``Handle"}: \textit{``a number"} 		   
+\State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``PortConnectivity"}: \{ 
+\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``SrcBlock"}:[\textit{block handle, block handle, ...}], 
+\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``DstBlock"}:[\textit{block handle, block handle, ...}]		
+\State {\ \ \ \ \ \ \ \ \ \ \ \ }\}	
+\State {\ \ \ \ \ \ \ \ } \}
+\State {\ \ \ \ \ \ \ \ } $\ldots$
+\State {\ \ \ \ }\}
+\State \}}
+\end{algorithmic}
+\caption{The core syntax of JSON representation}
+\label{jsonsyntax}
+\end{figure}
+
 
 CoCoSim supports a subset of the blocks provided by the Simulink toolset. Figure~\ref{basicmapping}~\ref{mapping2}~\ref{mapping3}~\ref{mapping4} summarize the supported blocks and the limitations on their semantics if it applies. 
 
 A CoCoSim model is a visualization of a set of block declarations and their connectivities.
 The CoCoSim intermediate compiler takes as input a Simulink model and translate it into a JSON representation storing blocks and connectivities information. 
+Figure~\ref{jsonsyntax} shows the core syntax of the CoCoSim JSON representation.
 The model information is stored as name -- value pairs in a JSON file. 
 The name attribute specifies the name of the block, and the value stores the actual data about the block such as block handle, block connectivities and so on. 
 Each block is uniquely identified by its block handle.
@@ -132,6 +167,7 @@ They all together comprise the expression: Safety = Out1 AND (In1 $>=$ In2).
 
 Figure~\ref{basicmapping} shows a mapping from basic CoCoSim blocks to their equivalent representations in Lustre, which is currently supported by the translator. 
 
+\subsection{CoCoSim constructs to Lustre constructs}
 \paragraph{Subsystem, Inport, and Outport} 
 Subsystems create a hierarchical model comprising many layers. 
 A subsystem is a set of blocks that you replace with a single \textsf{Subsystem} block. 
@@ -228,7 +264,7 @@ When parsing the expressions, the expression will be constructed as an abstract 
 As we traverse the abstract syntax tree, the variables will be substituted by the concrete expressions
 that are corresponding to.
 
-\subsubsection{Types}
+\subsection{Types}
 
 Types in CoCoSim models are loosely defined. 
 They can be mixed compared, i.e., an integer can be compared to a Boolean.
@@ -398,7 +434,7 @@ The Lustre programs translated from the JSON model of the bacterialPopulation ar
 
 \section{The Translation Algorithms}
 
-We describe here the translation algorithms for the JSON model in Figure~\ref{mainalgo}~\ref{mainalgo1}~\ref{block}~\ref{node}~\ref{contract}.
+We describe here the translation algorithms for the JSON model in Figure~\ref{mainalgo}~\ref{mainalgo1}~\ref{translateblock}~\ref{translatenode}~\ref{translatecontract}.
 
 
 \begin{figure}
@@ -422,6 +458,7 @@ We describe here the translation algorithms for the JSON model in Figure~\ref{ma
 \begin{figure}
 \begin{algorithmic}
 \Function{\textbf{translateSubsystem}}{\textbf{Node} subsystem}
+\\
 \Return{(\textbf{LustreAst} ast)}
 
 \State \textbf{let} inputs = \{\} \textbf{in}
@@ -464,7 +501,7 @@ We describe here the translation algorithms for the JSON model in Figure~\ref{ma
 \State \textbf{LustreNode}(inputs, outputs, props, contracts, equations);
 \EndFunction
 \end{algorithmic}
-\label{node}
+\label{translatenode}
 \caption{The algorithm for translating the subsystem node to Lustre node}
 \end{figure}
 
@@ -501,7 +538,7 @@ We describe here the translation algorithms for the JSON model in Figure~\ref{ma
 \State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } modeToRequires, modeToEnsures);
 \EndFunction
 \end{algorithmic}
-\label{contract}
+\label{translatecontract}
 \caption{The algorithm for translating contract }
 \end{figure}
 
@@ -546,7 +583,7 @@ We describe here the translation algorithms for the JSON model in Figure~\ref{ma
 \State $\mid$ MEMORY/UNITDELAY $\rightarrow$ \textbf{BinaryExpr}(init, PRE, inExprs[0]);
 \EndFunction
 \end{algorithmic}
-\label{block}
+\label{translateblock}
 \caption{The algorithm for translating blocks}
 \end{figure}
 
