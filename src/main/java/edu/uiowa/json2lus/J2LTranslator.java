@@ -267,7 +267,9 @@ public class J2LTranslator {
         for(int i = this.subsystemNodes.size()-1; i >= 0; i--) {
             
             // Translate each subsystem node
-            for(LustreAst ast : translateSubsystemNode(this.subsystemNodes.get(i))) {
+            LustreAst ast = translateSubsystemNode(this.subsystemNodes.get(i));
+            
+            if(ast != null) {
                 if(ast instanceof LustreNode) {
                     this.lustreProgram.addNode((LustreNode)ast);
                 } else if(ast instanceof LustreContract) {
@@ -380,22 +382,20 @@ public class J2LTranslator {
      * @param hdlToBlkNodeMap
      * @return A list of contracts corresponding to the contract node
      */    
-    protected List<LustreAst> translateContractNode(JsonNode contractNode, JsonNode validatorBlkNode, List<LustreVar> inputs, List<LustreVar> outputs, Map<JsonNode, List<String>> blkNodeToSrcBlkHdlsMap, Map<JsonNode, List<Integer>> blkNodeToSrcBlkPortsMap, Map<JsonNode, List<String>> blkNodeToDstBlkHdlsMap, Map<String, JsonNode> hdlToBlkNodeMap) {        
+    protected LustreContract translateContractNode(JsonNode contractNode, JsonNode validatorBlkNode, List<LustreVar> inputs, List<LustreVar> outputs, Map<JsonNode, List<String>> blkNodeToSrcBlkHdlsMap, Map<JsonNode, List<Integer>> blkNodeToSrcBlkPortsMap, Map<JsonNode, List<String>> blkNodeToDstBlkHdlsMap, Map<String, JsonNode> hdlToBlkNodeMap) {        
         // Get the contract name
         String              contractName    = getQualifiedBlkName(contractNode); 
         
         LOGGER.log(Level.INFO, "Start translating the contract block: {0}", contractName);
         
-        // Set up data structures for storing information
-        int aIndex = 1, gIndex = 1;        
-        
-        List<LustreAst>                 contracts       = new ArrayList<>();        
-        List<LustreExpr>                assumptions     = new ArrayList<>();            
-        List<LustreExpr>                guarantees      = new ArrayList<>();              
+        // Set up data structures for storing contract information
+        int aIndex = 1, gIndex = 1;             
         Map<String, List<LustreExpr>>   modeToRequires  = new HashMap<>();
-        Map<String, List<LustreExpr>>   modeToEnsures   = new HashMap<>();        
+        Map<String, List<LustreExpr>>   modeToEnsures   = new HashMap<>();           
+        List<LustreExpr>                assumptions     = new ArrayList<>();            
+        List<LustreExpr>                guarantees      = new ArrayList<>();                                  
         List<String>                    inHdls          = blkNodeToSrcBlkHdlsMap.get(validatorBlkNode);
-        List<Integer>                   inPorts         = blkNodeToSrcBlkPortsMap.get(validatorBlkNode);        
+        List<Integer>                   inPorts         = blkNodeToSrcBlkPortsMap.get(validatorBlkNode);         
         
         for(int i = 0; i < inHdls.size(); i++) {
             // Get the in block to the validator block node
@@ -403,13 +403,16 @@ public class J2LTranslator {
             // Get the origin path
             String      originPath  = inBlk.get(ORIGIN).asText();
             
+            // Translate assumption blocks
             if(isAssumeBlk(inBlk)) {
                 assumptions.add(translateBlock(false, inHdls.get(i), contractNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, new HashSet<String>(), null, inPorts.get(i)));
                 addMappingInfo(inHdls.get(i), originPath, null, contractName, null, ASSUME, String.valueOf(aIndex++), null);                
+            // Translate guarantee blocks                
             } else if(isGuaranteeBlk(inBlk)) {
                 guarantees.add(translateBlock(false, inHdls.get(i), contractNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, new HashSet<String>(), null, inPorts.get(i)));
                 addMappingInfo(inHdls.get(i), originPath, null, contractName, null, GUARANTEE, String.valueOf(gIndex++), null);                
             } else if(isModeBlk(inBlk)) {
+                // Set up data structures for requires and ensures of modes
                 int rIndex = 1, eIndex = 1;
                 String modeName                 = getBlkName(inBlk);
                 List<LustreExpr>    requires    = new ArrayList<>();
@@ -417,6 +420,7 @@ public class J2LTranslator {
                 List<String>        modeInHdls  = blkNodeToSrcBlkHdlsMap.get(inBlk);
                 List<Integer>       modeInPorts = blkNodeToSrcBlkPortsMap.get(inBlk);
                 
+                // Translate requires and ensures
                 for(int j = 0; j < modeInHdls.size(); j++) {
                     JsonNode    modeInBlk       = hdlToBlkNodeMap.get(modeInHdls.get(j));
                     LustreExpr  modeInBlkExpr   = translateBlock(false, modeInHdls.get(j), contractNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, new HashSet<String>(), null, modeInPorts.get(j));
@@ -439,12 +443,12 @@ public class J2LTranslator {
             }
         }
         outputs.clear();
-        contracts.add(new LustreContract(contractName, assumptions, guarantees, inputs, outputs, this.auxNodeLocalVars, this.auxNodeEqs, modeToRequires, modeToEnsures));
+        LustreContract contract = new LustreContract(contractName, assumptions, guarantees, inputs, outputs, this.auxNodeLocalVars, this.auxNodeEqs, modeToRequires, modeToEnsures);
         this.auxNodeEqs.clear();
         this.auxNodeLocalVars.clear();
         this.auxHdlToExprMap.clear();
         this.auxHdlToPreExprMap.clear();             
-        return contracts;
+        return contract;
     }   
    
     /**
@@ -452,16 +456,18 @@ public class J2LTranslator {
      * @param subsystemNode
      * @return The Lustre node or contract corresponding to the input subsystem JSON node
      */
-    protected List<LustreAst> translateSubsystemNode(JsonNode subsystemNode) {
-        if(isModeBlk(subsystemNode) || isLustreOpBlk(subsystemNode) || isCompareToConst(subsystemNode) || isCompareToZero(subsystemNode) || isPropertyBlk(subsystemNode)) {
-            return new ArrayList<>();
+    protected LustreAst translateSubsystemNode(JsonNode subsystemNode) {
+        // Ignore Mode, Lustre operator(arrow), compare to zero, compare to constant and property blocks
+        if(isModeBlk(subsystemNode) || isLustreOpBlk(subsystemNode) || isCompareToConst(subsystemNode) || 
+           isCompareToZero(subsystemNode) || isPropertyBlk(subsystemNode)) {
+            return null;
         }
         
         String lusNodeName = subsystemNode.equals(this.topLevelNode) ? this.topNodeName : getQualifiedBlkName(subsystemNode);         
         
         LOGGER.log(Level.INFO, "Start translating the subsystem block: {0}", lusNodeName);        
         
-        /** Node or contract construction neccesary information */
+        /** Necessary information for constructing node or contract */
         List<LustreEq>          props           = new ArrayList<>();
         List<LustreVar>         inputs          = new ArrayList<>();        
         List<LustreVar>         locals          = new ArrayList<>();
@@ -470,7 +476,10 @@ public class J2LTranslator {
         Map<Integer, JsonNode>  inports         = new HashMap<>();
         Map<Integer, JsonNode>  outports        = new HashMap<>();
         
+        /** Validator block */
         JsonNode                            validatorBlk                = null;
+        
+        /** JSON nodes for contracts */
         List<JsonNode>                      contractNodes               = new ArrayList<>();  
         
         /** Terminator node in the input subsystem block */
@@ -503,7 +512,7 @@ public class J2LTranslator {
                 // Remember the handle to block node mapping 
                 hdlToBlkNodeMap.put(getBlkHandle(contBlkNode), contBlkNode);
                 
-                // Put the block into its right position
+                // Collect inport, outport, property, contract, validator blocks
                 if(contBlkType.equals(INPORT)) {
                     if(!isContractBlk(subsystemNode)) {
                         addMappingInfo(getBlkHandle(contBlkNode), getOriginPath(contBlkNode), lusNodeName, null, null, null, null, getQualifiedBlkName(contBlkNode));    
@@ -523,11 +532,12 @@ public class J2LTranslator {
                 } else if(isValidatorBlk(contBlkNode)) {
                     validatorBlk = contBlkNode;
                 } 
-                // Top-level subsystem block does not have port connectivity field
+                // Populate connectivities content block node
                 populateConnectivitiesDS(contBlkNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap);                
             }            
         }
-        // Populate connectivities
+        // Since top-level subsystem block does not have port connectivity field,
+        // we only populate connectivities for its internal subsystem nodes
         populateConnectivitiesDS(subsystemNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap);
         
         // Ensure the positions of input and output are correct
@@ -563,21 +573,21 @@ public class J2LTranslator {
                 }
             }   
             
-            // Add auxilary node equations
+            // Add auxilary node equations generated during translation
             equations.addAll(this.auxNodeEqs);
             
-            // Add auxilary local variables
+            // Add auxilary local variables generated during translation
             locals.addAll(this.auxNodeLocalVars);               
             
-            // Add translated node
-            lusNodes.add(new LustreNode(subsystemNode.equals(this.topLevelNode), lusNodeName, inputs, outputs, locals, equations, props));                                                
+            // Add translated nodes
+            LustreNode node = new LustreNode(subsystemNode.equals(this.topLevelNode), lusNodeName, inputs, outputs, locals, equations, props);                                                
             
             // Clear the auxilary informations
             this.auxNodeEqs.clear();
             this.auxNodeLocalVars.clear();
             this.auxHdlToExprMap.clear();
             this.auxHdlToPreExprMap.clear();                  
-            return lusNodes;
+            return node;
         }                
     }
     
@@ -993,13 +1003,14 @@ public class J2LTranslator {
             }
         } 
         
+        // Start translate the block node expression
         if(blkNode != null && blkNode.has(BLOCKTYPE)) {
             String              blkType     = blkNode.get(BLOCKTYPE).asText();            
             List<LustreExpr>    inExprs     = new ArrayList<>();            
             List<String>        inHdls      = new ArrayList<>();
             List<Integer>       inPorts     = new ArrayList<>();
             
-            // Get the in blocks' handles
+            // Get the source blocks' handles
             if(blkNodeToSrcBlkHdlsMap.containsKey(blkNode)) {
                 inHdls  = blkNodeToSrcBlkHdlsMap.get(blkNode);
                 inPorts = blkNodeToSrcBlkPortsMap.get(blkNode);
@@ -1328,7 +1339,10 @@ public class J2LTranslator {
                             visitedHdls.add(blkHdl);
                             for(int j = 0; j < inHdls.size(); j++) {
                                 inExprs.add(translateBlock(isPropBlk, inHdls.get(j), parentSubsystemNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, visitedHdls, hdlToActualInputExpr, inPorts.get(j)));
-                                if( isContractBlk(blkNode) ) {
+                                
+                                // If the blkNode is a contract block, we need to treat it specially for the case
+                                // where the subsystem returns multiple outputs
+                                if( isContractBlk(parentSubsystemNode) ) {
                                     String varName = "input_"+j;
                                     inputVars.add(new LustreVar(varName, getLustreTypeFromStrRep(getBlkType(hdlToBlkNodeMap.get(inHdls.get(j))))));   
                                     inputs.add(new VarIdExpr(varName));
@@ -1339,6 +1353,7 @@ public class J2LTranslator {
                             
                             for(int i = 0; i < types.size(); i++) {
                                 LustreVar var = new LustreVar(blkName+"_"+sanitizeName(portNameMap.get(i+1)), types.get(i));
+                                
                                 vars.add(new VarIdExpr(blkName+"_"+sanitizeName(portNameMap.get(i+1))));
                                 this.auxNodeLocalVars.add(var);    
                                 if(isContractBlk(parentSubsystemNode)) {
@@ -1348,7 +1363,7 @@ public class J2LTranslator {
                                 }                                
                                 outputVars.add(var);
                             }   
-                            // This is to create a new node for nodecalls in contract that returns multiple output
+                            // This is to create auxiliary nodes for node calls in contract that returns multiple output
                             if(vars.size() >= 2 && isContractBlk(parentSubsystemNode)) {
                                 int n = 1;
                                 String              nodeName = getQualifiedBlkName(blkNode);
@@ -1366,9 +1381,9 @@ public class J2LTranslator {
                                         }
                                     }
                                     eqs.add(new LustreEq(new TupleExpr(elements), new NodeCallExpr(getQualifiedBlkName(blkNode), inputs)));                                    
-                                    LustreNode newNode = new LustreNode(nodeName+"_"+(m+1), inputVars, Arrays.asList(outputVars.get(m)), eqs);
-                                    newVars.add(new NodeCallExpr(newNode.name, inExprs));
-                                    this.auxLusNode.add(newNode);
+                                    LustreNode auxNode = new LustreNode(nodeName+"_"+(m+1), inputVars, Arrays.asList(outputVars.get(m)), eqs);
+                                    newVars.add(new NodeCallExpr(auxNode.name, inExprs));
+                                    this.auxLusNode.add(auxNode);
                                 }
                                 this.auxHdlToExprMap.put(blkHdl, newVars);
                                 blkExpr = newVars.get(port);   
@@ -2317,14 +2332,14 @@ public class J2LTranslator {
         return false;
     }     
     
-    protected void enforceCorrectTyping(List<LustreExpr> inExprs, List<String> inHandles, Map<String, JsonNode> handleToBlkNodeMap) {
-        Object[] results = getTheHighestType(inHandles, handleToBlkNodeMap);
+    protected void enforceCorrectTyping(List<LustreExpr> inExprs, List<String> inHandles, Map<String, JsonNode> hdlToBlkNodeMap) {
+        Object[] results = getTheHighestType(inHandles, hdlToBlkNodeMap);
         
         if(((Boolean)results[0])) {
             LustreType highestType = (LustreType)results[1];
             
             for(int i = 0; i < inHandles.size(); i++) {
-                LustreType nodeType = getBlkOutportType(handleToBlkNodeMap.get(inHandles.get(i)));
+                LustreType nodeType = getBlkOutportType(hdlToBlkNodeMap.get(inHandles.get(i)));
 
                 if((nodeType == PrimitiveType.BOOL) && (highestType == PrimitiveType.INT)) {
                     inExprs.set(i, new NodeCallExpr(getOrCreateLustreLibNode(BOOLTOINT), inExprs.get(i)));
@@ -2336,7 +2351,7 @@ public class J2LTranslator {
                     LOGGER.log(Level.SEVERE, "Unsupported type conversion: {0} to {1}", new Object[]{nodeType, highestType});
                 }
             }            
-        } else if(getBlkOutportType(handleToBlkNodeMap.get(inHandles.get(0))) == PrimitiveType.BOOL) {            
+        } else if(getBlkOutportType(hdlToBlkNodeMap.get(inHandles.get(0))) == PrimitiveType.BOOL) {            
             for(int i = 0; i < inHandles.size(); i++) {
                 inExprs.set(i, new NodeCallExpr(getOrCreateLustreLibNode(BOOLTOINT), inExprs.get(i)));
             }
