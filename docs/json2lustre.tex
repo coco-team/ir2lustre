@@ -31,7 +31,7 @@
 
 \maketitle
 
-This is to document the translation process from the JSON representation of a CoCoSim model to its equivalent representation in Lustre.
+This is to document the translation from the JSON representation of a CoCoSim model to its equivalent representation in Lustre.
 
 
 \section{JSON Representation of CoCoSim Blocks}
@@ -85,7 +85,7 @@ The ``Origin\_path" is the full path to the block in the CoCoSim model.
 The value of ``Ports" of inports or outports is the position index in the inputs or outputs. 
 
 Figure~\ref{cocosimmodel} shows an overview of a CoCoSim model ``unsafe\_1\_PP" and Figure~\ref{jsoninport} shows a snippet of an overview its JSON representation. 
-``In1" and ``In2" are the names of the inport blocks, ``Inport" is the type of block ``In1", and the handle which is the unique identifier for ``In1" is ``77.0003662109375". 
+``In1" and ``In2" are the names of the inport blocks; ``Inport" is the type of block ``In1"; and the handle is ``77.0003662109375", which is the unique identifier for ``In1". 
 ``Out1" is the outport of the block.
 The data type of ``In1" is stored in the attribute ``Outport" of ``CompiledPortDataTypes", which is Boolean. 
 Since ``In1" is an inport of top most node, it only has destination blocks. 
@@ -268,7 +268,7 @@ that are corresponding to.
 
 Types in CoCoSim models are loosely defined. 
 They can be mixed compared, i.e., an integer can be compared to a Boolean.
-However, Lustre language is strictly defined with types.
+However, Lustre language is a strictly typed language.
 To be better handle types in CoCoSim models, we define six auxiliary functions
 for converting typed expressions.
 They are \textsf{bool\_to\_int, bool\_to\_real, int\_to\_bool, 
@@ -444,7 +444,7 @@ We describe here the translation algorithms for the JSON model in Figure~\ref{ma
 \Return{(\textbf{LustreProgram} P)}
 \State \textbf{let} subsystems = \{S $\mid$ S is a subsystem block $\land$ S $\in$ rootNode.fields\} \textbf{in}
 \State \textbf{for} subsystem : subsystems
-\State {\ \ \ \ } \textbf{let} ast = \textbf{translateSubsystem}(subsystem) \textbf{in}
+\State {\ \ \ \ } \textbf{let} \textbf{LustreAst} ast = \textbf{translateSubsystem}(subsystem) \textbf{in}
 \State {\ \ \ \ } \textbf{if}  ast \textbf{instanceof} LustreNode \textbf{then}
 \State {\ \ \ \ \ \ \ \ } P.\textbf{addNode}(ast)
 \State {\ \ \ \ } \textbf{else}
@@ -479,7 +479,8 @@ We describe here the translation algorithms for the JSON model in Figure~\ref{ma
 \State {\ \ \ \ } $\mid$ CONTRACT $\rightarrow$ contracts $\leftarrow$ cntBlk;
 \State {\ \ \ \ } $\mid$ VALIDATOR $\rightarrow$ validator $\leftarrow$ contBlk;
 \State \textbf{if} subsystem.\textbf{isContract}() \textbf{then}
-\State {\ \ \ \ } \textbf{translateForContract}(subsystem, validator, hdlToBlk, blkToSrcHdls, blkToDstHdls);
+\State {\ \ \ \ } \textbf{translateForContract}(subsystem, validator, inputs, outputs, hdlToBlk, 
+\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } blkToSrcHdls, blkToDstHdls);
 \State \textbf{else}
 \State {\ \ \ \ } \textbf{translateForLusNode}(subsystem, inputs, outputs, props, contracts, hdlToBlk,
 \State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } blkToSrcHdls, blkToDstHdls);
@@ -497,7 +498,7 @@ We describe here the translation algorithms for the JSON model in Figure~\ref{ma
 \Return{(\textbf{LustreAst} ast)}
 \State \textbf{let} equations = \{\} \textbf{in}
 \State \textbf{for} (var, outputBlk) : outputs
-\State {\ \ \ \ } equations $\leftarrow$ \textbf{LusEquation}(var, \textbf{translateBlock}(outputBlk));
+\State {\ \ \ \ } equations $\leftarrow$ \textbf{LusEquation}(var, \textbf{translateBlock}(outputBlk, \State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } hdlToBlk, blkToSrcHdls, blkToDstHdls));
 \State \textbf{LustreNode}(inputs, outputs, props, contracts, equations);
 \EndFunction
 \end{algorithmic}
