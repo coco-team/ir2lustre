@@ -74,36 +74,36 @@ CoCoSim supports a subset of the blocks provided by the Simulink toolset. Figure
 
 A CoCoSim model is a visualization of a set of block declarations and their connectivities.
 The CoCoSim intermediate compiler takes as input a Simulink model and translate it into a JSON representation storing blocks and connectivities information. 
-Figure~\ref{jsonsyntax} shows the core syntax of the CoCoSim JSON representation.
+Figure~\ref{jsonsyntax} shows the core syntax of the JSON representation of CoCoSim models.
 The model information is stored as name -- value pairs in a JSON file. 
 The name attribute specifies the name of the block, and the value stores the actual data about the block such as block handle, block connectivities and so on. 
 Each block is uniquely identified by its block handle.
-The ``BlockType" field specifies the type of a block. 
+The \textsf{``BlockType"} field specifies the type of a block. 
 %For example, an inport block of a CoCoSim model has a ``BlockType" ``Inport".
-The blocks connectivity information is stored in the ``PortConnectivity" field, where ``SrcBlock" stores the handles of incoming blocks, whereas ``DstBlock" stores the handles of destination blocks. 
-The ``Origin\_path" is the full path to the block in the CoCoSim model.
-The value of ``Ports" of inports or outports is the position index in the inputs or outputs. 
+The blocks connectivity information is stored in the \textsf{``PortConnectivity"} field, where \textsf{``SrcBlock"} stores the handles of incoming blocks, whereas \textsf{``DstBlock"} stores the handles of destination blocks. 
+The \textsf{``Origin\_path"} is the full path to the block in the CoCoSim model.
+The value of \textsf{``Ports"} of inports or outports is the position index in the inputs or outputs. 
 
-Figure~\ref{cocosimmodel} shows an overview of a CoCoSim model ``unsafe\_1\_PP" and Figure~\ref{jsoninport} shows a snippet of an overview its JSON representation. 
-``In1" and ``In2" are the names of the inport blocks; ``Inport" is the type of block ``In1"; and the handle is ``77.0003662109375", which is the unique identifier for ``In1". 
-``Out1" is the outport of the block.
-The data type of ``In1" is stored in the attribute ``Outport" of ``CompiledPortDataTypes", which is Boolean. 
-Since ``In1" is an inport of top most node, it only has destination blocks. 
-The handles of its destination blocks are store as values \{79.0003662109375, 92.0008544921875\} in ``DstBlock" of ``PortConnectivity". 
-The ``Origin\_path" of ``In1" is ``unsafe\_1\_PP/In1".
-``In1" has a ports value of 1, meaning it is the first input. 
-Subsystem is a type of subsystem, which defines the relations among ``In1", ``In2", and ``Out1". 
+Figure~\ref{cocosimmodel} shows an overview of a CoCoSim model ``unsafe\_1\_PP" and Figure~\ref{jsoninport} shows a snippet of its JSON representation. 
+\textsf{``In1"} and \textsf{``In2"} are the names of the inport blocks; \textsf{``Inport"} is the type of block \textsf{``In1"}; and the handle is \textsf{``77.0003662109375"}, which is the unique identifier for \textsf{``In1"}. 
+\textsf{``Out1"} is the outport of the block.
+The data type of \textsf{``In1"} is stored in the attribute \textsf{``Outport"} of \textsf{``CompiledPortDataTypes"}, which is Boolean. 
+Since \textsf{``In1"} is an inport of top most node, it only has destination blocks. 
+The handles of its destination blocks are store as values \textsf{\{79.0003662109375, 92.0008544921875\}} in \textsf{``DstBlock"} of \textsf{``PortConnectivity"}. 
+The \textsf{``Origin\_path"} of \textsf{``In1"} is \textsf{``unsafe\_1\_PP/In1"}.
+\textsf{``In1"} has a ports value of 1, meaning it is the first input. 
+Subsystem is a type of subsystem, which defines the relations among \textsf{``In1", ``In2"}, and \textsf{``Out1"}. 
 Safety is an observer block that defines a property in terms of inputs and outputs of the subsystem block ``unsafe\_1\_PP". 
 Safety\_term is a terminator block.
 
-Figure~\ref{jsonsafety} shows a snippet of the observer block ``safety" in JSON, which is a type of subsystem block with the annotation type ``ensures".
-It connects with ``SrcBlock" with handles \{77.0003662109375, 78.0003662109375, 920008544921875\}, which are the handles of inports ``In1" and ``In2" and outport ``Out1" of the calling node ``unsafe\_1\_PP",  and connects with ``DstBlock with handle ``91.000732421875", which is the handle of the terminator block ``Safety\_term". 
+Figure~\ref{jsonsafety} shows a snippet of the observer block ``safety" in JSON, which is a type of subsystem block with the annotation type \textsf{``ensures"}.
+It connects with \textsf{``SrcBlock"} with handles\textsf{ \{77.0003662109375, 78.0003662109375, 920008544921875\}}, which are the handles of inports \textsf{``In1"} and \textsf{``In2"} and outport \textsf{``Out1"} of the calling node \textsf{``unsafe\_1\_PP"},  and connects with \textsf{``DstBlock"} with handle \textsf{``91.000732421875"}, which is the handle of the terminator block \textsf{``Safety\_term"}. 
 
-Figure~\ref{cocosimsafety} shows the CoCoSim model of the observer block ``Safety" and Figure~\ref{jsonsafetybody} shows the blocks definition of the observer block body in JSON, including 
-three inports ``In1", ``In2", and ``Out1", an outport ``Safety", a logical operator ``AND", and a relational operator ``$>=$". 
-Based on the connectivities defined in the port connectivity, ``Safety" connects with the source block logical operator ``AND", the logical operator ``AND" connects with the source blocks relational operator ``$>=$" and the inport block ``Out1", and the relational operator ``$>=$" connects
-with the source block inports ``In1" and ``In2". 
-They all together comprise the expression: Safety = Out1 AND (In1 $>=$ In2).
+Figure~\ref{cocosimsafety} shows the CoCoSim model of the observer block \textsf{``Safety"} and Figure~\ref{jsonsafetybody} shows the blocks definition of the observer block body in JSON, including 
+three inports \textsf{``In1", ``In2"}, and \textsf{``Out1"}, an outport \textsf{``Safety"}, a logical operator \textsf{``AND"}, and a relational operator \textsf{``$>=$"}. 
+Based on the connectivities defined in the port connectivity, \textsf{``Safety"} connects with the source block logical operator \textsf{``AND"}, the logical operator \textsf{``AND"} connects with the source blocks relational operator \textsf{``$>=$"} and the inport block \textsf{``Out1"}, and the relational operator \textsf{``$>=$"} connects
+with the source block inports \textsf{``In1"} and \textsf{``In2"}. 
+They all together comprise the expression: \textsf{Safety = Out1 AND (In1 $>=$ In2)}.
 
 \begin{figure}[h]
 \begin{center}
@@ -115,9 +115,9 @@ They all together comprise the expression: Safety = Out1 AND (In1 $>=$ In2).
 
 \begin{figure}[h]
 \begin{center}
-  \includegraphics[scale=0.5]{figures/In1}
+  \includegraphics[scale=0.35]{figures/In1}
 \end{center}  
-  \caption{A JSON snippet of the CoCoSim Model}
+  \caption{A JSON Representation of the CoCoSim Model}
   \label{jsoninport}
 \end{figure}
 
@@ -132,7 +132,7 @@ They all together comprise the expression: Safety = Out1 AND (In1 $>=$ In2).
 
 \begin{figure}[h]
 \begin{center}
-  \includegraphics[scale=0.5]{figures/safety}
+  \includegraphics[scale=0.35]{figures/safety}
 \end{center}  
   \caption{A JSON snippet of the observer block safety}
   \label{jsonsafety}
@@ -140,19 +140,19 @@ They all together comprise the expression: Safety = Out1 AND (In1 $>=$ In2).
 
 \begin{figure}[h]
 \begin{center}
-  \includegraphics[scale=0.4]{figures/safety1}
-    \includegraphics[scale=0.4]{figures/safety2}
-  \includegraphics[scale=0.4]{figures/safety4}     
-    \includegraphics[scale=0.4]{figures/safety3}
-    \includegraphics[scale=0.4]{figures/safety5}      
-    \includegraphics[scale=0.4]{figures/safety6}       
+  \includegraphics[scale=0.35]{figures/safety1}
+    \includegraphics[scale=0.35]{figures/safety2}
+  \includegraphics[scale=0.35]{figures/safety4}     
+    \includegraphics[scale=0.35]{figures/safety3}
+    \includegraphics[scale=0.35]{figures/safety5}      
+    \includegraphics[scale=0.35]{figures/safety6}       
     
 \end{center}  
   \caption{A JSON snippet of the body of the observer block safety}
   \label{jsonsafetybody}
 \end{figure}
 
-\section{A Mapping from Basic CoCoSim Blocks to Lustre}
+\section{A Mapping from Basic CoCoSim Blocks to Lustre Constructs}
 
 \begin{figure}[h]
 \begin{center}
@@ -201,7 +201,7 @@ Each expression is defined in terms of the following operators.
 We will describe the mappings of those operators in Lustre in the following paragraphs.
 
 \paragraph{Subsystem} 
-Subsystems are translated as node calls. 
+A subsystem block is translated as a Lustre node. If a subsystem is within another subsystem, it will be translated as a node call.
 
 
 \paragraph{Relational Operators} 
@@ -211,10 +211,10 @@ than or equal to, and less than or equal to are translated into their counterpar
 
 
 \paragraph{Logical Operators} 
-Logical operators AND, OR, NOT and XOR are translated into Lustre operators 
+Logical operators \textsf{AND, OR, NOT} and \textsf{XOR} are translated into Lustre operators 
 \textsf{and, or, not} and \textsf{xor}.
-Other logical operators NAND, NOR, and NXOR are represented by using Lustre 
-operators \textsf{not} and others.
+Logical operators \textsf{NAND, NOR}, and \textsf{NXOR} are represented by using Lustre 
+operators \textsf{NOT} and \textsf{AND, OR, XOR}.
 
 \paragraph{Mathematical Operators} 
 Mathematical operators sum, subtract, multiply, divide and mod are translated into 
@@ -366,12 +366,12 @@ constant
 The Kind 2 contracts are introduced as additional features for modeling CoCoSim models.
 They are encapsulated in \textsf{Subsystem} blocks and are accessible by using customized 
 blocks.
-To distinguish the node type, we use the ``ContractBlockType" to indicate whether a block 
+To distinguish different contract blocks, we use the \textsf{``ContractBlockType"} to indicate whether a block 
 is an \textsf{assume}, \textsf{guarantee}, \textsf{mode}, \textsf{requires}, or \textsf{ensures} block.
 The contract always returns a Boolean typed variable \textsf{valid}.
 The translation ignores the variable \textsf{valid} and construct the signature 
-of the contract by looking at the signature of the calling node.
-The translation process of expressions is the same as described above. 
+of the contract by identifying with the signature of the calling node.
+The translation of internal expressions of contracts is the same as expressions in the subsystem blocks.
 
 
 \begin{figure}[h]
@@ -392,7 +392,7 @@ The translation process of expressions is the same as described above.
 
 \begin{figure}[h]
 \begin{center}
-  \includegraphics[scale=0.4]{figures/jsoncontract}    
+  \includegraphics[scale=0.35]{figures/jsoncontract}    
 \end{center}  
   \caption{The overview of CoCoSim model bacterialPopulation in JSON}
   \label{jsoncontract}
@@ -425,7 +425,7 @@ The translation process of expressions is the same as described above.
 Figure~\ref{contractmodel} shows a ``bacterialPopulation" model using a contract. 
 And the contract body definition is shown in Figure~\ref{contractdef}, where it has one assume, two guarantees, and three mode connecting to the validator block. 
 The validator block always has an outport valid. 
-Figure~\ref{jsoncontract} and Figure~\ref{jsoncontractdef} are the overview of CoCoSim model ``bacterialPopulation" and its contract definition in JSON respectively. 
+Figure~\ref{jsoncontract} and Figure~\ref{jsoncontractdef} are the overview of CoCoSim model \textsf{``bacterialPopulation"} and its contract definition in JSON respectively. 
 The Lustre programs translated from the JSON model of the bacterialPopulation are shown Figure ~\ref{lusnodecon}~\ref{luscon}.
 
 
