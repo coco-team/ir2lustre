@@ -49,6 +49,11 @@ This is to document the translation from the JSON representation of a CoCoSim mo
 \State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``SrcBlock"}:[\textit{block handle, block handle, ...}], 
 \State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``DstBlock"}:[\textit{block handle, block handle, ...}]		
 \State {\ \ \ \ \ \ \ \ \ \ \ \ }\}	
+\State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``Content"}: \{ 
+\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }  \textit{``block name": \{...\}} 
+\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }  \textit{``block name": \{...\}} 
+\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }  \textit{...} 
+\State {\ \ \ \ \ \ \ \ \ \ \ \ } \}
 \State {\ \ \ \ \ \ \ \ } \}
 \State {\ \ \ \ \ \ \ \ } \textit{``block name": \{} 
 \State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``BlockType"}:  \textit{``Inport, Outport, Subsystem ..."} 
@@ -92,7 +97,7 @@ Since \textsf{``In1"} is an inport of top most node, it only has destination blo
 The handles of its destination blocks are store as values \textsf{\{79.0003662109375, 92.0008544921875\}} in \textsf{``DstBlock"} of \textsf{``PortConnectivity"}. 
 The \textsf{``Origin\_path"} of \textsf{``In1"} is \textsf{``unsafe\_1\_PP/In1"}.
 \textsf{``In1"} has a ports value of 1, meaning it is the first input. 
-Subsystem is a type of subsystem, which defines the relations among \textsf{``In1", ``In2"}, and \textsf{``Out1"}. 
+Subsystem is a type of \textsf{subsystem}, which defines the relations among \textsf{``In1", ``In2"}, and \textsf{``Out1"}. 
 Safety is an observer block that defines a property in terms of inputs and outputs of the subsystem block ``unsafe\_1\_PP". 
 Safety\_term is a terminator block.
 
@@ -194,14 +199,14 @@ by substituting the input and output variables by concrete ones.
 
 The translation is initiated by translating the outports backwardly. 
 Each outport and its connected expressions are translated into an equation, where the outport is the output of the equation 
-and the left hand side is the definition of the output.
-They are translated recursively.
+and the right hand side of the equation is the definition of the output.
+The right hand side expression is translated recursively.
 Figure~\ref{lus} shows the Lustre programs translated from the CoCoSim model ``unsafe\_1\_PP".
 Each expression is defined in terms of the following operators. 
 We will describe the mappings of those operators in Lustre in the following paragraphs.
 
 \paragraph{Subsystem} 
-A subsystem block is translated as a Lustre node. If a subsystem is within another subsystem, it will be translated as a node call.
+Typically, if a subsystem is within another subsystem, it will be translated as a node call.
 
 
 \paragraph{Relational Operators} 
@@ -364,16 +369,6 @@ constant
 
 
 \subsection{The Translation of CoCoSim contracts}
-The Kind 2 contracts are introduced as additional features for modeling CoCoSim models.
-They are encapsulated in \textsf{Subsystem} blocks and are accessible by using customized 
-blocks.
-To distinguish different contract blocks, we use the \textsf{``ContractBlockType"} to indicate whether a block 
-is an \textsf{assume}, \textsf{guarantee}, \textsf{mode}, \textsf{requires}, or \textsf{ensures} block.
-The contract always returns a Boolean typed variable \textsf{valid}.
-The translation ignores the variable \textsf{valid} and construct the signature 
-of the contract by identifying with the signature of the calling node.
-The translation of internal expressions of contracts is the same as expressions in the subsystem blocks.
-
 
 \begin{figure}[h]
 \begin{center}
@@ -382,6 +377,17 @@ The translation of internal expressions of contracts is the same as expressions 
   \caption{A CoCoSim model using contracts}
   \label{contractmodel}
 \end{figure}
+
+
+The Kind 2 contracts are introduced as additional features for modeling CoCoSim models.
+They are encapsulated in \textsf{Subsystem} blocks and are accessible by using customized 
+blocks.
+To distinguish different contract blocks, we use the \textsf{``ContractBlockType"} in JSON to indicate whether a block 
+is an \textsf{assume}, \textsf{guarantee}, \textsf{mode}, \textsf{requires}, or \textsf{ensures} block.
+The contract always returns a Boolean variable \textsf{valid}.
+The translation ignores the variable \textsf{valid} and construct the signature 
+of the contract by identifying with the signature of the calling node.
+The translation of internal expressions of contracts is the same as translating expressions in the subsystem blocks.
 
 \begin{figure}[h]
 \begin{center}
@@ -423,19 +429,20 @@ The translation of internal expressions of contracts is the same as expressions 
   \label{luscon}
 \end{figure}
 
-Figure~\ref{contractmodel} shows a ``bacterialPopulation" model using a contract. 
-And the contract body definition is shown in Figure~\ref{contractdef}, where it has one assume, two guarantees, and three mode connecting to the validator block. 
-The validator block always has an outport valid. 
+Figure~\ref{contractmodel} shows a CoCoSim model ``bacterialPopulation" using contracts. 
+And the contract body definition is shown in Figure~\ref{contractdef}, where it has one \textsf{assume}, two \textsf{guarantees}, and three \textsf{mode} connecting to the \textsf{validator} block. 
+The \textsf{validator} block always has an outport \textsf{valid}. 
 Figure~\ref{jsoncontract} and Figure~\ref{jsoncontractdef} are the overview of CoCoSim model \textsf{``bacterialPopulation"} and its contract definition in JSON respectively. 
 The Lustre programs translated from the JSON model of the bacterialPopulation are shown Figure ~\ref{lusnodecon}~\ref{luscon}.
-
-
-
 
 
 \section{The Translation Algorithms}
 
 We describe here the translation algorithms for the JSON model in Figure~\ref{mainalgo}~\ref{mainalgo1}~\ref{translateblock}~\ref{translatenode}~\ref{translatecontract}.
+Figure~\ref{mainalgo} is the entry point of the translation algorithm, where it takes the root node of the JSON file as input and returns a Lustre program for it.
+The algorithm first recursively collect all subsystem blocks in the root node, and then translate each of them by calling the function \textsf{translateSubsystem}. 
+If the node is a contract, it will invoke \textsf{translateForContract}.
+Otherwise, it will call \textsf{translateForLusNode}.
 
 
 \begin{figure}
@@ -541,7 +548,7 @@ We describe here the translation algorithms for the JSON model in Figure~\ref{ma
 \EndFunction
 \end{algorithmic}
 \label{translatecontract}
-\caption{The algorithm for translating contract }
+\caption{The algorithm for translating contract}
 \end{figure}
 
 \begin{figure}
@@ -578,7 +585,7 @@ We describe here the translation algorithms for the JSON model in Figure~\ref{ma
 \State $\mid$ COMPARETOCONST $\rightarrow$ \textbf{BinaryExpr}(inExprs[0], OP, \textbf{getConstant}(blkNode));
 \State $\mid$ COMPARETOZERO $\rightarrow$ \textbf{BinaryExpr}(inExprs[0], OP, \textbf{Zero});
 
-\State $\mid$ ARROW $\rightarrow$ \textbf{BinaryExpr}(inExprs[0], ARROW, \textbf{Zero});
+\State $\mid$ ARROW $\rightarrow$ \textbf{BinaryExpr}(inExprs[0], ARROW, inExprs[1]);
 \State $\mid$ SWITCH $\rightarrow$  \textbf{let} threshHold = blkNode.\textbf{getThreshHold}() \textbf{in}
 \State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } \textbf{let} condExpr = \textbf{BinaryExpr}(inExprs[1], GTE/GT/NEQ, threshHold) \textbf{in}
 \State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } \textbf{IteExpr}(condExpr, inExprs[0], inExprs[2]);
