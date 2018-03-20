@@ -37,9 +37,10 @@ This is to document the translation from the JSON representation of a CoCoSim mo
 \section{JSON Representation of CoCoSim Models}
 \begin{figure}
 \begin{algorithmic}
-\State \textit{\textsf{``block name": \{ }}
+\State \textit{\textsf{``top-level block name": \{ }}
 \State {\ \ \ \ } \textsf{\textbf{``Content"}: \{
 \State {\ \ \ \ \ \ \ \ } \textit{``block name": \{} 
+\State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``Name"}:  \textit{``block name"} 
 \State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``BlockType"}:  \textit{``Inport, Outport, Subsystem ..."} 
 \State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``CompiledPortDataTypes"}: \textit{``int, boolean, double ..."} 
 \State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``Origin\_path"}: \textit{``full path to the block"} 
@@ -56,6 +57,7 @@ This is to document the translation from the JSON representation of a CoCoSim mo
 \State {\ \ \ \ \ \ \ \ \ \ \ \ } \}
 \State {\ \ \ \ \ \ \ \ } \}
 \State {\ \ \ \ \ \ \ \ } \textit{``block name": \{} 
+\State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``Name"}:  \textit{``block name"} 
 \State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``BlockType"}:  \textit{``Inport, Outport, Subsystem ..."} 
 \State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``CompiledPortDataTypes"}: \textit{``int, boolean, double ..."} 
 \State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``Origin\_path"}: \textit{``full path to the block"} 
