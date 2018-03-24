@@ -99,11 +99,12 @@ CoCoSim supports a subset of the blocks provided by the Simulink toolset. Figure
 \State \textbf{Origin\_path} := \textit{String}
 \State \textbf{Port} := \textit{Unsigned integer}
 \State \textbf{Handle} := \textit{Decimal number}
+\State \textbf{Integer} := \{$-$\}?[0 - 9]+
 \State \textbf{Unsigned integer} := [0 - 9]+
 \State \textbf{Boolean constant} := true $\mid$ false 
 \State \textbf{Decimal number} := [0 - 9]* \{.\}? [0 - 9]*
-\State \textbf{Constant} := \textit{Decimal number $\mid$ Unsigned integer $\mid$ Boolean constant}
-\State \textbf{Inputs} := \{$+^*-^*+^*-^*$\} $\mid$ \{$\times^* /^*\times^* /^*$\} $\mid$ \textit{Unsigned integer}
+\State \textbf{Constant} := \textit{Decimal number $\mid$ Integer $\mid$ Boolean constant}
+\State \textbf{Inputs} := \{$+^*-^*$\}$^*$ $\mid$ \{$\times^* /^*$\}$^*$ $\mid$ \textit{Unsigned integer}
 \State \textbf{Criteria} := u2 ($>=, >$) Threshold $\mid$ u2 $\sim =$ 0
 \State \textbf{AnnotationType} := ensures $\mid$ requires $\mid$ assert $\mid$ observer
 \State \textbf{ContractBlockType} := ContractBlock $\mid$ ContractModeBlock $\mid$ ContractRequireBlock 
