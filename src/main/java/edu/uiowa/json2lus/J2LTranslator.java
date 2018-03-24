@@ -1609,7 +1609,7 @@ public class J2LTranslator {
                     }
                     break;
                 }
-                // In Simulink, we translated together IF block with IfActionSubsystem and MERGE blocks together.
+                // In Simulink, we translated IF block with IfActionSubsystem and MERGE blocks together.
                 // Todo: Need to consider the case that IF block used with IfActionSubsystem together.
                 case IF: {
                     break;
