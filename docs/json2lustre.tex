@@ -118,7 +118,7 @@ CoCoSim supports a subset of the blocks provided by the Simulink toolset. Figure
 \State \textbf{\textsf{Inport}} := Data type*
 \State \textbf{\textsf{Outport}} := Data type*
 \State \textbf{Data type} := double $\mid$ single $\mid$ int8 $\mid$ uint8 $\mid$ int16 $\mid$ uint16 $\mid$ int32 $\mid$ uint32 $\mid$ string
-\State \textbf{Port connectivity} := DstBlock+, SrcBlock+
+\State \textbf{Port connectivity} := \{DstBlock\}+, \{SrcBlock\}+
 \State \textbf{DstBlock} := Handle*
 \State \textbf{SrcBlock} := Handle*
 
@@ -171,7 +171,7 @@ They all together comprise the expression: \textsf{Safety = Out1 AND (In1 $>=$ I
 
 \begin{figure}[h]
 \begin{center}
-  \includegraphics[scale=0.35]{figures/In1}
+  \includegraphics[scale=0.3]{figures/In1}
 \end{center}  
   \caption{A JSON Representation of the CoCoSim Model}
   \label{jsoninport}
@@ -188,7 +188,7 @@ They all together comprise the expression: \textsf{Safety = Out1 AND (In1 $>=$ I
 
 \begin{figure}[h]
 \begin{center}
-  \includegraphics[scale=0.35]{figures/safety}
+  \includegraphics[scale=0.3]{figures/safety}
 \end{center}  
   \caption{A JSON snippet of the observer block safety}
   \label{jsonsafety}
@@ -212,9 +212,9 @@ They all together comprise the expression: \textsf{Safety = Out1 AND (In1 $>=$ I
 
 \begin{figure}[h]
 \begin{center}
-  \includegraphics[scale=0.35]{figures/lus0}
-  \includegraphics[scale=0.35]{figures/lus1}
-  \includegraphics[scale=0.35]{figures/lus2}  
+  \includegraphics[scale=0.3]{figures/lus0}
+  \includegraphics[scale=0.3]{figures/lus1}
+  \includegraphics[scale=0.3]{figures/lus2}  
     
 \end{center}  
   \caption{The translated Lustre programs for the CoCoSim model unsafe\_1\_PP}
