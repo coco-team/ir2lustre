@@ -102,7 +102,7 @@ CoCoSim supports a subset of the blocks provided by the Simulink toolset. Figure
 \State \textbf{Integer} := \{$-$\}?[0 - 9]+
 \State \textbf{Unsigned integer} := [0 - 9]+
 \State \textbf{Boolean constant} := true $\mid$ false 
-\State \textbf{Decimal number} := [0 - 9]* \{.\}? [0 - 9]*
+\State \textbf{Decimal number} := [0 - 9]* \{.\} [0 - 9]*
 \State \textbf{Constant} := \textit{Decimal number $\mid$ Integer $\mid$ Boolean constant}
 \State \textbf{Inputs} := \{$+^*-^*$\}$^*$ $\mid$ \{$\times^* /^*$\}$^*$ $\mid$ \textit{Unsigned integer}
 \State \textbf{Criteria} := u2 ($>=, >$) Threshold $\mid$ u2 $\sim =$ 0
@@ -115,12 +115,12 @@ CoCoSim supports a subset of the blocks provided by the Simulink toolset. Figure
 \State \textbf{Operator} := NOT $\mid$ AND $\mid$ OR $\mid$ XOR $\mid$ NAND $\mid$ NOR $\mid$ NXOR 
 \State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } $\mid$ == $\mid$ $>=$ $\mid$ $>$ $\mid$ $<=$ $\mid$ $<$ $\mid$ $\sim$= $\mid -$ 
 \State \textbf{CompiledPortDataTypes} := \textsf{Inport, Outport}
-\State \textbf{\textsf{Inport}} := Data type*
-\State \textbf{\textsf{Outport}} := Data type*
+\State \textbf{\textsf{Inport}} := \textit{Data type}*
+\State \textbf{\textsf{Outport}} := \textit{Data type}*
 \State \textbf{Data type} := double $\mid$ single $\mid$ int8 $\mid$ uint8 $\mid$ int16 $\mid$ uint16 $\mid$ int32 $\mid$ uint32 $\mid$ string
 \State \textbf{Port connectivity} := \{DstBlock\}+, \{SrcBlock\}+
-\State \textbf{DstBlock} := Handle*
-\State \textbf{SrcBlock} := Handle*
+\State \textbf{DstBlock} := \textit{Handle}*
+\State \textbf{SrcBlock} := \textit{Handle}*
 
 \end{algorithmic}
 \caption{The grammar for the JSON representation of CoCoSim model}
@@ -171,7 +171,7 @@ They all together comprise the expression: \textsf{Safety = Out1 AND (In1 $>=$ I
 
 \begin{figure}[h]
 \begin{center}
-  \includegraphics[scale=0.3]{figures/In1}
+  \includegraphics[scale=0.35]{figures/In1}
 \end{center}  
   \caption{A JSON Representation of the CoCoSim Model}
   \label{jsoninport}
@@ -357,6 +357,10 @@ Gain &
 Multiply input by constant ($\times$)
 \\
 
+Product &
+Multiply and divide scalars and nonscalars ($\times$)
+\\
+
 Abs (in) &
 Use library node Abs(in)
 \\
@@ -371,7 +375,7 @@ Minmax &
 {Dynamically create minimum or maximum nodes}
 \\
 
-SwitchCase &
+Switch &
 {if ... then ... else if ... }
 \\
 
