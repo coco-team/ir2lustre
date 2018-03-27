@@ -101,6 +101,10 @@ public class J2LTranslator {
     private final String POW            = "pow";
     private final String MOD            = "mod";    
     private final String ABS            = "Abs";
+    private final String FLOOR          = "floor";
+    private final String CEIL           = "ceil";
+    private final String ROUND          = "round";
+    private final String FIX            = "fix";
     private final String SQRT           = "Sqrt";
     private final String MATH           = "Math";
     private final String LOG10          = "log10";
@@ -133,6 +137,8 @@ public class J2LTranslator {
     private final String INPUTS         = "Inputs";    
     private final String MINMAX         = "MinMax";    
     private final String MEMORY         = "Memory";
+    private final String ROUNDING       = "Rounding";    
+    
     
     private final String CONST          = "const";
     private final String ARROW          = "ArrowOperator";
@@ -145,6 +151,7 @@ public class J2LTranslator {
     private final String COMTOCONST     = "ComToConst";
     private final String COMTOZERO      = "ComToZero";
     private final String COMPARE        = "Compare";
+    private final String DATATYPECONVERSION = "DataTypeConversion";
             
     /** Blocks information */
     private final String META           = "meta";
@@ -1206,7 +1213,15 @@ public class J2LTranslator {
                     enforceTargetType(inExprs, inHdls, getBlkOutportType(blkNode), hdlToBlkNodeMap);
                     blkExpr = new UnaryExpr(UnaryExpr.Op.NEG, inExprs.get(0));                                                                           
                     break;                  
-                }                 
+                }
+                case ROUNDING: {
+                    blkExpr = new NodeCallExpr(getOrCreateLustreLibNode(blkNode), inExprs.get(0));
+                    break;
+                }
+                case DATATYPECONVERSION: {
+                    blkExpr = new NodeCallExpr(getOrCreateLustreLibNode(blkNode), inExprs.get(0));
+                    break;
+                }
                 case SUM: {
                     int     numOfInputs = -1;
                     String  ops         = blkNode.get(INPUTS).asText();
@@ -1960,6 +1975,7 @@ public class J2LTranslator {
 
     /**
      * @param nodeName
+     * @param type
      * @return The name of library Lustre node corresponding to the input JsonNode
      */
     protected String getOrCreateLustreLibNode(String nodeName, LustreType type) {        
@@ -2025,11 +2041,13 @@ public class J2LTranslator {
             }
             case REALTOINT: {
                 this.libNodeNameMap.put(REALTOINT, REALTOINT);
+                LOGGER.log(Level.SEVERE, "Unsupported library node type: {0}", nodeName);
                 this.lustreProgram.addNode(new LustreNode(nodeName, new LustreVar("in", PrimitiveType.REAL), new LustreVar("out", PrimitiveType.INT), bodyExprs));                                
                 break;
             }            
             case INTTOREAL: {                
                 this.libNodeNameMap.put(INTTOREAL, INTTOREAL);
+                LOGGER.log(Level.SEVERE, "Unsupported library node type: {0}", nodeName);
                 this.lustreProgram.addNode(new LustreNode(nodeName, new LustreVar("in", PrimitiveType.INT), new LustreVar("out", PrimitiveType.REAL), bodyExprs));                                
                 break;
             }            
@@ -2170,6 +2188,123 @@ public class J2LTranslator {
                 this.lustreProgram.addNode(new LustreNode(nodeName, inputVars, outputVars, bodyExprs));                                
                 break;
             }
+            case ROUNDING: {                
+                String op      = blkNode.get(OPERATOR).asText();
+                nodeName += "_"+op;
+                
+                if(this.libNodeNameMap.containsKey(nodeName)) {
+                    return this.libNodeNameMap.get(nodeName);
+                } else {
+                    this.libNodeNameMap.put(nodeName, nodeName);
+                }
+                getOrCreateDummyNode(nodeName, PrimitiveType.REAL, PrimitiveType.REAL);
+                           
+//                switch(op) {
+//                    case ROUND: {                        
+//                        break;
+//                    }
+//                    case FLOOR: {
+//                        break;
+//                    }
+//                    case FIX: {
+//                        break;
+//                    }
+//                    case CEIL: {
+//                        break;
+//                    }
+//                }
+                break;
+            }
+            case DATATYPECONVERSION: {
+                String inType   = getBlkInportType(blkNode).toString();
+                String outType  = getBlkOutportType(blkNode).toString();
+                
+                switch(inType) {
+                    case "bool": {
+                        switch(outType) {
+                            case "int": {
+                                if(this.libNodeNameMap.containsKey(BOOLTOINT)) {
+                                    nodeName = this.libNodeNameMap.get(BOOLTOINT);
+                                } else {
+                                    this.libNodeNameMap.put(BOOLTOINT, BOOLTOINT);
+                                    getOrCreateLustreLibNode(BOOLTOINT);
+                                    nodeName = BOOLTOINT;
+                                }
+                                break;
+                            }
+                            case "real": {
+                                if(this.libNodeNameMap.containsKey(BOOLTOREAL)) {
+                                    nodeName = this.libNodeNameMap.get(BOOLTOREAL);
+                                } else {
+                                    this.libNodeNameMap.put(BOOLTOREAL, BOOLTOREAL);
+                                    getOrCreateLustreLibNode(BOOLTOREAL);
+                                    nodeName = BOOLTOREAL;
+                                }
+                                break;
+                            }                                                  
+                        }
+                        break;
+                    }
+                    case "int": {
+                        switch(outType) {
+                            case "bool": {
+                                if(this.libNodeNameMap.containsKey(INTTOBOOL)) {
+                                    nodeName = this.libNodeNameMap.get(INTTOBOOL);
+                                } else {
+                                    this.libNodeNameMap.put(INTTOBOOL, INTTOBOOL);
+                                    getOrCreateLustreLibNode(INTTOBOOL);
+                                    nodeName = INTTOBOOL;
+                                }
+                                break;
+                            }
+                            case "real": {
+                                if(this.libNodeNameMap.containsKey(INTTOREAL)) {
+                                    nodeName = this.libNodeNameMap.get(INTTOREAL);
+                                } else {
+                                    this.libNodeNameMap.put(INTTOREAL, INTTOREAL);
+                                    getOrCreateLustreLibNode(INTTOREAL);
+                                    nodeName = BOOLTOREAL;
+                                }
+                                break;
+                            }                                                  
+                        }
+                        break;
+                    }                    
+                    case "real": {
+                        switch(outType) {
+                            case "bool": {
+                                if(this.libNodeNameMap.containsKey(REALTOBOOL)) {
+                                    nodeName = this.libNodeNameMap.get(REALTOBOOL);
+                                } else {
+                                    this.libNodeNameMap.put(REALTOBOOL, REALTOBOOL);
+                                    getOrCreateLustreLibNode(REALTOBOOL);
+                                    nodeName = REALTOBOOL;
+                                }
+                                break;
+                            }
+                            case "int": {
+                                if(this.libNodeNameMap.containsKey(REALTOINT)) {
+                                    nodeName = this.libNodeNameMap.get(REALTOINT);
+                                } else {
+                                    this.libNodeNameMap.put(REALTOINT, REALTOINT);
+                                    getOrCreateLustreLibNode(REALTOINT);
+                                    nodeName = REALTOINT;
+                                }
+                                break;
+                            }                                                  
+                        }
+                        break;
+                    }                          
+                }
+                if(inType.equals(outType)) {
+                    if(!getBlkRealInType(blkNode).equalsIgnoreCase(getBlkRealOutType(blkNode))) {
+                        LOGGER.log(Level.SEVERE, "Unsupported data type conversion from {0} to {1}", new Object[]{getBlkRealInType(blkNode), getBlkRealOutType(blkNode)});
+                        nodeName += "_"+DATATYPECONVERSION+"_"+inType+"_to_"+outType;
+                        getOrCreateDummyNode(nodeName, getLustreTypeFromStrRep(inType), getLustreTypeFromStrRep(outType));
+                    }
+                }
+                break;
+            }
             default:
                 LOGGER.log(Level.SEVERE, "Unsupported library node type: {0}", blkType);
                 break;
@@ -2194,6 +2329,23 @@ public class J2LTranslator {
             }                                  
         }
         return false;        
+    }
+    
+    protected void getOrCreateDummyNode(String fcnName, LustreType inType, LustreType outType) {
+        if(this.libNodeNameMap.containsKey(fcnName)) {
+            return ;
+        }
+        
+        List<LustreVar>     inVars  = new ArrayList<>();
+        List<LustreVar>     outVars = new ArrayList<>();
+        List<LustreEq>      eqs     = new ArrayList<>();                
+        LustreVar in    = new LustreVar("in", inType);
+        LustreVar out   = new LustreVar("out", outType);
+        inVars.add(in);
+        outVars.add(out);
+        eqs.add(new LustreEq(new VarIdExpr("out"), new VarIdExpr("in")));
+        this.lustreProgram.addNode(new LustreNode(fcnName, inVars, outVars, eqs)); 
+        this.libNodeNameMap.put(fcnName, fcnName);
     }
     
     /**
@@ -2697,14 +2849,22 @@ public class J2LTranslator {
         }
         return false;
     }
-    
+
     protected LustreType getBlkOutportType(JsonNode blkNode) {
         return getLustreTypeFromStrRep(blkNode.get(PORTDATATYPE).get(OUTPORT).asText());
-    }
+    }   
     
     protected LustreType getBlkInportType(JsonNode blkNode) {
         return getLustreTypeFromStrRep(blkNode.get(PORTDATATYPE).get(INPORT).asText());
+    }
+
+    protected String getBlkRealInType(JsonNode blkNode) {
+        return blkNode.get(PORTDATATYPE).get(INPORT).asText();
     }    
+    
+    protected String getBlkRealOutType(JsonNode blkNode) {
+        return blkNode.get(PORTDATATYPE).get(OUTPORT).asText();
+    }        
     
     protected List<LustreType> getBlockOutportTypes(JsonNode blkNode) {
         List<LustreType>    types       = new ArrayList<>();

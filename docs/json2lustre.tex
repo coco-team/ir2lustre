@@ -123,7 +123,7 @@ CoCoSim supports a subset of the blocks provided by the Simulink toolset. Figure
 \State \textbf{SrcBlock} := \textit{Handle}*
 
 \end{algorithmic}
-\caption{The grammar for the JSON representation of CoCoSim model}
+\caption{The grammar for the JSON representation of CoCoSim model that the translation supports}
 \label{jsongrammar}
 \end{figure}
 
@@ -224,6 +224,91 @@ They all together comprise the expression: \textsf{Safety = Out1 AND (In1 $>=$ I
 Figure~\ref{basicmapping} shows a mapping from basic CoCoSim blocks to their equivalent representations in Lustre, which is currently supported by the translator. 
 
 \subsection{CoCoSim constructs to Lustre constructs}
+
+\begin{figure}[t]
+\centering
+{
+\begin{tabular}{lp{5cm}}
+\hline
+\textbf{CoCoSim} & \textbf{Lustre}  \\
+\hline
+SubSystem & 
+Node
+\\
+Inport &
+Input
+\\
+Outport &
+Output
+\\
+Gain &
+Multiply input by constant ($\times$)
+\\
+
+Product &
+Multiply and divide scalars and nonscalars ($\times$)
+\\
+
+Abs (in) &
+Use library node Abs(in)
+\\
+
+AND, OR, NAND, NOR,
+&
+and, or, not and, not or
+\\
+XOR, NXOR, NOT
+&
+xor, not xor, not
+\\
+Minmax &
+{Dynamically create minimum or maximum nodes}
+\\
+
+Switch &
+{if ... then ... else if ... }
+\\
+
+Sum &
+$+$
+\\
+
+Saturate &
+The Saturation block imposes upper and lower limits on an input signal ($<=, <$)
+\\
+
+RelationalOperator &
+$==, <>, <, <=, >, >=$
+\\
+
+UnitDelay/Memory &
+pre
+\\
+
+If &
+if ... then ... else ...
+\\
+
+Compare To Zero/Constant  &
+$==, <>, <, <=, >, >=$
+\\
+
+mod, substract, divide, negative &
+mod, $\times, -, /, - $, 
+\\
+
+Constant &
+constant
+\\
+
+\hline
+\end{tabular}
+}
+\caption{A mapping from basic CocoSim blocks to Lustre constructs}
+\label{basicmapping}
+\end{figure}
+
+
 \paragraph{Subsystem, Inport, and Outport} 
 Subsystems create a hierarchical model comprising many layers. 
 A subsystem is a set of blocks that you replace with a single \textsf{Subsystem} block. 
@@ -317,8 +402,7 @@ expression parser \emph{ParBoiled} as the conditional expressions are in the str
 The expressions are defined by the syntax in Figure~\ref{fig:grammar}.
 
 When parsing the expressions, the expression will be constructed as an abstract syntax tree. 
-As we traverse the abstract syntax tree, the variables will be substituted by the concrete expressions
-that are corresponding to.
+As we traverse the abstract syntax tree, the variables will be substituted by the concrete expressions corresponding to them.
 
 \subsection{Types}
 
@@ -336,92 +420,6 @@ For example, in the ``unsafe\_1\_PP" model, since the inputs In1 and In2 are Boo
 If an expression is typed with Integer or Real and it is used as Boolean in the model,  it will be lowered 
 to a Boolean by calling the function \textsf{int\_to\_bool} or \textsf{real\_to\_bool}.
  
-
-\begin{figure}[t]
-\centering
-{
-\begin{tabular}{lp{5cm}}
-\hline
-\textbf{CoCoSim} & \textbf{Lustre}  \\
-\hline
-SubSystem & 
-Node
-\\
-Inport &
-Input
-\\
-Outport &
-Output
-\\
-Gain &
-Multiply input by constant ($\times$)
-\\
-
-Product &
-Multiply and divide scalars and nonscalars ($\times$)
-\\
-
-Abs (in) &
-Use library node Abs(in)
-\\
-
-AND, OR, NAND, NOR,
-XOR, NXOR, NOT
-&
-and, or, not and, not or, xor, not xor, not
-\\
-
-Minmax &
-{Dynamically create minimum or maximum nodes}
-\\
-
-Switch &
-{if ... then ... else if ... }
-\\
-
-Sum &
-$+$
-\\
-
-Saturate &
-The Saturation block imposes upper and lower limits on an input signal ($<=, <$)
-\\
-
-RelationalOperator &
-$==, <>, <, <=, >, >=$
-\\
-
-UnitDelay/Memory &
-pre
-\\
-
-If &
-if ... then ... else ...
-\\
-
-Memory &
-Output input from previous time step (pre)
-\\
-
-Compare To Zero/Constant  &
-$==, <>, <, <=, >, >=$
-\\
-
-Math(mod, square, substract, divide, negative) &
-mod, $\times, -, /, - $, 
-\\
-
-Constant &
-constant
-\\
-
-\hline
-\end{tabular}
-}
-\caption{A mapping from basic CocoSim blocks to Lustre constructs}
-\label{basicmapping}
-\end{figure}
-
 
 \subsection{The Translation of CoCoSim contracts}
 
@@ -488,8 +486,14 @@ Figure~\ref{contractmodel} shows a CoCoSim model ``bacterialPopulation" using co
 And the contract body definition is shown in Figure~\ref{contractdef}, where it has one \textsf{assume}, two \textsf{guarantees}, and three \textsf{mode} connecting to the \textsf{validator} block. 
 The \textsf{validator} block always has an outport \textsf{valid}. 
 Figure~\ref{jsoncontract} and Figure~\ref{jsoncontractdef} are the overview of CoCoSim model \textsf{``bacterialPopulation"} and its contract definition in JSON respectively. 
-The Lustre programs translated from the JSON model of the bacterialPopulation are shown Figure ~\ref{lusnodecon}~\ref{luscon}.
+The Lustre programs translated from the JSON model of the bacterialPopulation are shown Figure~\ref{lusnodecon}~\ref{luscon}.
 
+\subsection{Unsupported Blocks}
+
+Currently, we do not support translation for vector-related computations, such as \textsf{Vector Concatenate, Selector, Demux, Mux, vector plus/minus/multiplications} and so on. 
+We also do not support nonlinear blocks, such as \textsf{sqrt, log, exp}, and \textsf{Rounding} blocks. 
+We partially support \textsf{data type conversion} block for converting from Boolean to Integer and Real, and Integer and Real to Boolean. 
+However, we would ignore conversions related to the different bits integer and different precision real numbers and so on.
 
 \section{The Translation Algorithms}
 
@@ -660,10 +664,7 @@ Otherwise, it will call \textsf{translateForLusNode}.
 \hline
 \textbf{CocoSim} & \textbf{Semantics}  \\
 \hline
-Switch &
-{Switch output between first input and third input based on value of second input}
 
-\\
 Mux &
 Combine several input signals into vector
 \\
