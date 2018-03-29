@@ -146,11 +146,13 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
             sb.append(NL);
         }
         for(LustreEq prop : node.propExprs) {
-            for(VarIdExpr propVarId : prop.lhs) {
-                sb.append("  ");sb.append("--%PROPERTY ")
-                  .append(" \"").append(propVarId.id).append("\" ");
-                prop.rhs.accept(this);
-                sb.append(";").append(NL);
+            for(LustreExpr propVarId : prop.lhs) {
+                if(propVarId instanceof VarIdExpr) {
+                    sb.append("  ");sb.append("--%PROPERTY ")
+                      .append(" \"").append(((VarIdExpr)propVarId).id).append("\" ");
+                    prop.rhs.accept(this);
+                    sb.append(";").append(NL);                    
+                }
             }
         }
         sb.append("tel;").append(NL).append(NL);        
@@ -241,16 +243,18 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
         if(!contract.localEqs.isEmpty()) {
             for(LustreEq eq : contract.localEqs) {
                 sb.append("  var ");
-                for(VarIdExpr var : eq.lhs) {
-                    LustreVar lustVar = null;
-                    for(LustreVar v : contract.localVars) {
-                        if(var.id.equals(v.name)) {
-                            lustVar = v;
-                            break;
+                for(LustreExpr var : eq.lhs) {
+                    if(var instanceof VarIdExpr) {
+                        LustreVar lustVar = null;
+                        for(LustreVar v : contract.localVars) {
+                            if(((VarIdExpr)var).id.equals(v.name)) {
+                                lustVar = v;
+                                break;
+                            }
                         }
-                    }
-                    if(lustVar != null) {
-                        sb.append(lustVar.name).append(" : ").append(lustVar.type).append(" ");
+                        if(lustVar != null) {
+                            sb.append(lustVar.name).append(" : ").append(lustVar.type).append(" ");
+                        }                        
                     }
                 }
                 sb.append(" = ");
@@ -313,11 +317,18 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
 
     @Override
     public void visit(LustreVar var) {
-        sb.append("  ").append(var.name).append(" : ");
         if(var.type instanceof PrimitiveType) {
-            sb.append(var.type);
+            if(((PrimitiveType)var.type).isConst) {            
+                sb.append("const");
+            }  
+        }
+        sb.append("  ").append(var.name).append(" : ");
+        if(var.type instanceof PrimitiveType) {            
+            var.type.accept(this);
         } else if(var.type instanceof LustreEnumType) {
             sb.append(((LustreEnumType)var.type).name);
+        } else if(var.type instanceof ArrayType) {
+            var.type.accept(this);
         }
     }
 
@@ -366,5 +377,30 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
             sb.append(")");
         }
     }
-    
+
+    @Override
+    public void visit(PrimitiveType type) {
+        sb.append(type.name);
+    }
+
+    @Override
+    public void visit(ArrayType array) {
+        sb.append(array.type);
+        for(int d : array.dimensions) {
+            sb.append("^").append(d);
+        }
+        for(String d : array.sDimensions) {
+            sb.append("^").append(d);
+        }        
+    }
+
+    @Override
+    public void visit(ArrayExpr expr) {
+        sb.append(expr.name);
+        for(int i = 0; i < expr.dimmensions.size(); ++i) {
+            sb.append("[");
+            sb.append(expr.dimmensions.get(i));
+            sb.append("]");
+        }
+    }
 }

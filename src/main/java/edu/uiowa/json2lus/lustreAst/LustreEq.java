@@ -13,7 +13,7 @@ import java.util.List;
  * @author Paul Meng
  */
 public class LustreEq extends LustreAst {
-    List<VarIdExpr> lhs;
+    List<LustreExpr> lhs;
     LustreExpr      rhs;
     
     
@@ -27,11 +27,11 @@ public class LustreEq extends LustreAst {
     
     public LustreEq(LustreExpr lhs, LustreExpr rhs) {
         this.lhs = new ArrayList<>();
-        this.lhs.add((VarIdExpr)lhs);
+        this.lhs.add(lhs);
         this.rhs = rhs;
     } 
     
-    public List<VarIdExpr> getLhs() {
+    public List<LustreExpr> getLhs() {
         return this.lhs;
     }
     

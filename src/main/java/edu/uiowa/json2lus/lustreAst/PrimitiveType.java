@@ -11,13 +11,22 @@ package edu.uiowa.json2lus.lustreAst;
  */
 public class PrimitiveType extends LustreType {
     public final String name;
-    public static final PrimitiveType INT   = new PrimitiveType("int");
-    public static final PrimitiveType REAL  = new PrimitiveType("real");
-    public static final PrimitiveType BOOL  = new PrimitiveType("bool");
+    public boolean isConst = false;
+    public static final PrimitiveType INT           = new PrimitiveType("int");    
+    public static final PrimitiveType REAL          = new PrimitiveType("real");
+    public static final PrimitiveType BOOL          = new PrimitiveType("bool");
+    public static final PrimitiveType CONSTINT      = new PrimitiveType("int", true);    
+    public static final PrimitiveType CONSTREAL     = new PrimitiveType("real", true);    
+    public static final PrimitiveType CONSTBOOL     = new PrimitiveType("bool", true);    
     
     private PrimitiveType(String name) {
         this.name = name;
     }       
+    
+    private PrimitiveType(String name, boolean isConst) {
+        this.name = name;
+        this.isConst = isConst;
+    }           
     
     @Override
     public String toString() {
@@ -104,6 +113,6 @@ public class PrimitiveType extends LustreType {
 
     @Override
     public void accept(LustreAstVisitor visitor) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        visitor.visit(this);
     }
 }

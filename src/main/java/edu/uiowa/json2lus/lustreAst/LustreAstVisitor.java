@@ -27,4 +27,11 @@ public interface LustreAstVisitor {
     public void visit(LustreEnumType enumType);
 
     public void visit(TupleExpr aThis);
+
+    public void visit(PrimitiveType aThis);
+
+    public void visit(ArrayType aThis);
+
+    public void visit(ArrayExpr aThis);
+
 }
