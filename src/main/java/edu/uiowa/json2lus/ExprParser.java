@@ -1,8 +1,8 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * This file is part of CoCoSim_IR_Compiler.
+ * Copyright (C) 2017-2018  The University of Iowa
  */
+
 package edu.uiowa.json2lus;
 
 import edu.uiowa.json2lus.ExprParser.AstNode;

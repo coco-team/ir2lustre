@@ -1,8 +1,8 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * This file is part of CoCoSim_IR_Compiler.
+ * Copyright (C) 2017-2018  The University of Iowa
  */
+
 package edu.uiowa.json2lus;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -17,7 +17,6 @@ import edu.uiowa.json2lus.lustreAst.LustreContract;
 import edu.uiowa.json2lus.lustreAst.IntExpr;
 import edu.uiowa.json2lus.lustreAst.IteExpr;
 import edu.uiowa.json2lus.lustreAst.LustreAst;
-import edu.uiowa.json2lus.lustreAst.LustreAstVisitor;
 import edu.uiowa.json2lus.lustreAst.LustreEnumType;
 import edu.uiowa.json2lus.lustreAst.LustreEq;
 import edu.uiowa.json2lus.lustreAst.LustreExpr;
