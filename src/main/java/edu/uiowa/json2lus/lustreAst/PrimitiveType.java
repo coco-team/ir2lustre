@@ -15,9 +15,9 @@ public class PrimitiveType extends LustreType {
     public static final PrimitiveType INT           = new PrimitiveType("int");    
     public static final PrimitiveType REAL          = new PrimitiveType("real");
     public static final PrimitiveType BOOL          = new PrimitiveType("bool");
-    public static final PrimitiveType CONSTINT      = new PrimitiveType("int", true);    
-    public static final PrimitiveType CONSTREAL     = new PrimitiveType("real", true);    
-    public static final PrimitiveType CONSTBOOL     = new PrimitiveType("bool", true);    
+    public static final PrimitiveType INTCONST      = new PrimitiveType("int", true);    
+    public static final PrimitiveType REALCONST     = new PrimitiveType("real", true);    
+    public static final PrimitiveType BOOLCONST     = new PrimitiveType("bool", true);    
     
     private PrimitiveType(String name) {
         this.name = name;

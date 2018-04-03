@@ -144,7 +144,7 @@ public class J2LTranslator {
     private final String CONST          = "const";
     private final String ARROW          = "ArrowOperator";
     private final String PRODUCT        = "Product";
-    
+    private final String COLLAPSE       = "collapse";
     private final String CONSTANT       = "Constant";        
     private final String FUNCTION       = "Function";    
     private final String INITCOND       = "InitialCondition"; 
@@ -156,7 +156,12 @@ public class J2LTranslator {
     private final String MATRIX         = "Matrix(*)";     
     private final String ELEMENTWISE    = "Element-wise(.*)";
     private final String DIMENSION      = "CompiledPortDimensions";       
+    
+    private final String COLLAPSEDIM        = "CollapseDim"; 
+    private final String COLLAPSEMODE       = "CollapseMode"; 
     private final String MULTIPLICATIOIN    = "Multiplication";    
+    private final String ALLDIMENSIONS      = "All dimensions";  
+    private final String SPECDIMENSIONS     = "Specified dimension";  
     private final String DATATYPECONVERSION = "DataTypeConversion";
     
             
@@ -208,7 +213,8 @@ public class J2LTranslator {
     private final String ANNOTATIONTYPE     = "AnnotationType";
     private final String CONTRACTBLKTYPE    = "ContractBlockType";            
     private final String COMPARETOCONSTANT  = "Compare To Constant";
-    private final String LUSTREOPERATORBLK  = "LustreOperatorBlock";    
+    private final String LUSTREOPERATORBLK  = "LustreOperatorBlock";  
+    private final String MATRIXPRODUCT      = "matrix";
     
     /** Lustre program information */            
     private final String INDEX          = "Index";    
@@ -230,6 +236,7 @@ public class J2LTranslator {
     private final String REALTOBOOL     = "real_to_bool";    
     private final String INTTOREAL      = "int_to_real";
     private final String REALTOINT      = "real_to_int";
+    private final String RESULTMATRIX   = "result_matrix";
                       
     private JsonNode                                topLevelNode;  
     private final List<LustreNode>                  auxLusNode;
@@ -1262,114 +1269,25 @@ public class J2LTranslator {
                     break;
                 }
                 case SUM: {
-                    int     numOfInputs = -1;
-                    String  ops         = blkNode.get(INPUTS).asText();
-                    
-                    enforceTargetType(inExprs, inHdls, getBlkOutportType(blkNode), hdlToBlkNodeMap);
-                    if(ops.matches("\\d+")) {
-                        numOfInputs = Integer.parseInt(ops);
-                    } else {
-                        ops = ops.replaceAll("\\|", "").trim();
-                    }
-                    
-                    if(numOfInputs != -1 && numOfInputs != inExprs.size()) {
-                        LOGGER.log(Level.SEVERE, "Number of inputs to SUM block does not equal the number of inputs specified in parameters: {0}", numOfInputs);
-                    } else if((numOfInputs != -1 && numOfInputs == inExprs.size())) {
-                        blkExpr = inExprs.get(0);
-                        for(int i = 1; i < inExprs.size(); i++) {
-                            blkExpr = new BinaryExpr(blkExpr, BinaryExpr.Op.PLUS, inExprs.get(i));   
-                        }                        
-                    } else if(ops != null && ops.length() > 0 && ops.length() == inExprs.size()) {
-                        blkExpr = inExprs.get(0);
-                        
-                        if(ops.charAt(0) == '-') {
-                            blkExpr = new UnaryExpr(UnaryExpr.Op.NEG, blkExpr);
-                        }
-                        for(int i = 1; i < ops.length(); i++) {
-                            switch (ops.charAt(i)) {
-                                case '+':
-                                    blkExpr = new BinaryExpr(blkExpr, BinaryExpr.Op.PLUS, inExprs.get(i));
-                                    break;
-                                case '-':
-                                    blkExpr = new BinaryExpr(blkExpr, BinaryExpr.Op.MINUS, inExprs.get(i));
-                                    break;
-                                default:
-                                    LOGGER.log(Level.SEVERE, "Unexpected operators in SUM blocks parameters: {0}", ops.charAt(i));
-                                    break;
-                            }
-                        }
-                    } else {
-                        LOGGER.log(Level.SEVERE, "Unexpected definition for SUM block: {0}", blkNode);
-                    }
+                    blkExpr = mkSumExpr(blkNode, inExprs, inHdls, hdlToBlkNodeMap);
                     break;
                 }
                 case COMTOZERO: {
-                    BinaryExpr.Op   bOp     = null;
-                    LustreType      type    = getBlkInportType(blkNode);
-                    String          op      = blkNode.get(CONTENT).get(COMPARE).get(OPERATOR).asText();
-                    
-                    switch (op) {
-                        case "==":
-                            bOp = BinaryExpr.Op.EQ;
-                            break;
-                        case "~=":
-                            bOp = BinaryExpr.Op.NEQ;
-                            break;
-                        case ">=":
-                            bOp = BinaryExpr.Op.GTE;
-                            break;
-                        case "<=":
-                            bOp = BinaryExpr.Op.LTE;
-                            break;
-                        case ">":
-                            bOp = BinaryExpr.Op.GT;
-                            break;
-                        case "<":
-                            bOp = BinaryExpr.Op.LT;
-                            break;                                
-                        default:
-                            break;
-                    }                    
+                    LustreExpr      constExpr   = null;        
+                    LustreType      type        = getBlkInportType(blkNode);                          
                                         
                     if(type == PrimitiveType.INT) {
-                        blkExpr = new BinaryExpr(inExprs.get(0), bOp, new IntExpr(BigInteger.ZERO));
+                        constExpr = new IntExpr(BigInteger.ZERO);
                     } else if(type == PrimitiveType.REAL) {
-                        blkExpr = new BinaryExpr(inExprs.get(0), bOp, new RealExpr(new BigDecimal("0.0")));
+                        constExpr = new RealExpr(new BigDecimal("0.0"));
                     } else {
-                        blkExpr = new BinaryExpr(inExprs.get(0), bOp, new RealExpr(BigDecimal.ZERO));
+                        LOGGER.log(Level.SEVERE, "Unhandled case: compre to zero with type: {0}", type);
                     }
+                    blkExpr = mkCompareToConst(blkNode, constExpr, inExprs.get(0));
                     break;
                 }
-                case COMTOCONST: {                    
-                    BinaryExpr.Op   bOp     = null;
-                    LustreType      type    = getBlkInportType(blkNode);
-                    String          op      = blkNode.get(CONTENT).get(COMPARE).get(OPERATOR).asText();
-                    String          cont    = blkNode.get(CONST).asText();
-                    
-                    switch (op) {
-                        case "==":
-                            bOp = BinaryExpr.Op.EQ;
-                            break;
-                        case "~=":
-                            bOp = BinaryExpr.Op.NEQ;
-                            break;
-                        case ">=":
-                            bOp = BinaryExpr.Op.GTE;
-                            break;
-                        case "<=":
-                            bOp = BinaryExpr.Op.LTE;
-                            break;
-                        case ">":
-                            bOp = BinaryExpr.Op.GT;
-                            break;
-                        case "<":
-                            bOp = BinaryExpr.Op.LT;
-                            break;                                
-                        default:
-                            break;
-                    }
-                    blkExpr = getLustreConst(cont, type);
-                    blkExpr = new BinaryExpr(inExprs.get(0), bOp, blkExpr);                  
+                case COMTOCONST: {                                  
+                    blkExpr = mkCompareToConst(blkNode, getLustreConst(blkNode.get(CONST).asText(), getBlkInportType(blkNode)), inExprs.get(0));
                     break;
                 }                
                 case SUBSYSTEM: {
@@ -1502,43 +1420,7 @@ public class J2LTranslator {
                     break;
                 }
                 case SWITCH: {
-                    LustreExpr  condExpr    = null;
-                    LustreType  condType    = getSwitchCondType(blkNode);
-                                       
-                    if(condType == PrimitiveType.BOOL) {
-                        condExpr = inExprs.get(1);
-                    } else {                        
-                        String      threshold       = blkNode.get(THRESHOLD).asText();
-                        String      criteria        = blkNode.get(CRITERIA).asText();                        
-                        LustreExpr  condRhsExpr     = getLustreConst(threshold, condType);                        
-
-                        switch(criteria) {
-                            case FSTCRIT: {
-                                condExpr = new BinaryExpr(inExprs.get(1), BinaryExpr.Op.GTE, condRhsExpr);
-                                break;
-                            }
-                            case SNDCRIT: {
-                                condExpr = new BinaryExpr(inExprs.get(1), BinaryExpr.Op.GT, condRhsExpr);
-                                break;
-                            }
-                            case TRDCRIT: {
-                                condExpr = new BinaryExpr(inExprs.get(1), BinaryExpr.Op.NEQ, condRhsExpr);
-                                break;
-                            }
-                            default:
-                                break;
-                        }
-                    }
-                    
-                    List<String>        newHandles = new ArrayList<>();
-                    List<LustreExpr>    newInExprs = new ArrayList<>();
-                    
-                    newInExprs.add(inExprs.get(0));
-                    newInExprs.add(inExprs.get(2));
-                    newHandles.add(inHdls.get(0));
-                    newHandles.add(inHdls.get(2));
-                    enforceTargetType(newInExprs, newHandles, getBlkOutportType(blkNode), hdlToBlkNodeMap);
-                    blkExpr = new IteExpr(condExpr, newInExprs.get(0), newInExprs.get(1));
+                    blkExpr = mkSwitchExpr(blkNode, inExprs, inHdls, hdlToBlkNodeMap);
                     break;
                 }               
                 case MEMORY: 
@@ -1684,37 +1566,132 @@ public class J2LTranslator {
         return blkExpr;
     }
     
+    /**
+     * @param blkNode
+     * @param constExpr
+     * @param inExpr
+     * @return 
+     */
+    protected LustreExpr mkCompareToConst(JsonNode blkNode, LustreExpr constExpr, LustreExpr inExpr) {
+        BinaryExpr.Op   bOp     = null;
+        String          op      = blkNode.get(CONTENT).get(COMPARE).get(OPERATOR).asText();
+
+        switch (op) {
+            case "==":
+                bOp = BinaryExpr.Op.EQ;
+                break;
+            case "~=":
+                bOp = BinaryExpr.Op.NEQ;
+                break;
+            case ">=":
+                bOp = BinaryExpr.Op.GTE;
+                break;
+            case "<=":
+                bOp = BinaryExpr.Op.LTE;
+                break;
+            case ">":
+                bOp = BinaryExpr.Op.GT;
+                break;
+            case "<":
+                bOp = BinaryExpr.Op.LT;
+                break;                                
+            default:
+                break;
+        }
+        return new BinaryExpr(inExpr, bOp, constExpr);
+    }
+    
+    /**
+     * @param blkNode
+     * @param inExprs
+     * @param inHdls
+     * @param hdlToBlkNodeMap
+     * @return 
+     */
+    protected LustreExpr mkSwitchExpr(JsonNode blkNode, List<LustreExpr> inExprs, List<String> inHdls, Map<String, JsonNode> hdlToBlkNodeMap) {
+        LustreExpr  condExpr    = null;
+        LustreType  condType    = getSwitchCondType(blkNode);
+
+        if(condType == PrimitiveType.BOOL) {
+            condExpr = inExprs.get(1);
+        } else {                        
+            String      threshold       = blkNode.get(THRESHOLD).asText();
+            String      criteria        = blkNode.get(CRITERIA).asText();                        
+            LustreExpr  condRhsExpr     = getLustreConst(threshold, condType);                        
+
+            switch(criteria) {
+                case FSTCRIT: {
+                    condExpr = new BinaryExpr(inExprs.get(1), BinaryExpr.Op.GTE, condRhsExpr);
+                    break;
+                }
+                case SNDCRIT: {
+                    condExpr = new BinaryExpr(inExprs.get(1), BinaryExpr.Op.GT, condRhsExpr);
+                    break;
+                }
+                case TRDCRIT: {
+                    condExpr = new BinaryExpr(inExprs.get(1), BinaryExpr.Op.NEQ, condRhsExpr);
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
+
+        List<String>        newHandles = new ArrayList<>();
+        List<LustreExpr>    newInExprs = new ArrayList<>();
+
+        newInExprs.add(inExprs.get(0));
+        newInExprs.add(inExprs.get(2));
+        newHandles.add(inHdls.get(0));
+        newHandles.add(inHdls.get(2));
+        enforceTargetType(newInExprs, newHandles, getBlkOutportType(blkNode), hdlToBlkNodeMap);
+        return new IteExpr(condExpr, newInExprs.get(0), newInExprs.get(1));        
+    }
+    
+    /**
+     * 
+     * @param blkNode
+     * @param inExprs
+     * @param inHdls
+     * @param hdlToBlkNodeMap
+     * @return 
+     */    
     protected LustreExpr mkProductExpr(JsonNode blkNode, List<LustreExpr> inExprs, List<String> inHdls, Map<String, JsonNode> hdlToBlkNodeMap) {
-        LustreExpr blkExpr  = null;
-        int     numOfInputs = -1;
-        String  ops         = blkNode.get(INPUTS).asText();
-        String  mult        = blkNode.get(MULTIPLICATIOIN).asText();
-        
+        LustreExpr      blkExpr     = null;        
+        String          fcnName     = sanitizeName(getOriginPath(blkNode));
+        String          ops         = blkNode.get(INPUTS).asText();
+        String          colMode     = blkNode.get(COLLAPSEMODE).asText();
+        String          mult        = blkNode.get(MULTIPLICATIOIN).asText();
+        List<Integer>       inDimensions    = getInportDimensions(blkNode);
+        List<Integer>       outDimensions   = getOutportDimensions(blkNode);
+        List<List<Integer>> newInDims       = new ArrayList<>();
+        List<LustreType>    inBaseTypes     = getMatrixBlkInportType(blkNode);
+        LustreType          outBaseType     = getBlkOutportType(blkNode);
+        List<LustreExpr>    exprs           = new ArrayList<>();        
+            
+        // Get all the values of in-dimensions and create the sum function name
+        for(int i = 0; i < inDimensions.size();) {
+            int j = inDimensions.get(i);
+            List<Integer> dimension = new ArrayList<>();         
+            for(int k = i+1; k <= i+j; ++k) {
+                dimension.add(inDimensions.get(k));
+            }
+            newInDims.add(dimension);
+            i += (j+1);
+        }
+        // Get all operators
         if(ops.matches("\\d+")) {
-            numOfInputs = Integer.parseInt(ops);
+            int numOfInuts = Integer.parseInt(ops);
+            ops = "";
+            for(int i = 0; i < numOfInuts; ++i) {
+                ops += "*";
+            }
         } else {
-            ops = ops.replaceAll("\\|", "").trim();
+            ops = ops.replaceAll("\\|", "").trim().replaceAll(" ", "").trim();
         }
             
         if(mult.equals(MATRIX)) {
-            String              fcnName         = "matrix_product";
-            LustreType          baseType        = getBlkOutportType(blkNode);
-            List<LustreExpr>    exprs           = new ArrayList<>();
-            List<Integer>       inDimensions    = getInportDimensions(blkNode);
-            List<Integer>       outDimensions   = getOutportDimensions(blkNode);
-            List<List<Integer>> newInDims       = new ArrayList<>();
-            
-            for(int i = 0; i < inDimensions.size(); ) {
-                int j = inDimensions.get(i);
-                List<Integer> dimension = new ArrayList<>();
-                fcnName += "_"+j;
-                
-                for(int k = i+1; k <= i+j; ++k) {
-                    dimension.add(inDimensions.get(k));
-                }
-                newInDims.add(dimension);
-                i += (j+1);
-            }            
+            // Create dimensions as input and output variables
             for(List<Integer> ds : newInDims) {
                 for(int d : ds) {
                     exprs.add(new IntExpr(BigInteger.valueOf(d)));
@@ -1724,15 +1701,14 @@ public class J2LTranslator {
                 exprs.add(new IntExpr(BigInteger.valueOf(outDimensions.get(i))));
             }
             exprs.addAll(inExprs);
+            
             if(!this.libNodeNameMap.containsKey(fcnName)) {
-                // Dimensions
-                List<LustreVar> ds      = new ArrayList<>();
                 List<String>    inVars  = new ArrayList<>();
-                List<LustreVar> inputs  = new ArrayList<>();
-                List<LustreVar> tempInputs  = new ArrayList<>();
+                List<LustreVar> inputs  = new ArrayList<>();                
                 List<LustreVar> outputs = new ArrayList<>();
                 List<LustreEq>  eqs     = new ArrayList<>();
                 List<LustreVar> dimVars  = new ArrayList<>();
+                List<LustreVar> inputVars  = new ArrayList<>();
                 
                 for(List<Integer> dims : newInDims) {                    
                     String          name        = getFreshVar("m");                    
@@ -1741,10 +1717,10 @@ public class J2LTranslator {
                     for(int d : dims) {
                         String dimVar = getFreshVar("i");
                         tempVars.add(dimVar);
-                        dimVars.add(new LustreVar(dimVar, PrimitiveType.CONSTINT));
+                        dimVars.add(new LustreVar(dimVar, PrimitiveType.INTCONST));
                     }
                     inVars.add(name);
-                    tempInputs.add(new LustreVar(name, new ArrayType(tempVars, baseType)));
+                    inputVars.add(new LustreVar(name, new ArrayType(tempVars, outBaseType)));
                 }                
                 int             outportD    = outDimensions.get(0);                
                 List<String>    dimNames    = new ArrayList<>();
@@ -1752,32 +1728,43 @@ public class J2LTranslator {
                 for(int i = 1; i < outDimensions.size(); ++i) {
                     String dimVar = getFreshVar("i");
                     dimNames.add(dimVar);    
-                    dimVars.add(new LustreVar(dimVar, PrimitiveType.CONSTINT));
+                    dimVars.add(new LustreVar(dimVar, PrimitiveType.INTCONST));
                 }          
-                outputs.add(new LustreVar(getFreshVar("m"), new ArrayType(dimNames, baseType)));
+                outputs.add(new LustreVar(getFreshVar("m"), new ArrayType(dimNames, outBaseType)));
                 inputs.addAll(dimVars);
-                inputs.addAll(tempInputs);
+                inputs.addAll(inputVars);
                 
                 LustreExpr      rhsExpr     = null;
+                // The dimensions of outport
                 List<String>    dimensions  = new ArrayList<>();
                 
                 for(int j = 0; j < outportD; ++j) {
                     dimensions.add(getFreshVar("i"));
                 }   
                 if(ops.charAt(0)=='/') {
-                    rhsExpr = new BinaryExpr(baseType == PrimitiveType.INT? new IntExpr(BigInteger.ONE): 
+                    rhsExpr = new BinaryExpr(outBaseType == PrimitiveType.INT? new IntExpr(BigInteger.ONE): 
                                                 new RealExpr(new BigDecimal("1.0")), BinaryExpr.Op.DIVIDE, new ArrayExpr(inVars.get(0), dimensions));
                 } else {
                     rhsExpr = new ArrayExpr(inVars.get(0), dimensions);
                 }                
                 for(int i = 1; i < ops.length(); ++i) {
                     switch (ops.charAt(i)) {
-                        case '*':
-                            rhsExpr = new BinaryExpr(rhsExpr, BinaryExpr.Op.MULTIPLY, new ArrayExpr(inVars.get(i), dimensions));
+                        case '*': {
+                            if(dimensions.isEmpty()) {
+                                
+                            } else {
+                                rhsExpr = new BinaryExpr(rhsExpr, BinaryExpr.Op.MULTIPLY, new ArrayExpr(inVars.get(i), dimensions));
+                            }                            
                             break;
-                        case '/':
-                            rhsExpr = new BinaryExpr(rhsExpr, BinaryExpr.Op.DIVIDE, new ArrayExpr(inVars.get(i), dimensions));
+                        }
+                        case '/': {
+                            if(dimensions.isEmpty()) {
+                                
+                            } else {
+                                rhsExpr = new BinaryExpr(rhsExpr, BinaryExpr.Op.DIVIDE, new ArrayExpr(inVars.get(i), dimensions));
+                            }                                                         
                             break;
+                        }
                         default:
                             LOGGER.log(Level.SEVERE, "Unexpected operators in PRODUCT blocks parameters: {0}", ops.charAt(i));
                             break;
@@ -1788,40 +1775,535 @@ public class J2LTranslator {
                 this.libNodeNameMap.put(fcnName, fcnName);
             }
             blkExpr = new NodeCallExpr(fcnName, exprs);
-        } else {
-            tryLiftingExprTypes(inExprs, inHdls, hdlToBlkNodeMap);
-
-            if(numOfInputs != -1 && numOfInputs != inExprs.size()) {
-                LOGGER.log(Level.SEVERE, "Number of inputs to PRODUCT block does not equal the number of inputs specified in parameters: {0}", numOfInputs);
-            } else if((numOfInputs != -1 && numOfInputs == inExprs.size())) {
-                blkExpr = inExprs.get(0);
-                for(int i = 1; i < inExprs.size(); i++) {
-                    blkExpr = new BinaryExpr(blkExpr, BinaryExpr.Op.MULTIPLY, inExprs.get(i));   
-                }                        
-            } else if(ops != null && ops.length() > 0 && ops.length() == inExprs.size()) {
-                blkExpr = inExprs.get(0);
-
-                if(ops.charAt(0) == '/') {
-                    blkExpr = new BinaryExpr(new RealExpr(new BigDecimal("1.0")), BinaryExpr.Op.DIVIDE, blkExpr);
-                }
-                for(int i = 1; i < ops.length(); i++) {
-                    switch (ops.charAt(i)) {
-                        case '*':
-                            blkExpr = new BinaryExpr(blkExpr, BinaryExpr.Op.MULTIPLY, inExprs.get(i));
-                            break;
-                        case '/':
-                            blkExpr = new BinaryExpr(blkExpr, BinaryExpr.Op.DIVIDE, inExprs.get(i));
-                            break;
-                        default:
-                            LOGGER.log(Level.SEVERE, "Unexpected operators in PRODUCT blocks parameters: {0}", ops.charAt(i));
-                            break;
+            
+        // Handle element-wise product
+        } else if(colMode.equals(ALLDIMENSIONS)){
+            
+            // If the input is just one matrix, collapse the matrix for all dimensions
+            if(ops.length() == 1 && (newInDims.get(0).size() > 1 || newInDims.get(0).get(0) > 1)) {
+                List<LustreExpr> blkExprs = new ArrayList<>();
+                mkCollapseAllDimExpr(0, newInDims.get(0), ops.charAt(0), new ArrayList<Integer>(), blkExprs, inExprs.get(0), inBaseTypes.get(0));
+                blkExpr = blkExprs.get(0);
+            } else {
+                // Make all the in(out)-dimmension constants as expressions
+                // and make them as input
+                for(List<Integer> ds : newInDims) {
+                    for(int d : ds) {
+                        exprs.add(new IntExpr(BigInteger.valueOf(d)));
                     }
                 }
+                for(int i = 1; i < outDimensions.size(); ++i) {
+                    exprs.add(new IntExpr(BigInteger.valueOf(outDimensions.get(i))));
+                }
+
+                // Add all inexprs as input
+                exprs.addAll(inExprs);     
+
+                if(!this.libNodeNameMap.containsKey(fcnName)) {
+                    List<String>    inVarNames      = new ArrayList<>();
+                    List<LustreVar> inputs          = new ArrayList<>();
+                    List<LustreVar> tempInputs      = new ArrayList<>();
+                    List<LustreVar> outputs         = new ArrayList<>();
+                    List<LustreEq>  eqs             = new ArrayList<>();
+                    List<LustreVar> dimVars         = new ArrayList<>();
+                    Set<String>     singleInVar     = new HashSet<>();
+
+                    // Create input and dimension variables
+                    for(List<Integer> dims : newInDims) {                    
+                        String inVarName = getFreshVar("m");
+
+                        // If the input has dimension of 1*1
+                        // we create a variable for it but ignore its dimensions
+                        if(dims.size() == 1 && dims.get(0) == 1) {
+                            tempInputs.add(new LustreVar(inVarName, inBaseTypes.get(0)));
+                            dimVars.add(new LustreVar(getFreshVar("i"), PrimitiveType.INTCONST));
+                            singleInVar.add(inVarName);
+                        } else {
+                            List<String>    tempDimVars    = new ArrayList<>();
+
+                            for(int d : dims) {
+                                String dimVar = getFreshVar("i");
+                                tempDimVars.add(dimVar);
+                                dimVars.add(new LustreVar(dimVar, PrimitiveType.INTCONST));
+                            }                        
+                            tempInputs.add(new LustreVar(inVarName, new ArrayType(tempDimVars, outBaseType)));                        
+                        }
+                        inVarNames.add(inVarName);
+                    }
+                    // Get the value of out dimension and create output variables and dimmension values                             
+                    List<String>    dimNames    = new ArrayList<>();
+                    // The dimmensions that we are going to use for iterating the index 
+                    List<String>    dimensions  = new ArrayList<>();       
+                    
+                    // Create the output variable
+                    if(outDimensions.size() == 2 && outDimensions.get(1) == 1) {                         
+                        dimVars.add(new LustreVar(getFreshVar("i"), PrimitiveType.INTCONST));
+                        outputs.add(new LustreVar(getFreshVar("m"), outBaseType));
+                    } else {
+                        int outportD = outDimensions.get(0);   
+                        for(int j = 0; j < outportD; ++j) {
+                            dimensions.add(getFreshVar("i"));
+                        }                    
+                        for(int i = 1; i < outDimensions.size(); ++i) {
+                            String dimVar = getFreshVar("i");
+                            dimNames.add(dimVar);    
+                            dimVars.add(new LustreVar(dimVar, PrimitiveType.INTCONST));
+                        }                        
+                        outputs.add(new LustreVar(getFreshVar("m"), new ArrayType(dimNames, outBaseType)));                    
+                    }      
+                    // Put dimension variables before actual array variables 
+                    // because of the forward reference issue
+                    inputs.addAll(dimVars);
+                    inputs.addAll(tempInputs);
+
+                    LustreExpr rhsExpr = outBaseType == PrimitiveType.INT? new IntExpr(BigInteger.ONE): new RealExpr(new BigDecimal("1.0"));
+
+                    if(ops.charAt(0)=='/') {
+                        if(singleInVar.contains(inVarNames.get(0))) {
+                            rhsExpr = new BinaryExpr(rhsExpr, BinaryExpr.Op.DIVIDE, new VarIdExpr(inVarNames.get(0)));
+                        } else {
+                            rhsExpr = new BinaryExpr(rhsExpr, BinaryExpr.Op.DIVIDE, new ArrayExpr(inVarNames.get(0), dimensions)); 
+                        }                    
+                    } else {
+                        if(singleInVar.contains(inVarNames.get(0))) {
+                            rhsExpr = new VarIdExpr(inVarNames.get(0));
+                        } else {
+                            rhsExpr = new ArrayExpr(inVarNames.get(0), dimensions);
+                        }                    
+                    }                
+                    for(int i = 1; i < ops.length(); ++i) {
+                        switch (ops.charAt(i)) {
+                            case '*': {    
+                                if(singleInVar.contains(inVarNames.get(i))) {
+                                    rhsExpr = new BinaryExpr(rhsExpr, BinaryExpr.Op.MULTIPLY, new VarIdExpr(inVarNames.get(i)));
+                                } else {
+                                    rhsExpr = new BinaryExpr(rhsExpr, BinaryExpr.Op.MULTIPLY, new ArrayExpr(inVarNames.get(i), dimensions));
+                                }                             
+                                break;
+                            }
+                            case '/': {
+                                if(singleInVar.contains(inVarNames.get(i))) {
+                                    rhsExpr = new BinaryExpr(rhsExpr, BinaryExpr.Op.DIVIDE, new VarIdExpr(inVarNames.get(i)));
+                                } else {
+                                    rhsExpr = new BinaryExpr(rhsExpr, BinaryExpr.Op.DIVIDE, new ArrayExpr(inVarNames.get(i), dimensions));
+                                }                               
+                                break;
+                            }
+                            default:
+                                LOGGER.log(Level.SEVERE, "Unexpected operators in PRODUCT blocks parameters: {0}", ops.charAt(i));
+                                break;
+                        }                                        
+                    }                  
+
+                    if(dimensions.size() > 0) {
+                        eqs.add(new LustreEq(new ArrayExpr(outputs.get(0).name, dimensions), rhsExpr));
+                    } else {
+                        eqs.add(new LustreEq(new VarIdExpr(outputs.get(0).name), rhsExpr));
+                    }
+
+                    this.lustreProgram.addNode(new LustreNode(fcnName, inputs, outputs, eqs));
+                    this.libNodeNameMap.put(fcnName, fcnName);
+                }
+                blkExpr = new NodeCallExpr(fcnName, exprs);                        
+            }            
+        } else {
+            LustreExpr one = null;
+            
+            if(inBaseTypes.get(0) == PrimitiveType.INT) {
+                one = new IntExpr(BigInteger.ONE);
+            } else if(inBaseTypes.get(0) == PrimitiveType.REAL) {
+                one = new RealExpr(new BigDecimal("1.0"));
+            }
+            blkExpr = one;      
+            
+            //Input is a int/real constant
+            if(inDimensions.size() == 2 && inDimensions.get(1) == 1) {
+                if(ops.charAt(0) == '*') {
+                    blkExpr = inExprs.get(0);
+                } else {
+                    blkExpr = new BinaryExpr(one, BinaryExpr.Op.DIVIDE, inExprs.get(0));
+                }
+            // Input is an one dimensional array     
+            } else if(inDimensions.size() == 2) {
+                for(int i = 0; i < inDimensions.get(1); ++i) {
+                    if(ops.charAt(0) == '*') {                        
+                        blkExpr = new BinaryExpr(blkExpr, BinaryExpr.Op.MULTIPLY, new ArrayExpr(inExprs.get(0), i));
+                    } else {
+                        blkExpr = new BinaryExpr(blkExpr, BinaryExpr.Op.DIVIDE, new ArrayExpr(inExprs.get(0), i));
+                    }                                    
+                }
             } else {
-                LOGGER.log(Level.SEVERE, "Unexpected definition for PRODUCT block: {0}", blkNode);
-            }  
+                LustreVar       resultVar       = null;
+                int             colDim          = blkNode.get(COLLAPSEDIM).asInt();
+                String          resultVarName   = getFreshVar(RESULTMATRIX);
+                List<Integer>   outDims         = new ArrayList<>();
+                                
+                for(int i = 1; i < outDimensions.size(); ++i) {
+                    outDims.add(outDimensions.get(i));
+                }
+                if(outDimensions.size() == 2 && outDimensions.get(1) == 1) {
+                    resultVar = new LustreVar(resultVarName, outBaseType);
+                } else {
+                    resultVar = new LustreVar(resultVarName, new ArrayType(outBaseType, outDims));
+                } 
+                
+                List<LustreEq> eqs = new ArrayList<>();
+                mkCollapseSpecDimExpr(colDim-1, 0, ops.charAt(0), resultVar, inExprs.get(0), inBaseTypes.get(0), newInDims.get(0), eqs, new ArrayList<Integer>());
+                this.auxNodeLocalVars.add(resultVar);
+                this.auxNodeEqs.addAll(eqs);
+                blkExpr = new VarIdExpr(resultVarName);
+            }             
         }
         return blkExpr;
+    }
+    
+    
+    /**
+     * 
+     * @param blkNode
+     * @param inExprs
+     * @param inHdls
+     * @param hdlToBlkNodeMap
+     * @return 
+     */    
+    protected LustreExpr mkSumExpr(JsonNode blkNode, List<LustreExpr> inExprs, List<String> inHdls, Map<String, JsonNode> hdlToBlkNodeMap) {
+        LustreExpr blkExpr  = null;
+        String  ops         = blkNode.get(INPUTS).asText();
+        String  collapse    = blkNode.get(COLLAPSEMODE).asText();
+        List<LustreType>    inBaseTypes     = getMatrixBlkInportType(blkNode);
+        LustreType          outBaseType     = getBlkOutportType(blkNode);
+        List<Integer>       inDimensions    = getInportDimensions(blkNode);
+        List<Integer>       outDimensions   = getOutportDimensions(blkNode);    
+        List<List<Integer>> newInDims       = new ArrayList<>();
+        String              fcnName         = sanitizeName(getOriginPath(blkNode));        
+
+        // Get all the values of in-dimensions and create the sum function name
+        for(int i = 0; i < inDimensions.size();) {
+            int j = inDimensions.get(i);
+            List<Integer> dimension = new ArrayList<>();
+        
+            for(int k = i+1; k <= i+j; ++k) {
+                dimension.add(inDimensions.get(k));
+            }
+            newInDims.add(dimension);
+            i += (j+1);
+        }      
+        
+        // Get the operators and process them
+        if(ops.matches("\\d+")) {
+            int numOfInuts = Integer.parseInt(ops);            
+            if(numOfInuts != inExprs.size()) {
+                LOGGER.log(Level.SEVERE, "The number of inputs does not match inputs");
+            }
+            ops = "";
+            for(int i = 0; i < numOfInuts; ++i) {
+                ops += "+";
+            }
+        } else {
+            ops = ops.replaceAll("\\|", "").trim().replaceAll(" ", "").trim();
+        }
+        //Todo: make sure the types are correct
+        if(collapse.equals(ALLDIMENSIONS)) {
+            List<LustreExpr>    exprs           = new ArrayList<>();
+               
+            // Collapse the matrix for all dimensions
+            if(ops.length() == 1 && (newInDims.get(0).size() > 1 || newInDims.get(0).get(0) > 1)) {
+                List<Integer> finalInDim = newInDims.get(0);
+                List<LustreExpr> blkExprs = new ArrayList<>();
+                mkCollapseAllDimExpr(0, finalInDim, ops.charAt(0), new ArrayList<Integer>(), blkExprs, inExprs.get(0), inBaseTypes.get(0));
+                blkExpr = blkExprs.get(0);
+            } else {
+                // Make all the in(out)-dimmension constants as expressions
+                // and make them as input
+                for(List<Integer> ds : newInDims) {
+                    for(int d : ds) {
+                        exprs.add(new IntExpr(BigInteger.valueOf(d)));
+                    }
+                }
+                for(int i = 1; i < outDimensions.size(); ++i) {
+                    exprs.add(new IntExpr(BigInteger.valueOf(outDimensions.get(i))));
+                }
+                exprs.addAll(inExprs);      
+                
+                if(!this.libNodeNameMap.containsKey(fcnName)) {
+                     // Dimensions
+                    List<LustreVar> ds              = new ArrayList<>();
+                    List<String>    inVarNames      = new ArrayList<>();
+                    List<LustreVar> inputs          = new ArrayList<>();
+                    List<LustreVar> locals          = new ArrayList<>();
+                    List<LustreVar> tempInputs      = new ArrayList<>();
+                    List<LustreVar> outputs         = new ArrayList<>();
+                    List<LustreEq>  eqs             = new ArrayList<>();
+                    List<LustreVar> dimVars         = new ArrayList<>();
+                    Set<String>     singleInVar     = new HashSet<>();
+
+                    // Create input and dimension variables
+                    for(List<Integer> dims : newInDims) {                    
+                        String inVarName = getFreshVar("m");
+
+                        // If the input has dimension of 1*1
+                        // we create a variable for it but ignore its dimensions
+                        if(dims.size() == 1 && dims.get(0) == 1) {
+                            tempInputs.add(new LustreVar(inVarName, inBaseTypes.get(0)));
+                            dimVars.add(new LustreVar(getFreshVar("i"), PrimitiveType.INTCONST));
+                            singleInVar.add(inVarName);
+                        } else {
+                            List<String>    tempDimVars    = new ArrayList<>();
+
+                            for(int d : dims) {
+                                String dimVar = getFreshVar("i");
+                                tempDimVars.add(dimVar);
+                                dimVars.add(new LustreVar(dimVar, PrimitiveType.INTCONST));
+                            }                        
+                            tempInputs.add(new LustreVar(inVarName, new ArrayType(tempDimVars, outBaseType)));                        
+                        }
+                        inVarNames.add(inVarName);
+                    }
+                    // Get the value of out dimension and create output variables and dimmension values                             
+                    List<String>    dimNames    = new ArrayList<>();
+                    // The dimmensions that we are going to use for iterating the index 
+                    List<String>    dimensions  = new ArrayList<>();                
+                    // Create the output variable
+                    if(outDimensions.size() == 2 && outDimensions.get(1) == 1) {                         
+                        dimVars.add(new LustreVar(getFreshVar("i"), PrimitiveType.INTCONST));
+                        outputs.add(new LustreVar(getFreshVar("m"), outBaseType));
+                    } else {
+                        int outportD = outDimensions.get(0);   
+                        for(int j = 0; j < outportD; ++j) {
+                            dimensions.add(getFreshVar("i"));
+                        }                    
+                        for(int i = 1; i < outDimensions.size(); ++i) {
+                            String dimVar = getFreshVar("i");
+                            dimNames.add(dimVar);    
+                            dimVars.add(new LustreVar(dimVar, PrimitiveType.INTCONST));
+                        }                        
+                        outputs.add(new LustreVar(getFreshVar("m"), new ArrayType(dimNames, outBaseType)));                    
+                    }      
+                    // Put dimension variables before actual array variables 
+                    // because of the forward reference issue
+                    inputs.addAll(dimVars);
+                    inputs.addAll(tempInputs);
+
+                    LustreExpr rhsExpr = null;
+
+                   if(ops.charAt(0)=='-') {
+                        if(singleInVar.contains(inVarNames.get(0))) {
+                            rhsExpr = new UnaryExpr(UnaryExpr.Op.NEG, new VarIdExpr(inVarNames.get(0)));
+                        } else {
+                            rhsExpr = new UnaryExpr(UnaryExpr.Op.NEG, new ArrayExpr(inVarNames.get(0), dimensions));
+                        }                    
+                    } else {
+                        if(singleInVar.contains(inVarNames.get(0))) {
+                            rhsExpr = new VarIdExpr(inVarNames.get(0));
+                        } else {
+                            rhsExpr = new ArrayExpr(inVarNames.get(0), dimensions);
+                        }                    
+                    }                
+                    for(int i = 1; i < ops.length(); ++i) {
+                        switch (ops.charAt(i)) {
+                            case '+': {    
+                                if(singleInVar.contains(inVarNames.get(i))) {
+                                    rhsExpr = new BinaryExpr(rhsExpr, BinaryExpr.Op.PLUS, new VarIdExpr(inVarNames.get(i)));
+                                } else {
+                                    rhsExpr = new BinaryExpr(rhsExpr, BinaryExpr.Op.PLUS, new ArrayExpr(inVarNames.get(i), dimensions));
+                                }                             
+                                break;
+                            }
+                            case '-': {
+                                if(singleInVar.contains(inVarNames.get(i))) {
+                                    rhsExpr = new BinaryExpr(rhsExpr, BinaryExpr.Op.MINUS, new VarIdExpr(inVarNames.get(i)));
+                                } else {
+                                    rhsExpr = new BinaryExpr(rhsExpr, BinaryExpr.Op.MINUS, new ArrayExpr(inVarNames.get(i), dimensions));
+                                }                               
+                                break;
+                            }
+                            default:
+                                LOGGER.log(Level.SEVERE, "Unexpected operators in PRODUCT blocks parameters: {0}", ops.charAt(i));
+                                break;
+                        }                                        
+                    }  
+                    if(dimensions.size() > 0) {
+                        eqs.add(new LustreEq(new ArrayExpr(outputs.get(0).name, dimensions), rhsExpr));
+                    } else {
+                        eqs.add(new LustreEq(new VarIdExpr(outputs.get(0).name), rhsExpr));
+                    }
+
+                    this.lustreProgram.addNode(new LustreNode(fcnName, inputs, outputs, eqs));
+                    this.libNodeNameMap.put(fcnName, fcnName);
+                }
+                blkExpr = new NodeCallExpr(fcnName, exprs);                
+            }     
+        // This is to handle the specified dimension sum
+        } else {
+            if(inBaseTypes.get(0) == PrimitiveType.INT) {
+                blkExpr = new IntExpr(BigInteger.ZERO);
+            } else if(inBaseTypes.get(0) == PrimitiveType.REAL) {
+                blkExpr = new RealExpr(new BigDecimal("0.0"));
+            }
+          
+            if(inDimensions.size() == 2 && inDimensions.get(1) == 1) {
+                if(ops.charAt(0) == '+') {
+                    blkExpr = inExprs.get(0);
+                } else {
+                    blkExpr = new BinaryExpr(blkExpr, BinaryExpr.Op.MINUS, inExprs.get(0));
+                }
+            } else if(inDimensions.size() == 2) {
+                for(int i = 0; i < inDimensions.get(1); ++i) {
+                    if(ops.charAt(0) == '+') {                        
+                        blkExpr = new BinaryExpr(blkExpr, BinaryExpr.Op.PLUS, new ArrayExpr(inExprs.get(0), i));
+                    } else {
+                        blkExpr = new BinaryExpr(blkExpr, BinaryExpr.Op.MINUS, new ArrayExpr(inExprs.get(0), i));
+                    }                                    
+                }
+            } else {
+                LustreVar       resultVar       = null;
+                int             colDim          = blkNode.get(COLLAPSEDIM).asInt();
+                String          resultVarName   = getFreshVar(RESULTMATRIX);
+                List<Integer>   outDims         = new ArrayList<>();
+                                
+                for(int i = 1; i < outDimensions.size(); ++i) {
+                    outDims.add(outDimensions.get(i));
+                }
+                if(outDimensions.size() == 2 && outDimensions.get(1) == 1) {
+                    resultVar = new LustreVar(resultVarName, outBaseType);
+                } else {
+                    resultVar = new LustreVar(resultVarName, new ArrayType(outBaseType, outDims));
+                } 
+                List<LustreEq> eqs = new ArrayList<>();
+                mkCollapseSpecDimExpr(colDim-1, 0, ops.charAt(0), resultVar, inExprs.get(0), inBaseTypes.get(0), newInDims.get(0), eqs, new ArrayList<Integer>());
+                this.auxNodeLocalVars.add(resultVar);
+                this.auxNodeEqs.addAll(eqs);
+                blkExpr = new VarIdExpr(resultVarName);
+            }                              
+        }
+        return blkExpr;
+    }    
+   
+    
+    /**
+     * @param colDim
+     * @param curDim
+     * @param op
+     * @param resultVar
+     * @param inputExpr
+     * @param baseType
+     * @param inDims
+     * @param eqs
+     * @param allDims
+     */
+    protected void mkCollapseSpecDimExpr(int colDim, int curDim, char op, LustreVar resultVar,  LustreExpr inputExpr, LustreType baseType, List<Integer> inDims, List<LustreEq> eqs, List<Integer> allDims) {
+        if(curDim == inDims.size()) {
+            List<Integer> newAllDims = new ArrayList<>();
+            newAllDims.addAll(allDims);            
+            newAllDims.add(colDim, 0);
+            ArrayExpr   lhs = new ArrayExpr(newAllDims, resultVar.name);
+            LustreExpr  rhs = null;
+            
+            if(baseType == PrimitiveType.INT) {
+                rhs = (op == '+' || op == '-') ? new IntExpr(BigInteger.ZERO) : new IntExpr(BigInteger.ONE);
+            } else if(baseType == PrimitiveType.REAL) {
+                rhs = (op == '+' || op == '-') ? new RealExpr(new BigDecimal("0.0")) : new RealExpr(new BigDecimal("1.0"));
+            } else {
+                LOGGER.log(Level.SEVERE, "Unhandled type case: {0}", baseType);
+            }
+            
+            for(int j = 0; j < inDims.get(colDim); ++j) {
+                List<Integer> sndNewAllDims = new ArrayList<>();
+                sndNewAllDims.addAll(allDims);            
+                sndNewAllDims.add(colDim, j);
+                
+                switch (op) {
+                    case '+':
+                        rhs = new BinaryExpr(rhs, BinaryExpr.Op.PLUS, new ArrayExpr(sndNewAllDims, inputExpr));
+                        break;
+                    case '-':
+                        rhs = new BinaryExpr(rhs, BinaryExpr.Op.MINUS, new ArrayExpr(sndNewAllDims, inputExpr));
+                        break;
+                    case '*':
+                        rhs = new BinaryExpr(rhs, BinaryExpr.Op.MULTIPLY, new ArrayExpr(sndNewAllDims, inputExpr));
+                        break;
+                    case '/':
+                        rhs = new BinaryExpr(rhs, BinaryExpr.Op.DIVIDE, new ArrayExpr(sndNewAllDims, inputExpr));
+                        break;
+                    default:
+                        break;
+                }
+            }
+            eqs.add(new LustreEq(lhs, rhs));
+        } else if(colDim == curDim) {
+            mkCollapseSpecDimExpr(colDim, curDim+1, op, resultVar, inputExpr, baseType, inDims, eqs, allDims);
+        } else {
+            for(int i = 0; i < inDims.get(curDim); ++i) {
+                List<Integer> newAllDims = new ArrayList<>();
+                newAllDims.addAll(allDims);
+                newAllDims.add(i);
+                mkCollapseSpecDimExpr(colDim, curDim+1, op, resultVar, inputExpr, baseType, inDims, eqs, newAllDims);
+            }
+        }
+    }
+    
+    /**
+     * @param size
+     * @param inDims
+     * @param op
+     * @param dims
+     * @param blkExpr
+     * @param inExpr
+     */
+    protected void mkCollapseAllDimExpr(int size, List<Integer> inDims, char op, List<Integer> dims, List<LustreExpr> blkExpr, LustreExpr inExpr, LustreType baseType) {
+        if(size == inDims.size()-1) {            
+            List<Integer> newDims = new ArrayList<>();
+            newDims.addAll(dims);
+            newDims.add(0);
+            LustreExpr expr = new ArrayExpr(newDims, inExpr);
+            BinaryExpr.Op bOp = null;
+            
+            switch (op) {
+                case '+':
+                    bOp = BinaryExpr.Op.PLUS;
+                    break;
+                case '-': {
+                    bOp = BinaryExpr.Op.MINUS;
+                    expr = new UnaryExpr(UnaryExpr.Op.NEG, new ArrayExpr(newDims, inExpr));   
+                    break;                
+                }
+                case '*':
+                    bOp = BinaryExpr.Op.MULTIPLY;
+                    break;
+                case '/': {
+                    LustreExpr one = baseType == PrimitiveType.INT ? new IntExpr(BigInteger.ONE) : new RealExpr(new BigDecimal("1.0"));
+                    expr = new BinaryExpr(one, BinaryExpr.Op.DIVIDE, new ArrayExpr(newDims, inExpr));   
+                    bOp = BinaryExpr.Op.DIVIDE;
+                    break; 
+                }
+                default:
+                    break;
+            }                      
+            for(int i = 1; i < inDims.get(size); ++i) {
+                List<Integer> freshDims = new ArrayList<>();
+                freshDims.addAll(dims);
+                freshDims.add(i);
+                expr = new BinaryExpr(expr, bOp, new ArrayExpr(freshDims, inExpr));
+            }
+            if(!blkExpr.isEmpty()) {
+                LustreExpr newExpr = blkExpr.get(0);
+                newExpr = new BinaryExpr(newExpr, (op == '-' || op == '+') ? BinaryExpr.Op.PLUS:BinaryExpr.Op.MULTIPLY, expr);
+                blkExpr.clear();
+                blkExpr.add(newExpr);                
+            } else {
+                blkExpr.add(expr);    
+            }
+            
+        } else {
+            List<LustreExpr> exprs = new ArrayList<>();
+            
+            for(int j = 0; j < inDims.get(size); ++j) {
+                List<Integer> newDims = new ArrayList<>();
+                newDims.addAll(dims);                
+                newDims.add(j);
+                mkCollapseAllDimExpr(size+1, inDims, op, newDims, blkExpr, inExpr, baseType);
+            }          
+        }   
     }
     
     /**
@@ -2338,21 +2820,6 @@ public class J2LTranslator {
                     this.libNodeNameMap.put(nodeName, nodeName);
                 }
                 getOrCreateDummyNode(nodeName, PrimitiveType.REAL, PrimitiveType.REAL);
-                           
-//                switch(op) {
-//                    case ROUND: {                        
-//                        break;
-//                    }
-//                    case FLOOR: {
-//                        break;
-//                    }
-//                    case FIX: {
-//                        break;
-//                    }
-//                    case CEIL: {
-//                        break;
-//                    }
-//                }
                 break;
             }
             case DATATYPECONVERSION: {
@@ -2915,8 +3382,10 @@ public class J2LTranslator {
                 lusType = PrimitiveType.BOOL;
                 break;                
             }        
-            default:
+            default: {
+                LOGGER.log(Level.SEVERE, "Unsupported type: {0}", type);
                 break;
+            }                
         }
         
         return lusType;
@@ -2995,8 +3464,24 @@ public class J2LTranslator {
     }   
     
     protected LustreType getBlkInportType(JsonNode blkNode) {
-        return getLustreTypeFromStrRep(blkNode.get(PORTDATATYPE).get(INPORT).asText());
+        return getLustreTypeFromStrRep(blkNode.get(PORTDATATYPE).get(INPORT).asText());     
     }
+    
+    protected List<LustreType> getMatrixBlkInportType(JsonNode blkNode) {
+        JsonNode node = blkNode.get(PORTDATATYPE).get(INPORT);
+        List<LustreType> types = new ArrayList<>();
+        
+        if(node.isArray()) {
+            Iterator<JsonNode> nodeIt = node.elements();
+            while(nodeIt.hasNext()) {
+                JsonNode typeNode = nodeIt.next();
+                types.add(getLustreTypeFromStrRep(typeNode.asText()));
+            }
+        } else {
+            types.add(getLustreTypeFromStrRep(node.asText()));            
+        }   
+        return types;
+    }    
 
     protected String getBlkRealInType(JsonNode blkNode) {
         return blkNode.get(PORTDATATYPE).get(INPORT).asText();
