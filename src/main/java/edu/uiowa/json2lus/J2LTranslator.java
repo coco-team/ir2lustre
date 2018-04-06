@@ -1747,6 +1747,7 @@ public class J2LTranslator {
      * @return 
      */    
     protected LustreExpr mkProductExpr(JsonNode blkNode, List<LustreExpr> inExprs) {
+        boolean oneDimProd = true;
         LustreExpr      blkExpr     = null;        
         String          fcnName     = sanitizeName(getOriginPath(blkNode));
         String          ops         = blkNode.get(INPUTS).asText();
@@ -1779,6 +1780,33 @@ public class J2LTranslator {
         } else {
             ops = ops.replaceAll("\\|", "").trim().replaceAll(" ", "").trim();
         }
+        
+        for(int d : inDimensions) {
+            if(d!=1) {
+                oneDimProd = false;
+                break;
+            }
+        }
+        if(oneDimProd) {
+            if(ops.charAt(0) == '/') {
+                if(inBaseTypes.get(0) == PrimitiveType.INT) {
+                    blkExpr = new BinaryExpr(new IntExpr(BigInteger.ONE), BinaryExpr.Op.DIVIDE, inExprs.get(0));
+                } else {
+                    blkExpr = new BinaryExpr(new RealExpr(new BigDecimal("1.0")), BinaryExpr.Op.DIVIDE, inExprs.get(0));
+                }
+                
+            } else {
+                blkExpr = inExprs.get(0);
+            }
+            for(int i = 1; i < ops.length(); ++i) {
+                if(ops.charAt(i) == '/') {
+                    blkExpr = new BinaryExpr(blkExpr, BinaryExpr.Op.DIVIDE, inExprs.get(i));    
+                } else {
+                    blkExpr = new BinaryExpr(blkExpr, BinaryExpr.Op.MULTIPLY, inExprs.get(i));    
+                }
+            }
+            return blkExpr;
+        }        
             
         if(mult.equals(MATRIX)) {
             // Create dimensions as input and output variables
