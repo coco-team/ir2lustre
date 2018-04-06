@@ -3513,6 +3513,7 @@ public class J2LTranslator {
             case "int8": 
             case "uint8":
             case "uint16":
+            case "sfix64":                
             case "uint32":{
                 lusType = PrimitiveType.INT;
                 break;                
