@@ -130,7 +130,7 @@ public class J2LTranslator {
 
     private final String U              = "u";
     private final String Y              = "y";
-    private final String X0             = "InitialCondition";
+    private final String X0             = "X0";
     private final String MAX            = "max";
     private final String MIN            = "min";
     private final String GAIN           = "Gain";
@@ -141,8 +141,10 @@ public class J2LTranslator {
     private final String MEMORY         = "Memory";
     private final String ROUNDING       = "Rounding";       
     
+    private final String MUX            = "Mux";
     private final String CONST          = "const";
     private final String ARROW          = "ArrowOperator";
+    private final String DEMUX          = "Demux";
     private final String PRODUCT        = "Product";
     private final String COLLAPSE       = "collapse";
     private final String CONSTANT       = "Constant";        
@@ -1020,11 +1022,11 @@ public class J2LTranslator {
      * @param hdlToBlkNodeMap
      * @param visitedHdls
      * @param hdlToActualInputExpr
-     * @param port
+     * @param portNum
      * @return The Lustre expression corresponding to the input JSON block node
      */
 
-    protected LustreExpr translateBlock(boolean isPropBlk, String blkHdl, JsonNode parentSubsystemNode, Map<JsonNode, List<String>> blkNodeToSrcBlkHdlsMap, Map<JsonNode, List<Integer>> blkNodeToSrcBlkPortsMap, Map<JsonNode, List<String>> blkNodeToDstBlkHdlsMap, Map<String, JsonNode> hdlToBlkNodeMap, Set<String> visitedHdls, Map<String, LustreExpr> hdlToActualInputExpr, int port) {        
+    protected LustreExpr translateBlock(boolean isPropBlk, String blkHdl, JsonNode parentSubsystemNode, Map<JsonNode, List<String>> blkNodeToSrcBlkHdlsMap, Map<JsonNode, List<Integer>> blkNodeToSrcBlkPortsMap, Map<JsonNode, List<String>> blkNodeToDstBlkHdlsMap, Map<String, JsonNode> hdlToBlkNodeMap, Set<String> visitedHdls, Map<String, LustreExpr> hdlToActualInputExpr, int portNum) {        
         LustreExpr  blkExpr     = null;
         JsonNode    blkNode     = null;
         
@@ -1045,14 +1047,18 @@ public class J2LTranslator {
         // This is to simplify the translation for the case where the property block node connect with an outport.
         // Instead of translating the outport's definition, we will directly use the outport variable.
         if(blkNodeToDstBlkHdlsMap.containsKey(blkNode) && isPropBlk) {
-            List<String> dstHdls = blkNodeToDstBlkHdlsMap.get(blkNode);
+            List<String>        dstHdls     = blkNodeToDstBlkHdlsMap.get(blkNode);
+            List<LustreExpr>    outportExpr = new ArrayList<>();
             
             for(String hdl : dstHdls) {
                 JsonNode dstNode = hdlToBlkNodeMap.get(hdl);
                 
                 if(dstNode.get(BLOCKTYPE).asText().equals(OUTPORT)) {
-                    return new VarIdExpr(getBlkName(dstNode));
+                    outportExpr.add(new VarIdExpr(getBlkName(dstNode)));
                 }
+            }
+            if(!outportExpr.isEmpty()) {
+                return outportExpr.get(portNum);
             }
         } 
         
@@ -1268,8 +1274,16 @@ public class J2LTranslator {
                     blkExpr = new NodeCallExpr(getOrCreateLustreLibNode(blkNode), inExprs.get(0));
                     break;
                 }
+                case MUX: {
+                    blkExpr = mkMuxExpr(blkNode, inExprs);
+                    break;
+                }
+                case DEMUX: {
+                    blkExpr = mkDemuxExpr(blkNode, inExprs);
+                    break;
+                }                
                 case SUM: {
-                    blkExpr = mkSumExpr(blkNode, inExprs, inHdls, hdlToBlkNodeMap);
+                    blkExpr = mkSumExpr(blkNode, inExprs);
                     break;
                 }
                 case COMTOZERO: {
@@ -1295,7 +1309,7 @@ public class J2LTranslator {
                         List<LustreExpr> exprs = this.auxHdlToExprMap.get(blkHdl);
                         
                         if(exprs != null) {
-                            blkExpr = exprs.get(port);
+                            blkExpr = exprs.get(portNum);
                         } else {
                             LOGGER.log(Level.SEVERE, "Unexpected null expressions with handle: {0}", blkHdl);
                         }
@@ -1358,17 +1372,21 @@ public class J2LTranslator {
                                     this.auxLusNode.add(auxNode);
                                 }
                                 this.auxHdlToExprMap.put(blkHdl, newVars);
-                                blkExpr = newVars.get(port);   
-                            } else {                                                         
+                                blkExpr = newVars.get(portNum);   
+                            } else if(vars.size() >= 2){                                                         
                                 this.auxHdlToExprMap.put(blkHdl, vars);
                                 this.auxNodeEqs.add(new LustreEq(vars, nodeCall));
-                                blkExpr = vars.get(port);   
+                                blkExpr = new TupleExpr(vars);
+                            } else {
+                                this.auxHdlToExprMap.put(blkHdl, vars);
+                                this.auxNodeEqs.add(new LustreEq(vars, nodeCall));
+                                blkExpr = vars.get(portNum);                                   
                             }
                         } else {                                                        
                             for(int k = 0; k < portNameMap.size(); k++) {
                                 vars.add(new VarIdExpr(blkName+"_"+sanitizeName(portNameMap.get(k+1))));
                             }
-                            blkExpr = vars.get(port);
+                            blkExpr = vars.get(portNum);
                         }                       
                     }                                     
                     break;
@@ -1392,7 +1410,7 @@ public class J2LTranslator {
                     break;
                 }
                 case PRODUCT: {
-                    blkExpr = mkProductExpr(blkNode, inExprs, inHdls, hdlToBlkNodeMap);
+                    blkExpr = mkProductExpr(blkNode, inExprs);
                     break;
                 }
                 case GAIN: {
@@ -1647,16 +1665,88 @@ public class J2LTranslator {
         enforceTargetType(newInExprs, newHandles, getBlkOutportType(blkNode), hdlToBlkNodeMap);
         return new IteExpr(condExpr, newInExprs.get(0), newInExprs.get(1));        
     }
+
+    /**
+     * 
+     * @param blkNode
+     * @param inExprs
+     * @return a Lustre expression for blkNode
+     */    
+    protected LustreExpr mkMuxExpr(JsonNode blkNode, List<LustreExpr> inExprs) {
+        LustreType      baseType        = getBlkOutportType(blkNode);
+        List<Integer>   inDimensions    = getInportDimensions(blkNode);
+        List<Integer>   outDimensions   = getOutportDimensions(blkNode);
+        String          muxName         = getFreshVar("mux_output");
+        List<Integer>   newOutDims      = new ArrayList<>();
+        List<LustreEq>  eqs             = new ArrayList<>();
+        LustreExpr      lhs             = new VarIdExpr(muxName);
+        int outDim = outDimensions.get(1);
+        
+        newOutDims.add(outDimensions.get(1));
+        LustreVar muxVar = outDimensions.get(1)>1?new LustreVar(muxName, new ArrayType(baseType, newOutDims)):
+                           new LustreVar(muxName, baseType);                
+        if(outDim > 1) {            
+            List<Integer> newInDims = new ArrayList<>();
+            for(int i = 1; i < inDimensions.size();) {
+                newInDims.add(inDimensions.get(i));
+                i += 2;
+            }
+            for(int i = 0; i < outDim;) {
+                for(int j = 0; j < inExprs.size(); ++j) {
+                    if(newInDims.get(j) == 1) {
+                        eqs.add(new LustreEq(new ArrayExpr(lhs, i), inExprs.get(j)));
+                        ++i;
+                    } else {
+                        for(int k = 0; k < newInDims.get(j); ++k) {
+                            eqs.add(new LustreEq(new ArrayExpr(lhs, i), new ArrayExpr(inExprs.get(j), k)));
+                            ++i;
+                        }                        
+                    }                 
+                }
+            }
+        } else {
+            eqs.add(new LustreEq(lhs, inExprs.get(0)));
+        }
+        this.auxNodeEqs.addAll(eqs);
+        this.auxNodeLocalVars.add(muxVar);
+        return new VarIdExpr(muxName);
+    }
     
     /**
      * 
      * @param blkNode
      * @param inExprs
-     * @param inHdls
-     * @param hdlToBlkNodeMap
      * @return 
      */    
-    protected LustreExpr mkProductExpr(JsonNode blkNode, List<LustreExpr> inExprs, List<String> inHdls, Map<String, JsonNode> hdlToBlkNodeMap) {
+    protected LustreExpr mkDemuxExpr(JsonNode blkNode, List<LustreExpr> inExprs) {
+        LustreType      baseType        = getBlkOutportType(blkNode);
+        List<Integer>   inDimensions    = getInportDimensions(blkNode);
+        List<Integer>   outDimensions   = getOutportDimensions(blkNode);
+        String          muxName         = getFreshVar("mux_output");
+        List<Integer>   newOutDims      = new ArrayList<>();
+        
+        newOutDims.add(outDimensions.get(1));
+        LustreVar muxVar = outDimensions.get(1)>1?new LustreVar(muxName, new ArrayType(baseType, newOutDims)):
+                           new LustreVar(muxName, baseType);
+        
+        int outDim = outDimensions.get(1);
+        
+        if(outDim > 1) {            
+            muxVar = new LustreVar(muxName, new ArrayType(baseType, inDimensions));
+        } else {
+            
+        }
+                
+        return new VarIdExpr(muxName);
+    }    
+    
+    /**
+     * 
+     * @param blkNode
+     * @param inExprs
+     * @return 
+     */    
+    protected LustreExpr mkProductExpr(JsonNode blkNode, List<LustreExpr> inExprs) {
         LustreExpr      blkExpr     = null;        
         String          fcnName     = sanitizeName(getOriginPath(blkNode));
         String          ops         = blkNode.get(INPUTS).asText();
@@ -1962,11 +2052,10 @@ public class J2LTranslator {
      * 
      * @param blkNode
      * @param inExprs
-     * @param inHdls
-     * @param hdlToBlkNodeMap
      * @return 
      */    
-    protected LustreExpr mkSumExpr(JsonNode blkNode, List<LustreExpr> inExprs, List<String> inHdls, Map<String, JsonNode> hdlToBlkNodeMap) {
+    protected LustreExpr mkSumExpr(JsonNode blkNode, List<LustreExpr> inExprs) {
+        boolean    oneDimSum = true;
         LustreExpr blkExpr  = null;
         String  ops         = blkNode.get(INPUTS).asText();
         String  collapse    = blkNode.get(COLLAPSEMODE).asText();
@@ -2002,6 +2091,29 @@ public class J2LTranslator {
         } else {
             ops = ops.replaceAll("\\|", "").trim().replaceAll(" ", "").trim();
         }
+        
+        for(int d : inDimensions) {
+            if(d!=1) {
+                oneDimSum = false;
+                break;
+            }
+        }
+        if(oneDimSum) {
+            if(ops.charAt(0) == '-') {
+                blkExpr = new UnaryExpr(UnaryExpr.Op.NEG, inExprs.get(0));
+            } else {
+                blkExpr = inExprs.get(0);
+            }
+            for(int i = 1; i < ops.length(); ++i) {
+                if(ops.charAt(i) == '+') {
+                    blkExpr = new BinaryExpr(blkExpr, BinaryExpr.Op.PLUS, inExprs.get(i));    
+                } else {
+                    blkExpr = new BinaryExpr(blkExpr, BinaryExpr.Op.MINUS, inExprs.get(i));    
+                }
+            }
+            return blkExpr;
+        }
+        
         //Todo: make sure the types are correct
         if(collapse.equals(ALLDIMENSIONS)) {
             List<LustreExpr>    exprs           = new ArrayList<>();
@@ -3452,9 +3564,7 @@ public class J2LTranslator {
     
     protected boolean isPropertyBlk(JsonNode blkNode) {
         if(blkNode.has(ANNOTATIONTYPE)) {
-            if(blkNode.get(ANNOTATIONTYPE).asText().equals(ENSURES)) {
-                return true;
-            }
+            return blkNode.get(ANNOTATIONTYPE).asText().equals(ENSURES);
         }
         return false;
     }
@@ -3649,7 +3759,7 @@ public class J2LTranslator {
             index = Integer.parseInt(node.get(PORT).asText().trim())-1;
         } else {
             LOGGER.log(Level.SEVERE, "Unexpected: in/out port does not have a port field!");
-        }
+        } 
         return index;
     }
     
