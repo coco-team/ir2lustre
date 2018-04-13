@@ -28,7 +28,7 @@ public class Main {
      * 
      * @param args input parameters
      */
-    public static void main(String[] args) {                  
+    public static void main(String[] args) {                   
         String              jsonFilePath    = null; 
         String              lusFilePath     = null;
         Options             opts            = constructOptions();               
@@ -53,7 +53,7 @@ public class Main {
                 lusFilePath = cl.getOptionValue('o');
             }             
             if(lusFilePath == null || !lusFilePath.endsWith(".lus")) {
-                lusFilePath = jsonFilePath+".lus";
+                lusFilePath = new File(jsonFilePath).getAbsolutePath() +".lus";
             }               
             if(validateInput(jsonFilePath)) {
                 J2LTranslator       translator  = new J2LTranslator(jsonFilePath);                

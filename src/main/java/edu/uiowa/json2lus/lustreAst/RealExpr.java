@@ -22,4 +22,8 @@ public class RealExpr extends LustreExpr {
     public void accept(LustreAstVisitor visitor) {
         visitor.visit(this);
     }
+    @Override
+    public String toString() {
+        return this.value.toString();
+    }    
 }

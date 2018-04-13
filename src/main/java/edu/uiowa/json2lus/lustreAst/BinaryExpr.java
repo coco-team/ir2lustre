@@ -56,4 +56,13 @@ public class BinaryExpr extends LustreExpr {
             return this.opStr;
         }        
     }
+    
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(this.left);
+        sb.append(" ").append(this.op).append(" ");
+        sb.append(this.right);
+        return sb.toString();
+    }
 }

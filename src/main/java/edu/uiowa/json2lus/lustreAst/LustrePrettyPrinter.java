@@ -37,13 +37,14 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
         Logger.getLogger(LustrePrettyPrinter.class.getName()).log(Level.INFO, "****************************************************");
         try {
             File output = new File(path);
-            if(!output.exists()) {
-                if(!output.getParentFile().exists()) {
-                    output.getParentFile().createNewFile();
+
+            if(!output.getAbsoluteFile().exists()) {
+                if(!output.getAbsoluteFile().getParentFile().exists()) {
+                    output.getAbsoluteFile().getParentFile().createNewFile();
                 }
-                output.createNewFile();
+                output.getAbsoluteFile().createNewFile();
             }            
-            BufferedWriter bw = new BufferedWriter(new FileWriter(path));
+            BufferedWriter bw = new BufferedWriter(new FileWriter(output.getAbsoluteFile()));
             bw.write(sb.toString());
             bw.close();
             Logger.getLogger(LustrePrettyPrinter.class.getName()).log(Level.INFO, "A Lustre program was generated at: {0}", path);
@@ -144,6 +145,9 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
         }
         if(!node.propExprs.isEmpty()) {
             sb.append(NL);
+        }
+        if(node.automata != null) {
+            node.automata.accept(this);
         }
         for(LustreEq prop : node.propExprs) {
             for(LustreExpr propVarId : prop.lhs) {
@@ -411,5 +415,92 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
             sb.append(strD);
             sb.append("]");            
         }        
+    }
+
+    @Override
+    public void visit(LustreAutomaton automaton) {
+        sb.append("automaton ");
+        sb.append(automaton.name);
+        sb.append(NL).append(NL);
+        
+        for(AutomatonState state : automaton.states) {
+            visit(state);
+        }
+    }
+
+    @Override
+    public void visit(AutomatonState state) {
+        if(state.isInit) {
+            sb.append("initial ");
+        }
+        sb.append("state ");
+        sb.append(state.name).append(":").append(NL);
+        
+        sb.append(TAB);
+        if(state.strongTrans != null) {
+            sb.append("unless ");            
+            if(state.strongTrans instanceof AutomatonIteExpr) {
+                visit((AutomatonIteExpr)state.strongTrans);
+            }
+            sb.append(NL);
+        }
+        
+        if(state.locals.size() > 0) {
+            sb.append(TAB);
+            sb.append("var ");
+        }
+        for(LustreVar var : state.locals) {
+            sb.append(NL);
+            sb.append(TAB).append(TAB);            
+            var.accept(this);
+            sb.append(";");            
+        }
+        sb.append(TAB).append("let").append(NL);
+        for(LustreAst eq : state.equations) {
+            sb.append(TAB).append(TAB);
+            if(eq instanceof LustreEq) {
+                visit((LustreEq)eq);
+                sb.append(NL);
+            }            
+        }
+        sb.append(TAB).append("tel").append(NL);
+        
+        if(state.weakTrans != null) {
+            sb.append(TAB);
+            sb.append("until ");
+            if(state.weakTrans instanceof AutomatonIteExpr) {
+                visit((AutomatonIteExpr)state.weakTrans);
+                sb.append(";").append(NL);
+            }
+        }
+        sb.append(NL);
+    }
+
+    @Override
+    public void visit(AutomatonIteExpr iteExpr) {
+        sb.append("if ");
+        iteExpr.ifExpr.accept(this);
+        if(iteExpr.restartExpr != null) {
+            sb.append(" restart ");
+            iteExpr.restartExpr.accept(this);            
+        } else if(iteExpr.resumeExpr != null) {
+            sb.append(" resume ");
+            iteExpr.resumeExpr.accept(this);              
+        }
+        sb.append(NL);
+        if(iteExpr.elseExpr instanceof AutomatonIteExpr) {
+            sb.append(TAB+TAB+TAB+TAB);
+            sb.append(" els");
+            iteExpr.elseExpr.accept(this);
+            sb.append(NL);
+        } else if(iteExpr.elseExpr == null){   
+            sb.append(TAB+TAB+TAB+TAB);
+            sb.append(" end;");
+        } else {
+            sb.append(TAB+TAB+TAB+TAB);
+            sb.append(" else ");
+            iteExpr.elseExpr.accept(this);
+            sb.append(" end;");                           
+        }
     }
 }

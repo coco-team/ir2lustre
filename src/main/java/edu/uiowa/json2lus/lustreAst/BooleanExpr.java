@@ -35,4 +35,9 @@ public class BooleanExpr extends LustreExpr {
     public void accept(LustreAstVisitor visitor) {
         visitor.visit(this);
     }
+    
+    @Override
+    public String toString() {
+        return String.valueOf(this.value);
+    }       
 }

@@ -22,4 +22,9 @@ public class IntExpr extends LustreExpr {
     public void accept(LustreAstVisitor visitor) {
         visitor.visit(this);
     }
+    
+    @Override
+    public String toString() {
+        return value.toString();
+    }    
 }

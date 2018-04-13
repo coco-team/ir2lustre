@@ -44,4 +44,22 @@ public class LustreEq extends LustreAst {
         visitor.visit(this);
     }
     
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        if(lhs.size() > 1) {
+            sb.append("(");
+        }
+        sb.append(lhs.get(0));
+        for(int i = 0; i < lhs.size(); ++i) {
+            sb.append(", ");
+            sb.append(lhs.get(i));
+        }
+        if(lhs.size() > 1) {
+            sb.append(")");
+        }        
+        sb.append(" = ");
+        sb.append(this.rhs.toString());
+        return sb.toString();
+    }    
 }

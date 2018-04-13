@@ -130,7 +130,7 @@ public class J2LTranslator {
 
     private final String U              = "u";
     private final String Y              = "y";
-    private final String X0             = "X0";
+    private final String X0             = "InitialCondition";
     private final String MAX            = "max";
     private final String MIN            = "min";
     private final String GAIN           = "Gain";
@@ -140,6 +140,10 @@ public class J2LTranslator {
     private final String MINMAX         = "MinMax";    
     private final String MEMORY         = "Memory";
     private final String ROUNDING       = "Rounding";       
+    
+    /** State flow language features */
+    private final String OUTPUT         = "Output";
+    private final String SFCONTENT      = "StateflowContent";
     
     private final String MUX            = "Mux";
     private final String CONST          = "const";
@@ -169,12 +173,14 @@ public class J2LTranslator {
             
     /** Blocks information */
     private final String META           = "meta";
+    private final String DATA           = "Data";
     private final String NAME           = "Name";
     private final String PORT           = "Port";
     private final String TYPE           = "Type";
     private final String PATH           = "Path";
     private final String VALUE          = "Value";
     private final String LOGIC          = "logic";    
+    private final String SCOPE          = "Scope";
     private final String HANDLE         = "Handle";  
             
     private final String MSFUNCTION     = "M-S-Function";      
@@ -288,10 +294,16 @@ public class J2LTranslator {
         
         // Ensure a bottom-up translation to avoid forward reference issue
         for(int i = this.subsystemNodes.size()-1; i >= 0; i--) {
-            
+            JsonNode subsystemNode = this.subsystemNodes.get(i);
             // Translate each subsystem node
-            LustreAst ast = translateSubsystemNode(this.subsystemNodes.get(i));
+            LustreAst ast = null;
             
+            if(subsystemNode.has(SFCONTENT) && subsystemNode.get(SFCONTENT).size() > 0) {
+                Sf2LTranslator sfTranslator = new Sf2LTranslator();                
+                ast = sfTranslator.translate(subsystemNode);
+            } else if(subsystemNode.has(CONTENT) && subsystemNode.get(CONTENT) != null) {
+                ast = translateSubsystemNode(subsystemNode);
+            }
             if(ast != null) {
                 if(ast instanceof LustreNode) {
                     this.lustreProgram.addNode((LustreNode)ast);
@@ -319,14 +331,16 @@ public class J2LTranslator {
         ObjectMapper objectMapper = new ObjectMapper();
         
         try {
-            File output = new File(path);
-            if(!output.exists()) {
-                if(!output.getParentFile().exists()) {
-                    output.getParentFile().createNewFile();
+            File    output          = new File(path);
+            File    absoluteOutput  = output.getAbsoluteFile();
+            
+            if(!absoluteOutput.exists()) {
+                if(!absoluteOutput.getParentFile().exists()) {
+                    absoluteOutput.getParentFile().createNewFile();
                 }
-                output.createNewFile();
+                output.getAbsoluteFile().createNewFile();
             }            
-            BufferedWriter  bw      = new BufferedWriter(new FileWriter(path));
+            BufferedWriter  bw      = new BufferedWriter(new FileWriter(absoluteOutput));
             String          json    = objectMapper.writeValueAsString(this.jsonMappingInfo);
             bw.write(json);
             bw.close();
@@ -538,14 +552,14 @@ public class J2LTranslator {
                 // Collect inport, outport, property, contract, validator blocks
                 if(contBlkType.equals(INPORT)) {
                     if(!isContractBlk(subsystemNode)) {
-                        addMappingInfo(getBlkHandle(contBlkNode), getOriginPath(contBlkNode), lusNodeName, null, null, null, null, getQualifiedBlkName(contBlkNode));    
+                        addMappingInfo(getBlkHandle(contBlkNode), getPath(contBlkNode), lusNodeName, null, null, null, null, getQualifiedBlkName(contBlkNode));    
                     } else {
-                        addMappingInfo(getBlkHandle(contBlkNode), getOriginPath(contBlkNode), null, lusNodeName, null, null, null, getQualifiedBlkName(contBlkNode));    
+                        addMappingInfo(getBlkHandle(contBlkNode), getPath(contBlkNode), null, lusNodeName, null, null, null, getQualifiedBlkName(contBlkNode));    
                     }                 
                     inports.put(getBlkPortPosition(contBlkNode), contBlkNode);
                 } else if(contBlkType.equals(OUTPORT)) {
                     if(!isContractBlk(subsystemNode)) {
-                        addMappingInfo(getBlkHandle(contBlkNode), getOriginPath(contBlkNode), lusNodeName, null, null, null, null, getQualifiedBlkName(contBlkNode));    
+                        addMappingInfo(getBlkHandle(contBlkNode), getPath(contBlkNode), lusNodeName, null, null, null, null, getQualifiedBlkName(contBlkNode));    
                     }                    
                     outports.put(getBlkPortPosition(contBlkNode), contBlkNode);
                 } else if(isPropertyBlk(contBlkNode)) {
@@ -1330,7 +1344,7 @@ public class J2LTranslator {
                                 // where the subsystem returns multiple outputs
                                 if( isContractBlk(parentSubsystemNode) ) {
                                     String varName = "input_"+j;
-                                    inputVars.add(new LustreVar(varName, getLustreTypeFromStrRep(getBlkType(hdlToBlkNodeMap.get(inHdls.get(j))))));   
+                                    inputVars.add(new LustreVar(varName, getBlkOutportType(hdlToBlkNodeMap.get(inHdls.get(j)))));   
                                     inputs.add(new VarIdExpr(varName));
                                 }                                
                             }                                              
@@ -1341,11 +1355,12 @@ public class J2LTranslator {
                                 LustreVar var = new LustreVar(blkName+"_"+sanitizeName(portNameMap.get(i+1)), types.get(i));
                                 
                                 vars.add(new VarIdExpr(blkName+"_"+sanitizeName(portNameMap.get(i+1))));
-                                this.auxNodeLocalVars.add(var);    
+                                this.auxNodeLocalVars.add(var);  
+                                
                                 if(isContractBlk(parentSubsystemNode)) {
-                                    addMappingInfo(getBlkHandle(blkNode), getOriginPath(blkNode), null, getBlkName(parentSubsystemNode), null, null, null, var.name);
+                                    addMappingInfo(getBlkHandle(blkNode), getPath(blkNode), null, getBlkName(parentSubsystemNode), null, null, null, var.name);
                                 } else {
-                                    addMappingInfo(getBlkHandle(blkNode), getOriginPath(blkNode), getBlkName(parentSubsystemNode), null, null, null, null, var.name);
+                                    addMappingInfo(getBlkHandle(blkNode), getPath(blkNode), getBlkName(parentSubsystemNode), null, null, null, null, var.name);
                                 }                                
                                 outputVars.add(var);
                             }   
@@ -1463,9 +1478,9 @@ public class J2LTranslator {
                                 LOGGER.log(Level.SEVERE, "UNEXPECTED init value : {0} for memory or unit delay block", init);
                             }       
                             if(isContractBlk(parentSubsystemNode)) {
-                                addMappingInfo(getBlkHandle(blkNode), getOriginPath(blkNode), null, getBlkName(parentSubsystemNode), null, null, null, varName);
+                                addMappingInfo(getBlkHandle(blkNode), getPath(blkNode), null, getBlkName(parentSubsystemNode), null, null, null, varName);
                             } else {
-                                addMappingInfo(getBlkHandle(blkNode), getOriginPath(blkNode), getBlkName(parentSubsystemNode), null, null, null, null, varName);
+                                addMappingInfo(getBlkHandle(blkNode), getPath(blkNode), getBlkName(parentSubsystemNode), null, null, null, null, varName);
                             }                            
                             this.auxNodeLocalVars.add(new LustreVar(varName, blkOutType));
                             this.auxNodeEqs.add(new LustreEq(preVarId, preBlkExpr));
@@ -1510,9 +1525,9 @@ public class J2LTranslator {
                                 }
                                 this.auxNodeLocalVars.add(new LustreVar(varName, outTypes.get(i-1)));
                                 if(isContractBlk(parentSubsystemNode)) {
-                                    addMappingInfo(getBlkHandle(blkNode), getOriginPath(blkNode), null, getBlkName(parentSubsystemNode), null, null, null, varName);
+                                    addMappingInfo(getBlkHandle(blkNode), getPath(blkNode), null, getBlkName(parentSubsystemNode), null, null, null, varName);
                                 } else {
-                                    addMappingInfo(getBlkHandle(blkNode), getOriginPath(blkNode), getBlkName(parentSubsystemNode), null, null, null, null, varName);
+                                    addMappingInfo(getBlkHandle(blkNode), getPath(blkNode), getBlkName(parentSubsystemNode), null, null, null, null, varName);
                                 }                                 
                             }
                             this.auxNodeEqs.add(new LustreEq(actSysOuts, new IteExpr(condExpr, actSysCall, new TupleExpr(elseActSysOuts))));
@@ -1749,7 +1764,7 @@ public class J2LTranslator {
     protected LustreExpr mkProductExpr(JsonNode blkNode, List<LustreExpr> inExprs) {
         boolean oneDimProd = true;
         LustreExpr      blkExpr     = null;        
-        String          fcnName     = sanitizeName(getOriginPath(blkNode));
+        String          fcnName     = sanitizeName(getPath(blkNode));
         String          ops         = blkNode.get(INPUTS).asText();
         String          colMode     = blkNode.get(COLLAPSEMODE).asText();
         String          mult        = blkNode.get(MULTIPLICATIOIN).asText();
@@ -2092,7 +2107,7 @@ public class J2LTranslator {
         List<Integer>       inDimensions    = getInportDimensions(blkNode);
         List<Integer>       outDimensions   = getOutportDimensions(blkNode);    
         List<List<Integer>> newInDims       = new ArrayList<>();
-        String              fcnName         = sanitizeName(getOriginPath(blkNode));        
+        String              fcnName         = sanitizeName(getPath(blkNode));        
 
         // Get all the values of in-dimensions and create the sum function name
         for(int i = 0; i < inDimensions.size();) {
@@ -3488,49 +3503,7 @@ public class J2LTranslator {
         results[0] = hasDiscrepancy;
         results[1] = lowestType;
         return results;
-    }    
-    
-    /**
-     * 
-     * @param type
-     * @return The corresponding Lustre type from its string representation
-     */
-    protected LustreType getLustreTypeFromStrRep(String type) {
-        LustreType lusType = null;
-        
-        switch(type.toLowerCase()) {
-            case "float": 
-            case "single":                
-            case "double": {
-                lusType = PrimitiveType.REAL;
-                break;
-            }
-            case "integer": 
-            case "int": 
-            case "int64":     
-            case "int32": 
-            case "int16": 
-            case "int8": 
-            case "uint8":
-            case "uint16":
-            case "sfix64":                
-            case "uint32":{
-                lusType = PrimitiveType.INT;
-                break;                
-            }            
-            case "boolean": 
-            case "bool": {
-                lusType = PrimitiveType.BOOL;
-                break;                
-            }        
-            default: {
-                LOGGER.log(Level.SEVERE, "Unsupported type: {0}", type);
-                break;
-            }                
-        }
-        
-        return lusType;
-    }
+    }        
     
     
     protected LustreType getSwitchCondType(JsonNode switchBlk) {        
@@ -3656,7 +3629,7 @@ public class J2LTranslator {
     protected Map<Integer, String> getBlkOutportNameAndPort(JsonNode blkNode) {
         Map<Integer, String> names = new HashMap<>();
         
-        if(blkNode.has(CONTENT)) {
+        if(blkNode.has(CONTENT) && blkNode.get(CONTENT).size() > 1) {
             Iterator<Entry<String, JsonNode>> contentFields = blkNode.get(CONTENT).fields();
 
             while(contentFields.hasNext()) {
@@ -3670,14 +3643,34 @@ public class J2LTranslator {
                     }            
                 }            
             }            
+        } else if(blkNode.has(SFCONTENT)) {
+            JsonNode sfContentNode = blkNode.get(SFCONTENT);
+            
+            if(sfContentNode.has(DATA)) {
+                Iterator<JsonNode> dataFields = sfContentNode.get(DATA).elements();
+                
+                while(dataFields.hasNext()) {
+                    JsonNode dataField = dataFields.next();
+                    
+                    if(dataField.has(SCOPE) && dataField.get(SCOPE).asText().equals(OUTPUT)) {
+                        names.put(dataField.get(PORT).asInt(), dataField.get(NAME).asText());
+                    }
+                }
+            }             
+        } else {
+            LOGGER.log(Level.SEVERE, "Unexpected: no content or sfcontent definition!");
         }                             
         return names;   
     }    
 
     
-    String getOriginPath(JsonNode blk) {
+    String getPath(JsonNode blk) {
         return blk.get(PATH).asText();
     }
+    
+    String getOriginPath(JsonNode blk) {
+        return blk.get(ORIGIN).asText();
+    }    
 
     List<Integer> getInportDimensions(JsonNode blk) {
         List<Integer>   dimentsions = new ArrayList<>();
@@ -3806,14 +3799,7 @@ public class J2LTranslator {
     
     protected boolean isNumType(LustreType type) {
         return type == PrimitiveType.REAL || type == PrimitiveType.INT;
-    }  
-    
-    protected String sanitizeName(String name) {
-        return name.trim().replace(" ", "_").replace("\n", "_").replace("=", "_")
-                .replace(">", "_").replace("<", "_").replace("/", "_").replace("\\", "_")
-                .replace("-", "_").replace("+", "_").replace("$", "_").replace("*", "_")
-                .replace("(", "_").replace(")", "_").replace(",", "_");
-    }
+    }      
     
     protected List<JsonNode> getBlksFromSubSystemByType(JsonNode subsystemNode, String blkType) {
         List<JsonNode> blkNodes = new ArrayList();
@@ -3829,5 +3815,52 @@ public class J2LTranslator {
         }
         return blkNodes;
     }      
+    public String sanitizeName(String name) {
+        return name.trim().replace(" ", "_").replace("\n", "_").replace("=", "_")
+                .replace(">", "_").replace("<", "_").replace("/", "_").replace("\\", "_")
+                .replace("-", "_").replace("+", "_").replace("$", "_").replace("*", "_")
+                .replace("(", "_").replace(")", "_").replace(",", "_");
+    }    
     
+    /**
+     * 
+     * @param type
+     * @return The corresponding Lustre type from its string representation
+     */
+    public LustreType getLustreTypeFromStrRep(String type) {
+        LustreType lusType = null;
+        
+        switch(type.toLowerCase()) {
+            case "float": 
+            case "single":                
+            case "double": {
+                lusType = PrimitiveType.REAL;
+                break;
+            }
+            case "integer": 
+            case "int": 
+            case "int64":     
+            case "int32": 
+            case "int16": 
+            case "int8": 
+            case "uint8":
+            case "uint16":
+            case "sfix64":                
+            case "uint32":{
+                lusType = PrimitiveType.INT;
+                break;                
+            }            
+            case "boolean": 
+            case "bool": {
+                lusType = PrimitiveType.BOOL;
+                break;                
+            }        
+            default: {
+                LOGGER.log(Level.SEVERE, "Unsupported type: {0}", type);
+                break;
+            }                
+        }
+        
+        return lusType;
+    }     
 }

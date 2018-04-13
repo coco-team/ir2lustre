@@ -27,6 +27,7 @@ public class UnaryExpr extends LustreExpr {
         
         NOT ("not"),
         PRE ("pre"),
+        LAST ("last"),
         NEG("-");
 
         private final String opStr;
@@ -39,5 +40,12 @@ public class UnaryExpr extends LustreExpr {
         public String toString() {
             return this.opStr;
         }    
+    }    
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(this.op).append(" ");
+        sb.append(this.expr);
+        return sb.toString();
     }    
 }

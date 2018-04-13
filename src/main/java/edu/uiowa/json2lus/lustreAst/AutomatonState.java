@@ -1,0 +1,59 @@
+/*
+ * This file is part of CoCoSim_IR_Compiler.
+ * Copyright (C) 2017-2018  The University of Iowa
+ */
+
+package edu.uiowa.json2lus.lustreAst;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ *
+ * @author Paul Meng
+ */
+public class AutomatonState extends LustreAst{
+    boolean             isInit = false;
+    String              name;
+    List<LustreVar>     locals;  
+    List<LustreAst>     equations;  
+    LustreExpr          strongTrans;  
+    LustreExpr          weakTrans;  
+
+    public AutomatonState(boolean isInit, String name, List<LustreVar> locals, List<LustreAst> equations, LustreExpr strongTrans, LustreExpr weakTrans) {
+        this.name           = name;
+        this.locals         = locals;
+        this.equations      = equations;
+        this.isInit         = isInit;
+        this.strongTrans    = strongTrans;
+        this.weakTrans      = weakTrans;
+    }   
+    
+    public AutomatonState(boolean isInit, String name, List<LustreVar> locals, List<LustreAst> equations, LustreExpr strongTrans) {
+        this.name           = name;
+        this.locals         = locals;
+        this.equations      = equations;
+        this.isInit         = isInit;
+        this.strongTrans    = strongTrans;
+        this.weakTrans      = null;
+    }       
+    
+    public AutomatonState(boolean isInit, String name, List<LustreVar> locals, List<LustreAst> equations) {
+        this.name       = name;
+        this.locals     = locals;
+        this.equations  = equations;
+        this.isInit     = isInit;
+    }
+    
+    public AutomatonState(boolean isInit, String name, List<LustreAst> equations) {
+        this.isInit     = isInit;
+        this.name       = name;
+        this.locals     = new ArrayList<>();
+        this.equations  = equations;
+    }    
+
+    @Override
+    public void accept(LustreAstVisitor visitor) {
+        visitor.visit(this);
+    }
+}
