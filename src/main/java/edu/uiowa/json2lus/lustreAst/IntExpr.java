@@ -17,6 +17,10 @@ public class IntExpr extends LustreExpr {
     public IntExpr(BigInteger value) {
         this.value = value;
     }
+    
+    public IntExpr(int value) {
+        this.value = new BigInteger(String.valueOf(value));
+    }    
 
     @Override
     public void accept(LustreAstVisitor visitor) {

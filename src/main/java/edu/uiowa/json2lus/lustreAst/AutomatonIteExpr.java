@@ -21,6 +21,13 @@ public class AutomatonIteExpr extends LustreExpr {
         this.resumeExpr     = resumeExpr;
         this.elseExpr       = elseExpr;
     }
+    
+    public AutomatonIteExpr(LustreExpr ifExpr, LustreExpr restartExpr, LustreExpr resumeExpr) {
+        this.ifExpr         = ifExpr;
+        this.restartExpr    = restartExpr;
+        this.resumeExpr     = resumeExpr;
+        this.elseExpr       = null;
+    }    
 
     @Override
     public void accept(LustreAstVisitor visitor) {

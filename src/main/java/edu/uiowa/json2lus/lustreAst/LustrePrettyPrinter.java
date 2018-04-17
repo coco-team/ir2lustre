@@ -436,13 +436,13 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
         sb.append("state ");
         sb.append(state.name).append(":").append(NL);
         
-        sb.append(TAB);
-        if(state.strongTrans != null) {
+        for(LustreExpr strongExpr : state.strongTrans) {
+            sb.append(TAB);            
             sb.append("unless ");            
-            if(state.strongTrans instanceof AutomatonIteExpr) {
-                visit((AutomatonIteExpr)state.strongTrans);
+            if(strongExpr instanceof AutomatonIteExpr) {
+                visit((AutomatonIteExpr)strongExpr);
             }
-            sb.append(NL);
+            sb.append(NL);            
         }
         
         if(state.locals.size() > 0) {
@@ -456,51 +456,63 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
             sb.append(";");            
         }
         sb.append(TAB).append("let").append(NL);
-        for(LustreAst eq : state.equations) {
-            sb.append(TAB).append(TAB);
+        for(LustreAst eq : state.equations) {            
             if(eq instanceof LustreEq) {
+                sb.append(TAB).append(TAB);
                 visit((LustreEq)eq);
                 sb.append(NL);
             }            
         }
         sb.append(TAB).append("tel").append(NL);
         
-        if(state.weakTrans != null) {
+        for(LustreExpr weakExpr : state.weakTrans) {
             sb.append(TAB);
             sb.append("until ");
-            if(state.weakTrans instanceof AutomatonIteExpr) {
-                visit((AutomatonIteExpr)state.weakTrans);
+            if(weakExpr instanceof AutomatonIteExpr) {
+                visit((AutomatonIteExpr)weakExpr);
                 sb.append(";").append(NL);
-            }
+            }            
         }
+
         sb.append(NL);
     }
 
     @Override
     public void visit(AutomatonIteExpr iteExpr) {
-        sb.append("if ");
-        iteExpr.ifExpr.accept(this);
-        if(iteExpr.restartExpr != null) {
-            sb.append(" restart ");
-            iteExpr.restartExpr.accept(this);            
-        } else if(iteExpr.resumeExpr != null) {
-            sb.append(" resume ");
-            iteExpr.resumeExpr.accept(this);              
-        }
-        sb.append(NL);
-        if(iteExpr.elseExpr instanceof AutomatonIteExpr) {
-            sb.append(TAB+TAB+TAB+TAB);
-            sb.append(" els");
-            iteExpr.elseExpr.accept(this);
+        if(iteExpr.elseExpr != null) {
+            sb.append("if ");
+            iteExpr.ifExpr.accept(this);
+            if(iteExpr.restartExpr != null) {
+                sb.append(" restart ");
+                iteExpr.restartExpr.accept(this);            
+            } else if(iteExpr.resumeExpr != null) {
+                sb.append(" resume ");
+                iteExpr.resumeExpr.accept(this);              
+            }
             sb.append(NL);
-        } else if(iteExpr.elseExpr == null){   
-            sb.append(TAB+TAB+TAB+TAB);
-            sb.append(" end;");
+            if(iteExpr.elseExpr instanceof AutomatonIteExpr) {
+                sb.append(TAB+TAB+TAB+TAB);
+                sb.append(" els");
+                iteExpr.elseExpr.accept(this);
+                sb.append(NL);
+            } else if(iteExpr.elseExpr == null){   
+                sb.append(TAB+TAB+TAB+TAB);
+                sb.append(" end;");
+            } else {
+                sb.append(TAB+TAB+TAB+TAB);
+                sb.append(" else ");
+                iteExpr.elseExpr.accept(this);
+                sb.append(" end;");                           
+            }            
         } else {
-            sb.append(TAB+TAB+TAB+TAB);
-            sb.append(" else ");
-            iteExpr.elseExpr.accept(this);
-            sb.append(" end;");                           
+            iteExpr.ifExpr.accept(this);
+            if(iteExpr.restartExpr != null) {
+                sb.append(" restart ");
+                iteExpr.restartExpr.accept(this);            
+            } else if(iteExpr.resumeExpr != null) {
+                sb.append(" resume ");
+                iteExpr.resumeExpr.accept(this);              
+            }            
         }
     }
 }

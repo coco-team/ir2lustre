@@ -296,15 +296,15 @@ public class J2LTranslator {
         for(int i = this.subsystemNodes.size()-1; i >= 0; i--) {
             JsonNode subsystemNode = this.subsystemNodes.get(i);
             // Translate each subsystem node
-            LustreAst ast = null;
+            List<LustreAst> asts = new ArrayList<>();
             
             if(subsystemNode.has(SFCONTENT) && subsystemNode.get(SFCONTENT).size() > 0) {
                 Sf2LTranslator sfTranslator = new Sf2LTranslator();                
-                ast = sfTranslator.translate(subsystemNode);
+                asts = sfTranslator.translate(subsystemNode);
             } else if(subsystemNode.has(CONTENT) && subsystemNode.get(CONTENT) != null) {
-                ast = translateSubsystemNode(subsystemNode);
+                asts.add(translateSubsystemNode(subsystemNode));
             }
-            if(ast != null) {
+            for(LustreAst ast : asts) {
                 if(ast instanceof LustreNode) {
                     this.lustreProgram.addNode((LustreNode)ast);
                 } else if(ast instanceof LustreContract) {
@@ -313,8 +313,8 @@ public class J2LTranslator {
                         this.lustreProgram.addNodes(this.auxLusNode);
                         this.auxLusNode.clear();
                     }
-                }
-            }            
+                }                
+            }
         }
         return this.lustreProgram;
     }

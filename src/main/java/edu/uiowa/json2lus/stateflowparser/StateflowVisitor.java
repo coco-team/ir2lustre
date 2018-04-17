@@ -172,7 +172,7 @@ public class StateflowVisitor extends StateflowBaseVisitor {
             String              nodeName    = assignmentExpr.ID(assignmentExpr.ID().size()-1).getSymbol().getText();
             
             for(int i = 0; i < assignmentExpr.ID().size()-1; ++i) {
-                ids.add(new VarIdExpr(assignmentExpr.ID(0).getSymbol().getText()));
+                ids.add(new VarIdExpr(assignmentExpr.ID(i).getSymbol().getText()));
             }
             for(ExprContext expr : assignmentExpr.expr()) {
                 LustreAst ast = visitExpr(expr);
