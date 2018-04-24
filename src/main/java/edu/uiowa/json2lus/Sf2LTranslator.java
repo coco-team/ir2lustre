@@ -107,13 +107,14 @@ public class Sf2LTranslator {
      */    
     public List<LustreAst> translate(JsonNode subsystemNode) {     
         List<LustreAst> asts = new ArrayList<>();
-        String nodeName = J2LUtils.sanitizeName(subsystemNode.get(PATH).asText());
+        String sfName = J2LUtils.sanitizeName(subsystemNode.get(PATH).asText());
         
-        LOGGER.log(Level.INFO, "******************** Start translating stateflow chart with name: {0}", nodeName);
+        LOGGER.log(Level.INFO, "******************** Start translating stateflow chart with name: {0}", sfName);
         
+        // Collect information about states, junctions, and functions
         JsonNode automatonNode = subsystemNode.get(SFCONTENT);                
         Iterator<Map.Entry<String, JsonNode>> chartFields = automatonNode.fields();
-
+        
         while(chartFields.hasNext()) {
             Map.Entry<String, JsonNode> field = chartFields.next(); 
             
@@ -353,7 +354,7 @@ public class Sf2LTranslator {
         // Create functions
         asts.addAll(createFunctions());
         
-        asts.add(new LustreNode(nodeName, new LustreAutomaton(automatonName, this.autoStates), newInputs, newOutputs, newLocals));
+        asts.add(new LustreNode(sfName, new LustreAutomaton(automatonName, this.autoStates), newInputs, newOutputs, newLocals));
         LOGGER.log(Level.INFO, "******************** Done ********************");
         return asts;
     }
@@ -372,14 +373,15 @@ public class Sf2LTranslator {
             JsonNode            junctionNode        = this.junctionIdToNode.get(junctionId);                        
             List<JsonNode>      outerTransitions    = getJunctionOuterTransitions(junctionNode);
             String              transitToJunctionName  = stateName + "_" + EXIT + "_" + getJunctionName(junctionNode) + "_" + ENTRY;             
-            LinkedHashMap<LustreExpr, List<LustreEq>> condExprToActs = new LinkedHashMap<>();
+            LinkedHashMap<LustreExpr, List<LustreEq>> condToFinalActs   = new LinkedHashMap<>();
+            LinkedHashMap<LustreExpr, List<LustreEq>> condToCondActs    = new LinkedHashMap<>();
             
             // Handle outer transitions
             for(JsonNode transNode : outerTransitions) {                
                 if(transNode.has(DEST)) {
-                    String conditionStr    = getCondForTransition(transNode);
-                    List<String> condActStrs = getCondActForTransition(transNode);                    
-                    String transitActStr   = getTransitActForTransition(transNode);
+                    String          conditionStr    = getCondForTransition(transNode);
+                    List<String>    condActStrs     = getCondActForTransition(transNode);                    
+                    String          transitActStr   = getTransitActForTransition(transNode);
                     List<LustreEq>      newTransitActEqs    = new ArrayList<>();  
                     List<LustreEq>      newCondActEqs       = new ArrayList<>();  
                     List<LustreExpr>    newConditionExprs   = new ArrayList<>();
@@ -402,7 +404,7 @@ public class Sf2LTranslator {
                             newTransitActEqs.add((LustreEq)ast);
                         }                                   
                     }                              
-                    translateJunctionTransition(transNode, actStateVarId, newTransitActEqs, newCondActEqs, newConditionExprs, condExprToActs);                    
+                    translateJunctionTransition(transNode, actStateVarId, newTransitActEqs, newCondActEqs, newConditionExprs, condToFinalActs);                    
                 } else {
                     LOGGER.log(Level.SEVERE, "A junction does not have outer transition destination!");
                 }
@@ -412,7 +414,7 @@ public class Sf2LTranslator {
         }       
     }
     
-    protected void translateJunctionTransition(JsonNode transNode, VarIdExpr actStateId, List<LustreEq> transitActEqs, List<LustreEq> condActEqs, List<LustreExpr> conditionExprs, LinkedHashMap<LustreExpr, List<LustreEq>> condExprToActs) {
+    protected void translateJunctionTransition(JsonNode transNode, VarIdExpr actStateId, List<LustreEq> transitActEqs, List<LustreEq> condActEqs, List<LustreExpr> conditionExprs, LinkedHashMap<LustreExpr, List<LustreEq>> condToFinalActs) {
         if(transNode.get(DEST).has(DEST)) {
             String transitType = transNode.get(DEST).get(DEST).get(TYPE).asText();
 
@@ -446,7 +448,7 @@ public class Sf2LTranslator {
                             }                                   
                         }      
                         
-                        translateJunctionTransition(transNode, actStateId, newTransitActEqs, newCondActEqs, newConditionExprs, condExprToActs);                        
+                        translateJunctionTransition(transNode, actStateId, newTransitActEqs, newCondActEqs, newConditionExprs, condToFinalActs);                        
                     }
                     break;
                 }
@@ -473,7 +475,7 @@ public class Sf2LTranslator {
                     // Set the next active state ID
                     newTransitActEqs.add(new LustreEq(actStateId, new IntExpr(this.stateIdToActId.get(destStateId))));
                     
-                    condExprToActs.put(J2LUtils.andExprs(conditionExprs), newTransitActEqs);
+                    condToFinalActs.put(J2LUtils.andExprs(conditionExprs), newTransitActEqs);
                     // Build the new state name for the transition
 
                     break;

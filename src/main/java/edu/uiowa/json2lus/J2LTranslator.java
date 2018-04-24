@@ -552,14 +552,14 @@ public class J2LTranslator {
                 // Collect inport, outport, property, contract, validator blocks
                 if(contBlkType.equals(INPORT)) {
                     if(!isContractBlk(subsystemNode)) {
-                        addMappingInfo(getBlkHandle(contBlkNode), getPath(contBlkNode), lusNodeName, null, null, null, null, getQualifiedBlkName(contBlkNode));    
+                        addMappingInfo(getBlkHandle(contBlkNode), getPath(contBlkNode), lusNodeName, null, null, null, null, getBlkName(contBlkNode));    
                     } else {
-                        addMappingInfo(getBlkHandle(contBlkNode), getPath(contBlkNode), null, lusNodeName, null, null, null, getQualifiedBlkName(contBlkNode));    
+                        addMappingInfo(getBlkHandle(contBlkNode), getPath(contBlkNode), null, lusNodeName, null, null, null, getBlkName(contBlkNode));    
                     }                 
                     inports.put(getBlkPortPosition(contBlkNode), contBlkNode);
                 } else if(contBlkType.equals(OUTPORT)) {
                     if(!isContractBlk(subsystemNode)) {
-                        addMappingInfo(getBlkHandle(contBlkNode), getPath(contBlkNode), lusNodeName, null, null, null, null, getQualifiedBlkName(contBlkNode));    
+                        addMappingInfo(getBlkHandle(contBlkNode), getPath(contBlkNode), lusNodeName, null, null, null, null, getBlkName(contBlkNode));    
                     }                    
                     outports.put(getBlkPortPosition(contBlkNode), contBlkNode);
                 } else if(isPropertyBlk(contBlkNode)) {
