@@ -19,6 +19,7 @@ import java.util.logging.Logger;
  * @author Paul Meng
  */
 public class J2LUtils {
+    public static int COUNT = 0;
     private static final Logger LOGGER = Logger.getLogger(J2LUtils.class.getName());    
     
     public static String sanitizeName(String name) {
@@ -95,5 +96,17 @@ public class J2LUtils {
             orExpr = new BooleanExpr(false);
         }
         return orExpr;
-    }       
+    } 
+    
+    
+    public static String getFreshVar(String varName) {
+        String newVarName = varName;
+        
+        if(newVarName == null) {
+            newVarName = "_" + (++COUNT);
+        } else {
+            newVarName += "_"+(++COUNT);
+        }
+        return newVarName;
+    }     
 }

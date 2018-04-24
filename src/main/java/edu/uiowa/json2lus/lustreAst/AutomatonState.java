@@ -14,11 +14,11 @@ import java.util.List;
  */
 public class AutomatonState extends LustreAst{
     boolean             isInit = false;
-    String              name;
-    List<LustreVar>     locals;  
-    List<LustreEq>      equations;  
-    List<LustreExpr>    strongTrans;  
-    List<LustreExpr>    weakTrans;  
+    public String              name;
+    public List<LustreVar>     locals;  
+    public List<LustreEq>      equations;  
+    public List<LustreExpr>    strongTrans;  
+    public List<LustreExpr>    weakTrans;  
 
     public AutomatonState(boolean isInit, String name, List<LustreVar> locals, List<LustreExpr> strongTrans, List<LustreEq> equations, List<LustreExpr> weakTrans) {
         this.name           = name;

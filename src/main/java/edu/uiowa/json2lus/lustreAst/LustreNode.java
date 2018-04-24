@@ -43,7 +43,19 @@ public class LustreNode extends LustreAst {
         this.bodyExprs  = bodyExprs;
         this.propExprs  = props;
         this.automata   = null;
-    }    
+    }
+
+        
+    public LustreNode(String name, List<LustreVar> inputs, List<LustreVar> outputs, List<LustreVar> locals, List<LustreEq> bodyExprs) {
+        this.isMain     = false;
+        this.name       = name;
+        this.inputVars  = inputs;
+        this.outputVars = outputs;
+        this.localVars  = locals;
+        this.bodyExprs  = bodyExprs;
+        this.propExprs  = new ArrayList<>();
+        this.automata   = null;
+    }
 
     public LustreNode(boolean isMain, String name, List<LustreVar> inputs, List<LustreVar> outputs, List<LustreEq> bodyExprs) {
         this.name       = name;

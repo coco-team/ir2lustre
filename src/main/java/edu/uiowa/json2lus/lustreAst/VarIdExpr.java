@@ -10,11 +10,15 @@ package edu.uiowa.json2lus.lustreAst;
  * @author Paul Meng
  */
 public class VarIdExpr extends LustreExpr {
-    public final String id;
+    public String id;
     
     public VarIdExpr (String id) {
         this.id = id;
     }
+    
+    public void setVarId (String id) {
+        this.id = id;
+    }    
     
     @Override
     public void accept(LustreAstVisitor visitor) {

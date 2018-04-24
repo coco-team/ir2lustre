@@ -442,7 +442,7 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
             if(strongExpr instanceof AutomatonIteExpr) {
                 visit((AutomatonIteExpr)strongExpr);
             }
-            sb.append(NL);            
+            sb.append(";").append(NL);            
         }
         
         if(state.locals.size() > 0) {
@@ -454,6 +454,7 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
             sb.append(TAB).append(TAB);            
             var.accept(this);
             sb.append(";");            
+            sb.append(NL);
         }
         sb.append(TAB).append("let").append(NL);
         for(LustreAst eq : state.equations) {            

@@ -60,7 +60,11 @@ public class StateflowVisitor extends StateflowBaseVisitor {
             }            
         } else if(ctx.statBlock() != null && ctx.statBlock().size() > 0) {
             for(StatBlockContext sb : ctx.statBlock()) {
-               asts.add(visitStatBlock(sb));
+                if(visitStatBlock(sb) != null) {
+                    asts.add(visitStatBlock(sb));
+                } else {
+                    LOGGER.log(Level.WARNING, "Generated a null expression but it might not be a big deal!");
+                }          
             }
         }
         return asts;
@@ -82,7 +86,7 @@ public class StateflowVisitor extends StateflowBaseVisitor {
         } else if(ctx.expr() != null) {
             ast = visitExpr(ctx.expr());
         } else {
-            LOGGER.log(Level.SEVERE, "Unsupported state flow statement: ", ctx.toString());
+            LOGGER.log(Level.SEVERE, "Unsupported state flow statement: {0}", ctx.toString());
         }
         return ast;
     } 
@@ -109,7 +113,7 @@ public class StateflowVisitor extends StateflowBaseVisitor {
         if(dotRef.ID().size() == 1) {
             idExpr = new VarIdExpr(dotRef.ID().get(0).getSymbol().getText());
         } else {
-            LOGGER.log(Level.SEVERE, "Unsupported state flow statement: ", dotRef.toString());
+            LOGGER.log(Level.SEVERE, "Unsupported state flow statement: {0}", dotRef.toString());
         }
         return idExpr;
     }
@@ -143,12 +147,13 @@ public class StateflowVisitor extends StateflowBaseVisitor {
             
             if(assignmentExpr.expr().isEmpty()) {
                 if(assignmentExpr.PLUSPLUS() != null) {
-                    equation = new LustreEq(varId, new BinaryExpr(new UnaryExpr(UnaryExpr.Op.LAST, varId), BinaryExpr.Op.PLUS, new IntExpr(BigInteger.ONE)));                    
+                    equation = new LustreEq(varId, new BinaryExpr(varId, BinaryExpr.Op.PLUS, new IntExpr(BigInteger.ONE)));                    
                 } else if(assignmentExpr.MINUSMINUS() != null) {
-                    equation = new LustreEq(varId, new BinaryExpr(new UnaryExpr(UnaryExpr.Op.LAST, varId), BinaryExpr.Op.MINUS, new IntExpr(BigInteger.ONE)));                    
+                    equation = new LustreEq(varId, new BinaryExpr(varId, BinaryExpr.Op.MINUS, new IntExpr(BigInteger.ONE)));                    
                 }
             } else {
                 BinaryExpr.Op op = null;
+                
                 if(assignmentExpr.PLUSASSIGN() != null) {
                     op = BinaryExpr.Op.PLUS;
                 } else if(assignmentExpr.MINUSASSIGN() != null) {
@@ -158,13 +163,17 @@ public class StateflowVisitor extends StateflowBaseVisitor {
                 } else if(assignmentExpr.DIVIDEASSIGN() != null) {
                     op = BinaryExpr.Op.DIVIDE;
                 }
-                LustreExpr  rhsExpr = null;
-                LustreAst   rhsAst = visitExpr(assignmentExpr.expr(0));
+                if(op != null) {
+                    LustreExpr  rhsExpr = null;
+                    LustreAst   rhsAst = visitExpr(assignmentExpr.expr(0));
 
-                if(rhsAst instanceof LustreExpr) {
-                    rhsExpr = (LustreExpr)rhsAst;
-                }
-                equation = new LustreEq(varId, new BinaryExpr(new UnaryExpr(UnaryExpr.Op.LAST, varId), op, rhsExpr));                
+                    if(rhsAst instanceof LustreExpr) {
+                        rhsExpr = (LustreExpr)rhsAst;
+                    }
+                    equation = new LustreEq(varId, new BinaryExpr(varId, op, rhsExpr));                        
+                } else {
+                    equation = new LustreEq(varId, (LustreExpr)visitExpr(assignmentExpr.expr(0)));
+                }            
             }
         } else {            
             List<LustreExpr>    ids         = new ArrayList<>();
