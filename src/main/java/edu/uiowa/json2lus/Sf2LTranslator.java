@@ -302,6 +302,7 @@ public class Sf2LTranslator {
         List<LustreVar> newOutputs   = new ArrayList<>();
         List<LustreVar> newLocals    = new ArrayList<>();
         Map<String, LustreType>     strInputs    = new HashMap<>();
+        Map<String, LustreType>     strLocals    = new HashMap<>();
         Map<String, LustreType>     strOutputs   = new LinkedHashMap<>();
         
         for(int i = 1; i <= this.inputs.size(); ++i) {
@@ -326,6 +327,7 @@ public class Sf2LTranslator {
             String      localName   = localNode.get(NAME).asText();
             LustreType  type        = J2LUtils.getLustreTypeFromStrRep(localNode.get(COMPILEDTYPE).asText());
             newLocals.add(new LustreVar(localName, type));
+            strLocals.put(localName, type);
         }
         
         // Create SSA form for each state's equations        
@@ -334,7 +336,7 @@ public class Sf2LTranslator {
         for(AutomatonState state : this.autoStates) {      
             Map<String, String> varToLastName = new HashMap<>();
             
-            createSSAForm(state.equations, strInputs, strOutputs, state.locals, varToLastName);
+            createSSAForm(state.equations, strInputs, strOutputs, strLocals, state.locals, varToLastName);
             varToLastNames.add(varToLastName);
         }
         
@@ -493,9 +495,10 @@ public class Sf2LTranslator {
         for(JsonNode fcnNode : this.functions.values()) {
             Map<String, LustreType> inputs     = new HashMap<>();
             Map<String, LustreType> outputs    = new HashMap<>();
+            Map<String, LustreType> locals     = new HashMap<>();
             List<LustreVar> fcnLocals    = new ArrayList<>();
             List<LustreVar> fcnInputs    = new ArrayList<>();
-            List<LustreVar> fcnOutputs   = new ArrayList<>();  
+            List<LustreVar> fcnOutputs   = new ArrayList<>();
             List<LustreEq>  fcnBody      = new ArrayList<>();
             
             List<LustreEq>      noGuardActExprs = new ArrayList<>();
@@ -522,6 +525,11 @@ public class Sf2LTranslator {
                             outputs.put(name, type);
                             break;
                         }
+                        case LOCAL: {
+                            fcnLocals.add(var);
+                            locals.put(name, type);
+                            break;
+                        }
                         default:
                             LOGGER.log(Level.SEVERE, "Unhandled case: the variable is a {0}", dataNode.get(SCOPE).asText());
                             break;
@@ -539,7 +547,7 @@ public class Sf2LTranslator {
             
             // Create the function body equations
             if(!noGuardActExprs.isEmpty()) {
-                createSSAForm(noGuardActExprs, inputs, outputs, fcnLocals, varToLastName);
+                createSSAForm(noGuardActExprs, inputs, outputs, locals, fcnLocals, varToLastName);
                 fcnBody.addAll(noGuardActExprs);
             }
             
@@ -563,7 +571,7 @@ public class Sf2LTranslator {
         return fcns;
     }
     
-    protected void createSSAForm(List<LustreEq> equations, Map<String, LustreType> inputs, Map<String, LustreType> outputs, List<LustreVar> fcnLocals, Map<String, String> varToLastName) {                
+    protected void createSSAForm(List<LustreEq> equations, Map<String, LustreType> inputs, Map<String, LustreType> outputs, Map<String, LustreType> locals, List<LustreVar> fcnLocals, Map<String, String> varToLastName) {                
         for(int i = 0; i < equations.size(); ++i) {
             LustreExpr          rhs = equations.get(i).getRhs();
             List<LustreExpr>    lhs = equations.get(i).getLhs();
@@ -576,7 +584,7 @@ public class Sf2LTranslator {
                 replaceRhsVars(0, rhs, varToLastName, outputs);
             }              
             
-            // Replace lhs input variables with new variables
+            // Replace variables in the lhs expression with new variables
             for(LustreExpr lhsExpr : lhs) {
                 if(lhsExpr instanceof VarIdExpr) {
                     String lhsExprName = ((VarIdExpr)lhsExpr).id;
@@ -587,8 +595,10 @@ public class Sf2LTranslator {
                         
                         if(inputs.containsKey(lhsExprName)) {
                             type = inputs.get(lhsExprName);
-                        } else {
+                        } else if(outputs.containsKey(lhsExprName)){
                             type = outputs.get(lhsExprName);
+                        } else {
+                            type = locals.get(lhsExprName);
                         }
                         
                         ((VarIdExpr) lhsExpr).setVarId(newVarName);

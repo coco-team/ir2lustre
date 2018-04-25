@@ -443,11 +443,11 @@ public class J2LTranslator {
             // Translate assumption blocks
             if(isAssumeBlk(inBlk)) {
                 assumptions.add(translateBlock(false, inHdls.get(i), contractNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, new HashSet<String>(), null, inPorts.get(i)));
-                addMappingInfo(inHdls.get(i), originPath, null, contractName, null, ASSUME, String.valueOf(aIndex++), null);                
+                addMappingInfo(originPath, null, contractName, null, ASSUME, String.valueOf(aIndex++), null);                
             // Translate guarantee blocks                
             } else if(isGuaranteeBlk(inBlk)) {
                 guarantees.add(translateBlock(false, inHdls.get(i), contractNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, new HashSet<String>(), null, inPorts.get(i)));
-                addMappingInfo(inHdls.get(i), originPath, null, contractName, null, GUARANTEE, String.valueOf(gIndex++), null);                
+                addMappingInfo(originPath, null, contractName, null, GUARANTEE, String.valueOf(gIndex++), null);                
             } else if(isModeBlk(inBlk)) {
                 // Set up data structures for requires and ensures of modes
                 int rIndex = 1, eIndex = 1;
@@ -465,10 +465,10 @@ public class J2LTranslator {
                     
                     if(isRequireBlk(modeInBlk)) {
                         requires.add(modeInBlkExpr);
-                        addMappingInfo(modeInHdls.get(j), originPath, null, contractName, modeName, REQUIRE, String.valueOf(rIndex++), null);
+                        addMappingInfo(originPath, null, contractName, modeName, REQUIRE, String.valueOf(rIndex++), null);
                     } else if(isEnsureBlk(modeInBlk)) {
                         ensures.add(modeInBlkExpr);
-                        addMappingInfo(modeInHdls.get(j), originPath, null, contractName, modeName, ENSURE, String.valueOf(eIndex++), null);                        
+                        addMappingInfo(originPath, null, contractName, modeName, ENSURE, String.valueOf(eIndex++), null);                        
                     }
                 }
                 if(!requires.isEmpty()) {
@@ -479,7 +479,10 @@ public class J2LTranslator {
                 }                
             }
         }
-        outputs.clear();
+        // Clear the outputs because later we will regenerate outputs for contracts
+        outputs.clear();        
+        
+        // Create the contract 
         LustreContract contract = new LustreContract(contractName, assumptions, guarantees, inputs, outputs, this.auxNodeLocalVars, this.auxNodeEqs, modeToRequires, modeToEnsures);
         this.auxNodeEqs.clear();
         this.auxNodeLocalVars.clear();
@@ -552,14 +555,14 @@ public class J2LTranslator {
                 // Collect inport, outport, property, contract, validator blocks
                 if(contBlkType.equals(INPORT)) {
                     if(!isContractBlk(subsystemNode)) {
-                        addMappingInfo(getBlkHandle(contBlkNode), getPath(contBlkNode), lusNodeName, null, null, null, null, getBlkName(contBlkNode));    
+                        addMappingInfo(getPath(contBlkNode), lusNodeName, null, null, null, null, getBlkName(contBlkNode));    
                     } else {
-                        addMappingInfo(getBlkHandle(contBlkNode), getPath(contBlkNode), null, lusNodeName, null, null, null, getBlkName(contBlkNode));    
+                        addMappingInfo(getPath(contBlkNode), null, lusNodeName, null, null, null, getBlkName(contBlkNode));    
                     }                 
                     inports.put(getBlkPortPosition(contBlkNode), contBlkNode);
                 } else if(contBlkType.equals(OUTPORT)) {
                     if(!isContractBlk(subsystemNode)) {
-                        addMappingInfo(getBlkHandle(contBlkNode), getPath(contBlkNode), lusNodeName, null, null, null, null, getBlkName(contBlkNode));    
+                        addMappingInfo(getPath(contBlkNode), lusNodeName, null, null, null, null, getBlkName(contBlkNode));    
                     }                    
                     outports.put(getBlkPortPosition(contBlkNode), contBlkNode);
                 } else if(isPropertyBlk(contBlkNode)) {
@@ -607,11 +610,16 @@ public class J2LTranslator {
         } 
         
         // Translate contract
-        if(isContractBlk(subsystemNode)) {            
+        if(isContractBlk(subsystemNode)) {
+            // Add the contract mapping info
+            addMappingInfo(getPath(subsystemNode), null, getQualifiedBlkName(subsystemNode), null, null, null, null);            
             return translateContractNode(subsystemNode, validatorBlk, inputs, outputs, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap);
         } else {
             // For translated Lustre nodes
             List<LustreAst>     lusNodes    = new ArrayList<>();
+            
+            // Add the Lustre node mapping info
+            addMappingInfo(getPath(subsystemNode), getQualifiedBlkName(subsystemNode), null, null, null, null, null);            
             
             // Attach contracts to nodes
             attachContractsToNode(contractNodes, blkNodeToSrcBlkHdlsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap);
@@ -626,7 +634,7 @@ public class J2LTranslator {
                 for(LustreEq propEq : propEqs) {
                     for(LustreExpr var : propEq.getLhs()) {
                         if(var instanceof VarIdExpr) {
-                            addMappingInfo(getBlkHandle(propNode), propNode.get(ORIGIN).asText(), lusNodeName, null, null, ((VarIdExpr)var).id, null, null);
+                            addMappingInfo(propNode.get(ORIGIN).asText(), lusNodeName, null, null, ((VarIdExpr)var).id, null, null);
                         }
                         
                     }                
@@ -634,16 +642,16 @@ public class J2LTranslator {
                 }
             }   
             
-            // Add auxilary node equations generated during translation
+            // Add auxilary node equations generated  translation
             equations.addAll(this.auxNodeEqs);
             
-            // Add auxilary local variables generated during translation
+            // Add auxilary local variables generated in the translation
             locals.addAll(this.auxNodeLocalVars);               
             
             // Add translated nodes
             LustreNode node = new LustreNode(subsystemNode.equals(this.topLevelNode), lusNodeName, inputs, outputs, locals, equations, props);                                                
             
-            // Clear the auxilary informations
+            // Clear the auxilary information
             this.auxNodeEqs.clear();
             this.auxNodeLocalVars.clear();
             this.auxHdlToExprMap.clear();
@@ -1358,9 +1366,9 @@ public class J2LTranslator {
                                 this.auxNodeLocalVars.add(var);  
                                 
                                 if(isContractBlk(parentSubsystemNode)) {
-                                    addMappingInfo(getBlkHandle(blkNode), getPath(blkNode), null, getBlkName(parentSubsystemNode), null, null, null, var.name);
+                                    addMappingInfo(getPath(blkNode), null, getBlkName(parentSubsystemNode), null, null, null, var.name);
                                 } else {
-                                    addMappingInfo(getBlkHandle(blkNode), getPath(blkNode), getBlkName(parentSubsystemNode), null, null, null, null, var.name);
+                                    addMappingInfo(getPath(blkNode), getBlkName(parentSubsystemNode), null, null, null, null, var.name);
                                 }                                
                                 outputVars.add(var);
                             }   
@@ -1478,9 +1486,9 @@ public class J2LTranslator {
                                 LOGGER.log(Level.SEVERE, "UNEXPECTED init value : {0} for memory or unit delay block", init);
                             }       
                             if(isContractBlk(parentSubsystemNode)) {
-                                addMappingInfo(getBlkHandle(blkNode), getPath(blkNode), null, getBlkName(parentSubsystemNode), null, null, null, varName);
+                                addMappingInfo(getPath(blkNode), null, getBlkName(parentSubsystemNode), null, null, null, varName);
                             } else {
-                                addMappingInfo(getBlkHandle(blkNode), getPath(blkNode), getBlkName(parentSubsystemNode), null, null, null, null, varName);
+                                addMappingInfo(getPath(blkNode), getBlkName(parentSubsystemNode), null, null, null, null, varName);
                             }                            
                             this.auxNodeLocalVars.add(new LustreVar(varName, blkOutType));
                             this.auxNodeEqs.add(new LustreEq(preVarId, preBlkExpr));
@@ -1525,9 +1533,9 @@ public class J2LTranslator {
                                 }
                                 this.auxNodeLocalVars.add(new LustreVar(varName, outTypes.get(i-1)));
                                 if(isContractBlk(parentSubsystemNode)) {
-                                    addMappingInfo(getBlkHandle(blkNode), getPath(blkNode), null, getBlkName(parentSubsystemNode), null, null, null, varName);
+                                    addMappingInfo(getPath(blkNode), null, getBlkName(parentSubsystemNode), null, null, null, varName);
                                 } else {
-                                    addMappingInfo(getBlkHandle(blkNode), getPath(blkNode), getBlkName(parentSubsystemNode), null, null, null, null, varName);
+                                    addMappingInfo(getPath(blkNode), getBlkName(parentSubsystemNode), null, null, null, null, varName);
                                 }                                 
                             }
                             this.auxNodeEqs.add(new LustreEq(actSysOuts, new IteExpr(condExpr, actSysCall, new TupleExpr(elseActSysOuts))));
@@ -2472,12 +2480,9 @@ public class J2LTranslator {
      * @param index 
      * @param variable
      */
-    protected void addMappingInfo(String hdl, String orgPath, String nodeName, String contractName, String modeName, String propName, String index, String variable) {
+    protected void addMappingInfo(String orgPath, String nodeName, String contractName, String modeName, String propName, String index, String variable) {
         Map<String, String> mappingInfo = new LinkedHashMap<>();
         
-        if(hdl != null) {
-            mappingInfo.put(HANDLE, hdl);
-        }
         if(orgPath != null) {
             mappingInfo.put(ORIGINPATH, orgPath);
         }
