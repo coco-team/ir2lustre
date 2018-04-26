@@ -402,19 +402,51 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
     public void visit(ArrayExpr arrayExpr) {
         if(arrayExpr.name != null) {
             sb.append(arrayExpr.name);    
-        } else {
+        } else if(arrayExpr.expr != null){
             arrayExpr.expr.accept(this);
-        }        
-        for(int intD : arrayExpr.intDims) {
-            sb.append("[");
-            sb.append(intD);
-            sb.append("]");            
         }
-        for(String strD : arrayExpr.stringDims) {
+        
+        if(arrayExpr.exprs != null) {
+            visitArrayExpr(0, arrayExpr.intDims, arrayExpr.exprs);
+        } else {
+            for(int intD : arrayExpr.intDims) {
+                sb.append("[");
+                sb.append(intD);
+                sb.append("]");            
+            }
+            for(String strD : arrayExpr.stringDims) {
+                sb.append("[");
+                sb.append(strD);
+                sb.append("]");            
+            }             
+        }              
+    }
+    
+    public void visitArrayExpr(int curDim, List<Integer> intDims, List<LustreExpr> exprs) {
+        if(curDim < intDims.size() - 1) {
+            int i = 0;
+            int dim = intDims.get(curDim);
             sb.append("[");
-            sb.append(strD);
-            sb.append("]");            
-        }        
+            for(; i < dim; ++i) {
+                visitArrayExpr(curDim+1, intDims, exprs);
+                if(i != dim-1) {
+                    sb.append(", ");
+                }
+            }
+            sb.append("]");
+        } else if(curDim == intDims.size() - 1) {             
+            int dim = intDims.get(curDim);  
+            for(int i = 0; i < dim; ++i) {
+                exprs.get(i).accept(this);
+                if(i != dim-1) {
+                    sb.append(", ");
+                }                
+            }
+            //Remove the ones that have been printed
+            for(int i = 0; i < dim; ++i) {
+                exprs.remove(0);
+            }
+        }
     }
 
     @Override

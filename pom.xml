@@ -24,8 +24,7 @@
             <artifactId>commons-cli</artifactId>
             <version>1.4</version>
             <type>jar</type>
-        </dependency>   
-        
+        </dependency>         
         <!-- Jackson dependency -->
         <!-- the core, which includes Streaming API, shared low-level abstractions (but NOT data-binding) -->
         <dependency>

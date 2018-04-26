@@ -150,7 +150,7 @@ public class Sf2LTranslator {
         VarIdExpr           actVarId                = new VarIdExpr("activeStateId");        
         String              automatonName           = J2LUtils.sanitizeName(automatonNode.get(PATH).asText());
         
-        // Set the initial state
+        // Set the entry state
         if(this.stateIdToNode.containsKey(this.entryStateId)) {
             initNode    = this.stateIdToNode.get(this.entryStateId);
             VarIdExpr initStateExpr   = new VarIdExpr(getStateName(initNode));
@@ -158,7 +158,7 @@ public class Sf2LTranslator {
             weakTransitExpr = new AutomatonIteExpr(new BooleanExpr(true), initStateExpr, null);
         }       
         
-        // Translating states
+        // Translating states except for the entry state
         for(JsonNode stateNode : this.stateIdToNode.values()) {
             if(getStateId(stateNode).equals(this.entryStateId)) {
                 continue;
