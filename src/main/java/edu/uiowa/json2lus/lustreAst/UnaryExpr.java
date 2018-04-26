@@ -28,7 +28,9 @@ public class UnaryExpr extends LustreExpr {
         NOT ("not"),
         PRE ("pre"),
         LAST ("last"),
-        NEG("-");
+        NEG("-"),
+        REAL("real"),
+        INT("int");
 
         private final String opStr;
 

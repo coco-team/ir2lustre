@@ -238,12 +238,16 @@ public class J2LTranslator {
     private final String CONTRACTNAME   = "ContractName";                             
     
     /** Lustre node names for type conversions */
+    private final String INT            = "int";
+    private final String REAL           = "real";
+    private final String BOOL           = "bool";
+    
     private final String BOOLTOINT      = "bool_to_int";
     private final String INTTOBOOL      = "int_to_bool";    
     private final String BOOLTOREAL     = "bool_to_real";
     private final String REALTOBOOL     = "real_to_bool";    
-    private final String INTTOREAL      = "int_to_real";
-    private final String REALTOINT      = "real_to_int";
+    private final String INTTOREAL      = "real";
+    private final String REALTOINT      = "int";
     private final String RESULTMATRIX   = "result_matrix";
                       
     private JsonNode                                topLevelNode;  
@@ -2800,37 +2804,49 @@ public class J2LTranslator {
             case BOOLTOINT: {                 
                 bodyExprs.add(new LustreEq(outVarExpr, new IteExpr(inVarExpr, new IntExpr(BigInteger.ONE), new IntExpr(BigInteger.ZERO))));
                 this.libNodeNameMap.put(BOOLTOINT, BOOLTOINT);
-                this.lustreProgram.addNode(new LustreNode(nodeName, new LustreVar("in", PrimitiveType.BOOL), new LustreVar("out", PrimitiveType.INT), bodyExprs));                                
+                this.lustreProgram.addNode(new LustreNode(nodeName, new LustreVar(inVarExpr.id, PrimitiveType.BOOL), new LustreVar(outVarExpr.id, PrimitiveType.INT), bodyExprs));                                
                 break;
             }
             case BOOLTOREAL: {
                 bodyExprs.add(new LustreEq(outVarExpr, new IteExpr(inVarExpr, new RealExpr(new BigDecimal("1.0")), new RealExpr(new BigDecimal("0.0")))));
                 this.libNodeNameMap.put(BOOLTOREAL, BOOLTOREAL);
-                this.lustreProgram.addNode(new LustreNode(nodeName, new LustreVar("in", PrimitiveType.BOOL), new LustreVar("out", PrimitiveType.REAL), bodyExprs));                                
+                this.lustreProgram.addNode(new LustreNode(nodeName, new LustreVar(inVarExpr.id, PrimitiveType.BOOL), new LustreVar(outVarExpr.id, PrimitiveType.REAL), bodyExprs));                                
                 break;
             }  
             case INTTOBOOL: {
                 bodyExprs.add(new LustreEq(outVarExpr, new IteExpr(new BinaryExpr(inVarExpr, BinaryExpr.Op.NEQ, new IntExpr(new BigInteger("0"))), new BooleanExpr(true), new BooleanExpr(false))));
                 this.libNodeNameMap.put(INTTOBOOL, INTTOBOOL);
-                this.lustreProgram.addNode(new LustreNode(nodeName, new LustreVar("in", PrimitiveType.INT), new LustreVar("out", PrimitiveType.BOOL), bodyExprs));                                
+                this.lustreProgram.addNode(new LustreNode(nodeName, new LustreVar(inVarExpr.id, PrimitiveType.INT), new LustreVar(outVarExpr.id, PrimitiveType.BOOL), bodyExprs));                                
                 break;
             } 
             case REALTOBOOL: {
                 bodyExprs.add(new LustreEq(outVarExpr, new IteExpr(new BinaryExpr(inVarExpr, BinaryExpr.Op.NEQ, new RealExpr(new BigDecimal("0.0"))), new BooleanExpr(true), new BooleanExpr(false))));
                 this.libNodeNameMap.put(REALTOBOOL, REALTOBOOL);
-                this.lustreProgram.addNode(new LustreNode(nodeName, new LustreVar("in", PrimitiveType.REAL), new LustreVar("out", PrimitiveType.BOOL), bodyExprs));                                
+                this.lustreProgram.addNode(new LustreNode(nodeName, new LustreVar(inVarExpr.id, PrimitiveType.REAL), new LustreVar(outVarExpr.id, PrimitiveType.BOOL), bodyExprs));                                
                 break;
-            }
+            } 
+            case INTTOREAL: {
+                this.libNodeNameMap.put(INTTOREAL, INTTOREAL);
+                break;
+            } 
             case REALTOINT: {
                 this.libNodeNameMap.put(REALTOINT, REALTOINT);
-                LOGGER.log(Level.SEVERE, "Unsupported library node type: {0}", nodeName);
-                this.lustreProgram.addNode(new LustreNode(nodeName, new LustreVar("in", PrimitiveType.REAL), new LustreVar("out", PrimitiveType.INT), bodyExprs));                                
                 break;
-            }            
-            case INTTOREAL: {                
-                this.libNodeNameMap.put(INTTOREAL, INTTOREAL);
-                LOGGER.log(Level.SEVERE, "Unsupported library node type: {0}", nodeName);
-                this.lustreProgram.addNode(new LustreNode(nodeName, new LustreVar("in", PrimitiveType.INT), new LustreVar("out", PrimitiveType.REAL), bodyExprs));                                
+            }
+            case FLOOR: {
+                mkFloorNode();
+                break;
+            }
+            case CEIL: {
+                mkCeilNode();
+                break;
+            }  
+            case ROUND: {
+                mkRoundNode();
+                break;
+            }
+            case FIX: {
+                mkFixNode();
                 break;
             }            
             default:
@@ -2839,11 +2855,10 @@ public class J2LTranslator {
         }                
         return nodeName;
     }
-
     
     /**
      * @param blkNode
-     * @return The name of library Lustre node corresponding to the input JsonNode
+     * @return The name of the library Lustre node corresponding to the input JsonNode
      */
     protected String getOrCreateLustreLibNode(JsonNode blkNode) {
         String path     = blkNode.get(PATH).asText();
@@ -2855,32 +2870,7 @@ public class J2LTranslator {
         }
         switch(blkType) {         
             case ABS: {
-                LustreType  outType = getBlkOutportType(blkNode);
-                
-                if(this.libNodeNameMap.containsKey(ABS+"_"+outType)) {
-                    nodeName = this.libNodeNameMap.get(ABS+"_"+outType);
-                    break;
-                }
-                
-                LustreExpr  zeroExpr = null;
-                
-                if(outType == PrimitiveType.INT) {
-                    nodeName    = nodeName + "_int";
-                    zeroExpr    = new IntExpr(new BigInteger("0"));                    
-                } else if(outType == PrimitiveType.REAL) {
-                    nodeName    = nodeName + "_real";
-                    zeroExpr    = new RealExpr(new BigDecimal("0.0"));
-                } else {
-                    LOGGER.log(Level.SEVERE, "Unsupported library node input and output type: {0}", outType);
-                }
-                
-                VarIdExpr           inVarExpr   = new VarIdExpr("in");
-                VarIdExpr           outVarExpr  = new VarIdExpr("out");   
-                List<LustreEq>      bodyExprs   = new ArrayList<>();                  
-    
-                bodyExprs.add(new LustreEq(outVarExpr, new IteExpr(new BinaryExpr(inVarExpr, BinaryExpr.Op.GTE, zeroExpr), inVarExpr, new UnaryExpr(UnaryExpr.Op.NEG, inVarExpr))));
-                this.libNodeNameMap.put(ABS+"_"+outType, nodeName);
-                this.lustreProgram.addNode(new LustreNode(nodeName, new LustreVar("in", outType), new LustreVar("out", outType), bodyExprs));                
+                nodeName = mkAbsNode(getBlkOutportType(blkNode));
                 break;
             } 
             case SQRTOP:
@@ -2971,15 +2961,12 @@ public class J2LTranslator {
                 break;
             }
             case ROUNDING: {                
-                String op      = blkNode.get(OPERATOR).asText();
-                nodeName += "_"+op;
+                String op = blkNode.get(OPERATOR).asText();
                 
-                if(this.libNodeNameMap.containsKey(nodeName)) {
-                    return this.libNodeNameMap.get(nodeName);
-                } else {
-                    this.libNodeNameMap.put(nodeName, nodeName);
+                if(!this.libNodeNameMap.containsKey(op)) {
+                    getOrCreateLustreLibNode(op);
                 }
-                getOrCreateDummyNode(nodeName, PrimitiveType.REAL, PrimitiveType.REAL);
+                nodeName = op;
                 break;
             }
             case DATATYPECONVERSION: {
@@ -2987,9 +2974,9 @@ public class J2LTranslator {
                 String outType  = getBlkOutportType(blkNode).toString();
                 
                 switch(inType) {
-                    case "bool": {
+                    case BOOL: {
                         switch(outType) {
-                            case "int": {
+                            case INT: {
                                 if(this.libNodeNameMap.containsKey(BOOLTOINT)) {
                                     nodeName = this.libNodeNameMap.get(BOOLTOINT);
                                 } else {
@@ -2999,7 +2986,7 @@ public class J2LTranslator {
                                 }
                                 break;
                             }
-                            case "real": {
+                            case REAL: {
                                 if(this.libNodeNameMap.containsKey(BOOLTOREAL)) {
                                     nodeName = this.libNodeNameMap.get(BOOLTOREAL);
                                 } else {
@@ -3012,9 +2999,9 @@ public class J2LTranslator {
                         }
                         break;
                     }
-                    case "int": {
+                    case INT: {
                         switch(outType) {
-                            case "bool": {
+                            case BOOL: {
                                 if(this.libNodeNameMap.containsKey(INTTOBOOL)) {
                                     nodeName = this.libNodeNameMap.get(INTTOBOOL);
                                 } else {
@@ -3024,22 +3011,16 @@ public class J2LTranslator {
                                 }
                                 break;
                             }
-                            case "real": {
-                                if(this.libNodeNameMap.containsKey(INTTOREAL)) {
-                                    nodeName = this.libNodeNameMap.get(INTTOREAL);
-                                } else {
-                                    this.libNodeNameMap.put(INTTOREAL, INTTOREAL);
-                                    getOrCreateLustreLibNode(INTTOREAL);
-                                    nodeName = BOOLTOREAL;
-                                }
+                            case REAL: {
+                                nodeName = INTTOREAL;
                                 break;
                             }                                                  
                         }
                         break;
                     }                    
-                    case "real": {
+                    case REAL: {
                         switch(outType) {
-                            case "bool": {
+                            case BOOL: {
                                 if(this.libNodeNameMap.containsKey(REALTOBOOL)) {
                                     nodeName = this.libNodeNameMap.get(REALTOBOOL);
                                 } else {
@@ -3049,14 +3030,8 @@ public class J2LTranslator {
                                 }
                                 break;
                             }
-                            case "int": {
-                                if(this.libNodeNameMap.containsKey(REALTOINT)) {
-                                    nodeName = this.libNodeNameMap.get(REALTOINT);
-                                } else {
-                                    this.libNodeNameMap.put(REALTOINT, REALTOINT);
-                                    getOrCreateLustreLibNode(REALTOINT);
-                                    nodeName = REALTOINT;
-                                }
+                            case INT: {
+                                nodeName = REALTOINT;
                                 break;
                             }                                                  
                         }
@@ -3067,7 +3042,7 @@ public class J2LTranslator {
                     if(!getBlkRealInType(blkNode).equalsIgnoreCase(getBlkRealOutType(blkNode))) {
                         LOGGER.log(Level.SEVERE, "Unsupported data type conversion from {0} to {1}", new Object[]{getBlkRealInType(blkNode), getBlkRealOutType(blkNode)});
                         nodeName += "_"+DATATYPECONVERSION+"_"+inType+"_to_"+outType;
-                        getOrCreateDummyNode(nodeName, getLustreTypeFromStrRep(inType), getLustreTypeFromStrRep(outType));
+                        getOrCreateDummyNode(nodeName, J2LUtils.getLustreTypeFromStrRep(inType), J2LUtils.getLustreTypeFromStrRep(outType));
                     }
                 }
                 break;
@@ -3328,6 +3303,91 @@ public class J2LTranslator {
             }            
         }
     } 
+    
+    
+    protected void mkFloorNode() {
+        if(this.libNodeNameMap.containsKey(FLOOR)) {
+            return;
+        }
+        
+        VarIdExpr       inVarExpr   = new VarIdExpr("in");
+        VarIdExpr       outVarExpr  = new VarIdExpr("out");          
+        List<LustreEq>  bodyExprs   = new ArrayList<>();
+        
+        bodyExprs.add(new LustreEq(outVarExpr, new UnaryExpr(UnaryExpr.Op.REAL, new UnaryExpr(UnaryExpr.Op.INT, inVarExpr))));
+        this.lustreProgram.addNode(new LustreNode(FLOOR, new LustreVar(inVarExpr.id, PrimitiveType.REAL), new LustreVar(outVarExpr.id, PrimitiveType.REAL), bodyExprs));
+        this.libNodeNameMap.put(FLOOR, FLOOR);
+    }
+    
+    protected String mkAbsNode(LustreType type) {
+        String nodeName = ABS+"_"+type;
+        
+        if(this.libNodeNameMap.containsKey(nodeName)) {
+            return nodeName;
+        }
+        
+        VarIdExpr       inVarExpr   = new VarIdExpr("in");
+        VarIdExpr       outVarExpr  = new VarIdExpr("out");          
+        List<LustreEq>  bodyExprs   = new ArrayList<>();        
+        
+        if(type == PrimitiveType.INT) {            
+            bodyExprs.add(new LustreEq(outVarExpr, new IteExpr(new BinaryExpr(inVarExpr, BinaryExpr.Op.GTE, new IntExpr(BigInteger.ZERO)), inVarExpr, new UnaryExpr(UnaryExpr.Op.NEG, inVarExpr))));            
+        } else if(type == PrimitiveType.REAL) {
+            bodyExprs.add(new LustreEq(outVarExpr, new IteExpr(new BinaryExpr(inVarExpr, BinaryExpr.Op.GTE, new RealExpr(new BigDecimal("0.0"))), inVarExpr, new UnaryExpr(UnaryExpr.Op.NEG, inVarExpr))));            
+        } else {
+            LOGGER.log(Level.SEVERE, "Unsupported datatype in absolute value function: {0}", type);
+        }
+        this.libNodeNameMap.put(nodeName, nodeName);
+        this.lustreProgram.addNode(new LustreNode(nodeName, new LustreVar(inVarExpr.id, type), new LustreVar(outVarExpr.id, type), bodyExprs));
+        return nodeName;
+    }
+    
+    protected void mkRoundNode() {
+        if(this.libNodeNameMap.containsKey(ROUND)) {
+            return;
+        }
+        
+        mkCeilNode();
+        String absReal = mkAbsNode(PrimitiveType.REAL);                
+        VarIdExpr       inVarExpr   = new VarIdExpr("in");
+        VarIdExpr       outVarExpr  = new VarIdExpr("out");          
+        List<LustreEq>  bodyExprs   = new ArrayList<>();
+        
+        bodyExprs.add(new LustreEq(outVarExpr, new IteExpr(new BinaryExpr(inVarExpr, BinaryExpr.Op.GTE, new RealExpr(new BigDecimal("0.0"))), new NodeCallExpr(CEIL, new NodeCallExpr(absReal, inVarExpr)), new UnaryExpr(UnaryExpr.Op.NEG, new NodeCallExpr(CEIL, new NodeCallExpr(absReal, inVarExpr))))));
+        this.lustreProgram.addNode(new LustreNode(ROUND, new LustreVar(inVarExpr.id, PrimitiveType.REAL), new LustreVar(outVarExpr.id, PrimitiveType.REAL), bodyExprs));
+        this.libNodeNameMap.put(ROUND, ROUND);
+    }    
+    
+    protected void mkFixNode() {
+        if(this.libNodeNameMap.containsKey(ROUND)) {
+            return;
+        }
+        
+        mkCeilNode();
+        String absReal = mkAbsNode(PrimitiveType.REAL);                
+        VarIdExpr       inVarExpr   = new VarIdExpr("in");
+        VarIdExpr       outVarExpr  = new VarIdExpr("out");          
+        List<LustreEq>  bodyExprs   = new ArrayList<>();
+        
+        bodyExprs.add(new LustreEq(outVarExpr, new IteExpr(new BinaryExpr(inVarExpr, BinaryExpr.Op.GTE, new RealExpr(new BigDecimal("0.0"))), new NodeCallExpr(FLOOR, new NodeCallExpr(absReal, inVarExpr)), new UnaryExpr(UnaryExpr.Op.NEG, new NodeCallExpr(FLOOR, new NodeCallExpr(absReal, inVarExpr))))));
+        this.lustreProgram.addNode(new LustreNode(FIX, new LustreVar(inVarExpr.id, PrimitiveType.REAL), new LustreVar(outVarExpr.id, PrimitiveType.REAL), bodyExprs));
+        this.libNodeNameMap.put(FIX, FIX);
+    }     
+    
+    protected void mkCeilNode() {
+        if(!this.libNodeNameMap.containsKey(FLOOR)) {
+            mkFloorNode();
+        }
+        
+        VarIdExpr       inVarExpr   = new VarIdExpr("in");
+        VarIdExpr       outVarExpr  = new VarIdExpr("out");          
+        List<LustreEq>  bodyExprs   = new ArrayList<>();
+        
+        bodyExprs.add(new LustreEq(outVarExpr, new UnaryExpr(UnaryExpr.Op.NEG, new NodeCallExpr(FLOOR, new UnaryExpr(UnaryExpr.Op.NEG, inVarExpr)))));
+        this.lustreProgram.addNode(new LustreNode(CEIL, new LustreVar(inVarExpr.id, PrimitiveType.REAL), new LustreVar(outVarExpr.id, PrimitiveType.REAL), bodyExprs));
+        this.libNodeNameMap.put(CEIL, CEIL);
+    }    
+    
 
     
     private boolean isCompareToConst(JsonNode blkNode) {
@@ -3515,7 +3575,7 @@ public class J2LTranslator {
         List<String>        types   = convertJsonValuesToList(switchBlk.get(PORTDATATYPE).get(INPORT));
         Iterator<JsonNode>  connIt  = switchBlk.get(CONNECTIVITY).elements(); 
         // The switch condition is the second port in the port connectivity
-        return getLustreTypeFromStrRep(types.get(connIt.next().get(TYPE).asInt()));
+        return J2LUtils.getLustreTypeFromStrRep(types.get(connIt.next().get(TYPE).asInt()));
     }    
     
     private List<String> convertJsonValuesToList(JsonNode values) {
@@ -3577,11 +3637,11 @@ public class J2LTranslator {
     }
 
     protected LustreType getBlkOutportType(JsonNode blkNode) {
-        return getLustreTypeFromStrRep(blkNode.get(PORTDATATYPE).get(OUTPORT).asText());
+        return J2LUtils.getLustreTypeFromStrRep(blkNode.get(PORTDATATYPE).get(OUTPORT).asText());
     }   
     
     protected LustreType getBlkInportType(JsonNode blkNode) {
-        return getLustreTypeFromStrRep(blkNode.get(PORTDATATYPE).get(INPORT).asText());     
+        return J2LUtils.getLustreTypeFromStrRep(blkNode.get(PORTDATATYPE).get(INPORT).asText());     
     }
     
     protected List<LustreType> getMatrixBlkInportType(JsonNode blkNode) {
@@ -3592,10 +3652,10 @@ public class J2LTranslator {
             Iterator<JsonNode> nodeIt = node.elements();
             while(nodeIt.hasNext()) {
                 JsonNode typeNode = nodeIt.next();
-                types.add(getLustreTypeFromStrRep(typeNode.asText()));
+                types.add(J2LUtils.getLustreTypeFromStrRep(typeNode.asText()));
             }
         } else {
-            types.add(getLustreTypeFromStrRep(node.asText()));            
+            types.add(J2LUtils.getLustreTypeFromStrRep(node.asText()));            
         }   
         return types;
     }    
@@ -3613,7 +3673,7 @@ public class J2LTranslator {
         List<String>        typeStrs    = convertJsonValuesToList(blkNode.get(PORTDATATYPE).get(OUTPORT));        
         
         for(String typeStr : typeStrs) {
-            types.add(getLustreTypeFromStrRep(typeStr));
+            types.add(J2LUtils.getLustreTypeFromStrRep(typeStr));
         }
         
         return types;
@@ -3624,7 +3684,7 @@ public class J2LTranslator {
         List<String>        typeStrs    = convertJsonValuesToList(blkNode.get(PORTDATATYPE).get(INPORT));        
         
         for(String typeStr : typeStrs) {
-            types.add(getLustreTypeFromStrRep(typeStr));
+            types.add(J2LUtils.getLustreTypeFromStrRep(typeStr));
         }
         
         return types;
@@ -3670,7 +3730,13 @@ public class J2LTranslator {
 
     
     String getPath(JsonNode blk) {
-        return blk.get(PATH).asText();
+        String path;
+        if(blk.has(PATH)) {
+            path = blk.get(PATH).asText();
+        } else {
+            path = this.topNodeName;
+        }
+        return path;
     }
     
     String getOriginPath(JsonNode blk) {
@@ -3827,45 +3893,4 @@ public class J2LTranslator {
                 .replace("(", "_").replace(")", "_").replace(",", "_");
     }    
     
-    /**
-     * 
-     * @param type
-     * @return The corresponding Lustre type from its string representation
-     */
-    public LustreType getLustreTypeFromStrRep(String type) {
-        LustreType lusType = null;
-        
-        switch(type.toLowerCase()) {
-            case "float": 
-            case "single":                
-            case "double": {
-                lusType = PrimitiveType.REAL;
-                break;
-            }
-            case "integer": 
-            case "int": 
-            case "int64":     
-            case "int32": 
-            case "int16": 
-            case "int8": 
-            case "uint8":
-            case "uint16":
-            case "sfix64":                
-            case "uint32":{
-                lusType = PrimitiveType.INT;
-                break;                
-            }            
-            case "boolean": 
-            case "bool": {
-                lusType = PrimitiveType.BOOL;
-                break;                
-            }        
-            default: {
-                LOGGER.log(Level.SEVERE, "Unsupported type: {0}", type);
-                break;
-            }                
-        }
-        
-        return lusType;
-    }     
 }
