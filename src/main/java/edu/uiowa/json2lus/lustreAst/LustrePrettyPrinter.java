@@ -436,12 +436,15 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
             sb.append("]");
         } else if(curDim == intDims.size() - 1) {             
             int dim = intDims.get(curDim);  
+            
+            sb.append("[");
             for(int i = 0; i < dim; ++i) {
                 exprs.get(i).accept(this);
                 if(i != dim-1) {
                     sb.append(", ");
                 }                
             }
+            sb.append("]");
             //Remove the ones that have been printed
             for(int i = 0; i < dim; ++i) {
                 exprs.remove(0);
