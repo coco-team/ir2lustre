@@ -390,12 +390,12 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
     @Override
     public void visit(ArrayType array) {
         sb.append(array.type);
-        for(int d : array.dimensions) {
-            sb.append("^").append(d);
+        for(int i = array.dimensions.size()-1; i >=0; --i) {
+            sb.append("^").append(array.dimensions.get(i));
         }
-        for(String d : array.sDimensions) {
-            sb.append("^").append(d);
-        }        
+        for(int i = array.sDimensions.size()-1; i >=0; --i) {
+            sb.append("^").append(array.sDimensions.get(i));
+        }      
     }
 
     @Override

@@ -1776,11 +1776,11 @@ public class J2LTranslator {
      */    
     protected LustreExpr mkProductExpr(JsonNode blkNode, List<LustreExpr> inExprs) {
         boolean oneDimProd = true;
-        LustreExpr      blkExpr;        
+        LustreExpr      blkExpr     = null;        
         String          fcnName     = sanitizeName(getPath(blkNode));
         String          ops         = blkNode.get(INPUTS).asText();
         String          colMode     = blkNode.get(COLLAPSEMODE).asText();
-        String          mult        = blkNode.get(MULTIPLICATIOIN).asText();
+        String          multType    = blkNode.get(MULTIPLICATIOIN).asText();
         List<Integer>       inDimensions    = getInportDimensions(blkNode);
         List<Integer>       outDimensions   = getOutportDimensions(blkNode);
         List<List<Integer>> newInDims       = new ArrayList<>();
@@ -1788,20 +1788,23 @@ public class J2LTranslator {
         LustreType          outBaseType     = getBlkOutportType(blkNode);
         List<LustreExpr>    exprs           = new ArrayList<>();        
             
-        // Get all the values of in-dimensions and create the sum function name
+        // Get all the values of in-dimensions
         for(int i = 0; i < inDimensions.size();) {
-            int j = inDimensions.get(i);
+            int             j       = inDimensions.get(i);
             List<Integer> dimension = new ArrayList<>();         
+                        
             for(int k = i+1; k <= i+j; ++k) {
                 dimension.add(inDimensions.get(k));
             }
             newInDims.add(dimension);
             i += (j+1);
         }
+        
         // Get all operators
         if(ops.matches("\\d+")) {
-            int numOfInuts = Integer.parseInt(ops);
+            int numOfInuts = Integer.parseInt(ops);            
             ops = "";
+            
             for(int i = 0; i < numOfInuts; ++i) {
                 ops += "*";
             }
@@ -1809,6 +1812,7 @@ public class J2LTranslator {
             ops = ops.replaceAll("\\|", "").trim().replaceAll(" ", "").trim();
         }
         
+        // Check if it is one-dimentsion sum
         for(int d : inDimensions) {
             if(d!=1) {
                 oneDimProd = false;
@@ -1836,7 +1840,7 @@ public class J2LTranslator {
             return blkExpr;
         }        
             
-        if(mult.equals(MATRIX)) {
+        if(multType.equals(MATRIX)) {
             // Create dimensions as input and output variables
             for(List<Integer> ds : newInDims) {
                 for(int d : ds) {
@@ -1923,7 +1927,7 @@ public class J2LTranslator {
             blkExpr = new NodeCallExpr(fcnName, exprs);
             
         // Handle element-wise product
-        } else if(colMode.equals(ALLDIMENSIONS)){
+        } else if(colMode.equals(ALLDIMENSIONS)) {
             
             // If the input is just one matrix, collapse the matrix for all dimensions
             if(ops.length() == 1 && (newInDims.get(0).size() > 1 || newInDims.get(0).get(0) > 1)) {
@@ -2053,22 +2057,23 @@ public class J2LTranslator {
                 blkExpr = new NodeCallExpr(fcnName, exprs);                        
             }            
         } else {
-            LustreExpr one = null;
+            
             char fstOp = ops.charAt(0);
             
             if(inBaseTypes.get(0) == PrimitiveType.INT) {
-                one = new IntExpr(BigInteger.ONE);
+                blkExpr = new IntExpr(BigInteger.ONE);
             } else if(inBaseTypes.get(0) == PrimitiveType.REAL) {
-                one = new RealExpr(new BigDecimal("1.0"));
+                blkExpr = new RealExpr(new BigDecimal("1.0"));
+            } else {
+                LOGGER.log(Level.SEVERE, "Unhandled type for one: {0}", inBaseTypes.get(0));
             }
-            blkExpr = one;      
             
             //Input is a int/real constant
             if(inDimensions.size() == 2 && inDimensions.get(1) == 1) {
                 if(fstOp == '*') {
                     blkExpr = inExprs.get(0);
                 } else {
-                    blkExpr = new BinaryExpr(one, BinaryExpr.Op.DIVIDE, inExprs.get(0));
+                    blkExpr = new BinaryExpr(blkExpr, BinaryExpr.Op.DIVIDE, inExprs.get(0));
                 }
             // Input is an one dimensional array     
             } else if(inDimensions.size() == 2) {
