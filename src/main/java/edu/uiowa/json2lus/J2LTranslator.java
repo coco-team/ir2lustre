@@ -237,6 +237,9 @@ public class J2LTranslator {
     private final String ORIGINPATH     = "OriginPath";     
     private final String CONTRACTNAME   = "ContractName";                             
     
+    private final String ID             = "id";
+    private final String NEXT           = "next";
+    
     /** Lustre node names for type conversions */
     private final String INT            = "int";
     private final String REAL           = "real";
@@ -1332,6 +1335,9 @@ public class J2LTranslator {
                     break;
                 }                
                 case SUBSYSTEM: {
+                    String blkName          = getBlkName(blkNode);
+                    String qualifiedName    = getQualifiedBlkName(blkNode);
+                    
                     if(this.auxHdlToExprMap.containsKey(blkHdl)) {
                         List<LustreExpr> exprs = this.auxHdlToExprMap.get(blkHdl);
                         
@@ -1340,8 +1346,40 @@ public class J2LTranslator {
                         } else {
                             LOGGER.log(Level.SEVERE, "Unexpected null expressions with handle: {0}", blkHdl);
                         }
+                    } else if(blkNode.has(SFCONTENT)) {
+                        String      curVarName          = ID + "_" + blkName;
+                        String      nxtVarName          = NEXT + "_" + ID + "_" + blkName;
+                        VarIdExpr   curActStateVarId    = new VarIdExpr(curVarName);
+                        VarIdExpr   nxtActStateVarId    = new VarIdExpr(nxtVarName);
+                        LustreVar   curActStateVar      = new LustreVar(curVarName, PrimitiveType.INT);
+                        LustreVar   nxtActStateVar      = new LustreVar(nxtVarName, PrimitiveType.INT);
+                        List<LustreExpr> varIdExprs      = new ArrayList<>();
+                        List<LustreType> outportTypes   = getBlkOutportTypes(blkNode);
+                        
+                        inExprs.add(curActStateVarId);
+                        varIdExprs.add(nxtActStateVarId);
+                        
+                        for(int j = 0; j < inHdls.size(); j++) {
+                            inExprs.add(translateBlock(isPropBlk, inHdls.get(j), parentSubsystemNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, visitedHdls, hdlToActualInputExpr, inPorts.get(j)));                             
+                        }                                                                                                 
+                        
+                        for(LustreType type : outportTypes) {
+                            String outVarName = J2LUtils.getFreshVar("out_" + blkName);                            
+                            varIdExprs.add(new VarIdExpr(outVarName));
+                            this.auxNodeLocalVars.add(new LustreVar(outVarName, type));
+                        }
+                                                        
+                        this.auxNodeLocalVars.add(curActStateVar);
+                        this.auxNodeLocalVars.add(nxtActStateVar);
+                        this.auxNodeEqs.add(new LustreEq(curActStateVarId, new BinaryExpr(new IntExpr(1), BinaryExpr.Op.ARROW, new UnaryExpr(UnaryExpr.Op.PRE, nxtActStateVarId))));
+                        this.auxNodeEqs.add(new LustreEq(varIdExprs, new NodeCallExpr(qualifiedName, inExprs)));
+                        
+                        // Remove the first variable expression because it is the nextActVar 
+                        varIdExprs.remove(0);
+                        blkExpr = varIdExprs.get(portNum);
+                        this.auxHdlToExprMap.put(blkHdl, varIdExprs);
                     } else {            
-                        String                  blkName     = getBlkName(blkNode);
+                        
                         List<LustreExpr>        vars        = new ArrayList<>();
                         List<LustreExpr>        inputs      = new ArrayList<>();
                         List<LustreVar>         inputVars   = new ArrayList<>();
@@ -1361,8 +1399,8 @@ public class J2LTranslator {
                                     inputs.add(new VarIdExpr(varName));
                                 }                                
                             }                                              
-                            LustreExpr              nodeCall    = new NodeCallExpr(getQualifiedBlkName(blkNode), inExprs);
-                            List<LustreType>        types       = getBlockOutportTypes(blkNode);
+                            LustreExpr              nodeCall    = new NodeCallExpr(qualifiedName, inExprs);
+                            List<LustreType>        types       = getBlkOutportTypes(blkNode);
                             
                             for(int i = 0; i < types.size(); i++) {
                                 LustreVar var = new LustreVar(blkName+"_"+sanitizeName(portNameMap.get(i+1)), types.get(i));
@@ -1522,7 +1560,7 @@ public class J2LTranslator {
                         LustreExpr          actSysCall      = new NodeCallExpr(actSystName, inExprs);                        
                         List<LustreExpr>     actSysOuts      = new ArrayList<>();
                         List<LustreExpr>    elseActSysOuts  = new ArrayList<>();
-                        List<LustreType>    outTypes        = getBlockOutportTypes(blkNode);
+                        List<LustreType>    outTypes        = getBlkOutportTypes(blkNode);
                         LustreExpr          elseExpr        = null;
                         
                         if(blkNodeToDstBlkHdlsMap.containsKey(blkNode)) {
@@ -3498,7 +3536,7 @@ public class J2LTranslator {
             LOGGER.log(Level.SEVERE, "Unexpected constant value: {0}", value);
         } 
         return constExpr;
-    }    
+    }
     
     protected Object[] getTheHighestType(List<String> handles, Map<String, JsonNode> handleToBlkNodeMap) {        
         LustreType highestType      = null;
@@ -3644,7 +3682,7 @@ public class J2LTranslator {
         return blkNode.get(PORTDATATYPE).get(OUTPORT).asText();
     }        
     
-    protected List<LustreType> getBlockOutportTypes(JsonNode blkNode) {
+    protected List<LustreType> getBlkOutportTypes(JsonNode blkNode) {
         List<LustreType>    types       = new ArrayList<>();
         List<String>        typeStrs    = convertJsonValuesToList(blkNode.get(PORTDATATYPE).get(OUTPORT));        
         
