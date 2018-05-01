@@ -433,11 +433,8 @@ public class Sf2LTranslator {
      * @param transitNameToCond
      */
     protected void translateJunctionTransition(VarIdExpr nextActState, JsonNode startStateNode, String junctionId, List<LustreExpr> condExprs, List<LustreEq> condActEqs, List<LustreEq> exitExprs, List<LustreEq> transitActEqs, LinkedHashMap<String, List<LustreEq>> transitNameToActs, LinkedHashMap<String, LustreExpr> transitNameToCond) {
-        // If A state transit to a junction
-        if(this.junctionIdToNode.containsKey(junctionId)) {                                                    
-            List<LustreExpr>    negPrevCondExprs         = new ArrayList<>();
-            List<LustreEq>      prevTransitActEqs        = new ArrayList<>();
-            List<LustreEq>      prevCondActEqs           = new ArrayList<>();              
+        // If a state transit to a junction
+        if(this.junctionIdToNode.containsKey(junctionId)) {                                                                  
             JsonNode            junctionNode             = this.junctionIdToNode.get(junctionId);                        
             List<JsonNode>      outerTransitions         = getJunctionOuterTransitions(junctionNode);
             
@@ -469,7 +466,6 @@ public class Sf2LTranslator {
                     // Parse the condition expression
                     if(conditionStr != null) {
                         LustreExpr condExpr = (LustreExpr)parseAndTranslateStrExpr(conditionStr);
-                        negPrevCondExprs.add(new UnaryExpr(UnaryExpr.Op.NOT, condExpr));
                         newCondExprs.add(condExpr);
                     }
                     // Parse the condition action expression
@@ -490,62 +486,7 @@ public class Sf2LTranslator {
                     }
                     
                     // Call the translation recursively
-                    translateJunctionTransition(nextActState, startStateNode, transNode, newTransitActEqs, newCondActEqs, newCondExprs, exitExprs, transitNameToActs, transitNameToCond);
-                    
-                    // Negate all previous condition expressions and continue the next new transition at current level
-                    if(i+1 < outerTransitions.size()) {
-                        JsonNode nextTransitNode        = outerTransitions.get(i+1);
-                        String    nextCondExprStr       = getCondForTransition(nextTransitNode);
-                        String    nextCondActStrs       = getCondActForTransition(nextTransitNode);                    
-                        String    nextTransitActStrs    = getTransitActForTransition(nextTransitNode);                        
-                        
-                        List<LustreExpr>    nextCondExprs        = new ArrayList<>();
-                        List<LustreEq>      nextTransitActEqs    = new ArrayList<>();  
-                        List<LustreEq>      nextCondActEqs       = new ArrayList<>();                         
-
-                        // Negate the previous condition expressions
-                        // Add previous condition expressions before the current junction
-                        if(!negPrevCondExprs.isEmpty()) {
-                            nextCondExprs.addAll(negPrevCondExprs);
-                        }
-                        if(!condExprs.isEmpty()) {
-                            nextCondExprs.addAll(condExprs);
-                        }
-                        if(!transitActEqs.isEmpty()) {
-                            nextTransitActEqs.addAll(transitActEqs);
-                        }
-                        if(!condActEqs.isEmpty()) {
-                            nextCondActEqs.addAll(condActEqs);
-                        }
-                                                
-                        // Parse the next condition expression
-                        if(nextCondExprStr != null) {
-                            nextCondExprs.add((LustreExpr)parseAndTranslateStrExpr(nextCondExprStr));
-                        }
-                        // Parse the next condition action expression
-                        if(nextCondActStrs != null) {
-                            for(LustreAst ast : parseAndTranslate(nextCondActStrs)) {
-                                if(ast instanceof LustreEq) {
-                                    nextCondActEqs.add((LustreEq)ast);
-                                }                        
-                            }
-                        }                 
-                        // Parse the next transition action expression
-                        if(nextTransitActStrs != null) {
-                            for(LustreAst ast : parseAndTranslate(nextTransitActStrs)) {
-                                if(ast instanceof LustreEq) {
-                                    nextTransitActEqs.add((LustreEq)ast);
-                                }                        
-                            }
-                        }                        
-                        // Continue the translation
-                        translateJunctionTransition(nextActState, startStateNode, outerTransitions.get(i+1), nextTransitActEqs, nextCondActEqs, nextCondExprs, exitExprs, transitNameToActs, transitNameToCond);
-                    } else {
-                        String transitionName = J2LUtils.getFreshVar(getStatePath(startStateNode) + "_" + EXIT + "_" + destName + "_" + CENTRY);                    
-                        newCondActEqs.add(new LustreEq(nextActState, new IntExpr(this.stateIdToActId.get(getStateId(startStateNode)))));
-                        transitNameToActs.put(transitionName, newCondActEqs);
-                        transitNameToCond.put(transitionName, J2LUtils.andExprs(newCondExprs));                              
-                    }
+                    translateJunctionTransition(nextActState, startStateNode, transNode, newTransitActEqs, newCondActEqs, newCondExprs, exitExprs, transitNameToActs, transitNameToCond);                   
                 } else {
                     LOGGER.log(Level.SEVERE, "A junction does not have outer transition destination!");
                 }
@@ -574,8 +515,7 @@ public class Sf2LTranslator {
 
             switch (transitType) {
                 case JUNCTION: {
-                    List<JsonNode>      outerTransitions    = getJunctionOuterTransitions(transNode);
-                    List<LustreExpr>    negPrevCondExprs    = new ArrayList<>();
+                    List<JsonNode> outerTransitions = getJunctionOuterTransitions(transNode);
                     
                     for(int i = 0; i < outerTransitions.size(); ++i) {
                         JsonNode outerTransitNode = outerTransitions.get(i);
@@ -602,9 +542,7 @@ public class Sf2LTranslator {
                         
                         // Parse the current condition expression
                         if(condStr != null) {
-                            LustreExpr condExpr = (LustreExpr)parseAndTranslateStrExpr(condStr);
-                            negPrevCondExprs.add(new UnaryExpr(UnaryExpr.Op.NOT, condExpr));
-                            newCondExprs.add(condExpr);
+                            newCondExprs.add((LustreExpr)parseAndTranslateStrExpr(condStr));
                         }                        
                         // Parse the current condition action expression
                         if(condActStrs != null) {
@@ -622,63 +560,14 @@ public class Sf2LTranslator {
                                 }                        
                             }
                         }
-                        // Positive polarity branch
+                        // Continue the translation
                         translateJunctionTransition(nextActState, startStateNode, transNode, newTransitActEqs, newCondActEqs, newCondExprs, exitExprs, transitNameToActs, transitNameToCond);                                                
                         
-                        // Negate all previous condition expressions and continue the next new transition
-                        if(i+1 < outerTransitions.size()) {
-                            JsonNode nextTransitNode        = outerTransitions.get(i+1);
-                            String    nextCondExprStr       = getCondForTransition(nextTransitNode);
-                            String    nextCondActStrs       = getCondActForTransition(nextTransitNode);                    
-                            String    nextTransitActStrs    = getTransitActForTransition(nextTransitNode);                        
-
-                            List<LustreExpr>    nextCondExprs        = new ArrayList<>();
-                            List<LustreEq>      nextTransitActEqs    = new ArrayList<>();  
-                            List<LustreEq>      nextCondActEqs       = new ArrayList<>();                         
-
-                            // Add previous condition expressions before the current junction
-                            if(!negPrevCondExprs.isEmpty()) {
-                                nextCondExprs.addAll(negPrevCondExprs);
-                            }
-                            if(!condExprs.isEmpty()) {
-                                nextCondExprs.addAll(condExprs);
-                            }
-                            if(!transitActEqs.isEmpty()) {
-                                nextTransitActEqs.addAll(transitActEqs);
-                            }
-                            if(!condActEqs.isEmpty()) {
-                                nextCondActEqs.addAll(condActEqs);
-                            }
-
-                            // Parse the next condition expression
-                            if(nextCondExprStr != null) {
-                                nextCondExprs.add((LustreExpr)parseAndTranslateStrExpr(nextCondExprStr));
-                            }
-                            // Parse the next condition action expression
-                            if(nextCondActStrs != null) {
-                                for(LustreAst ast : parseAndTranslate(nextCondActStrs)) {
-                                    if(ast instanceof LustreEq) {
-                                        nextCondActEqs.add((LustreEq)ast);
-                                    }                        
-                                }
-                            }                 
-                            // Parse the next transition action expression
-                            if(nextTransitActStrs != null) {
-                                for(LustreAst ast : parseAndTranslate(nextTransitActStrs)) {
-                                    if(ast instanceof LustreEq) {
-                                        nextTransitActEqs.add((LustreEq)ast);
-                                    }                        
-                                }
-                            }
-                            
-                            // Continue the translation
-                            translateJunctionTransition(nextActState, startStateNode, nextTransitNode, nextTransitActEqs, nextCondActEqs, nextCondExprs, exitExprs, transitNameToActs, transitNameToCond);
-                        } else {
-                            String transitionName = J2LUtils.getFreshVar(getStatePath(startStateNode) + "_" + EXIT + "_" + junctionName + "_" + CENTRY);                    
-                            newCondActEqs.add(new LustreEq(nextActState, new IntExpr(this.stateIdToActId.get(getStateId(startStateNode)))));                            
-                            transitNameToActs.put(transitionName, newCondActEqs);
-                            transitNameToCond.put(transitionName, J2LUtils.andExprs(condExprs));                            
-                        }                                                
+                        // Build the intermediate transitioins
+                        String transitionName = J2LUtils.getFreshVar(getStatePath(startStateNode) + "_" + EXIT + "_" + junctionName + "_" + CENTRY);                    
+                        newCondActEqs.add(new LustreEq(nextActState, new IntExpr(this.stateIdToActId.get(getStateId(startStateNode)))));                            
+                        transitNameToActs.put(transitionName, newCondActEqs);
+                        transitNameToCond.put(transitionName, J2LUtils.andExprs(condExprs));                                                                        
                     }
                     break;
                 }
