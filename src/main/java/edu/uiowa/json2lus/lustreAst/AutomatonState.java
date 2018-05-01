@@ -29,37 +29,42 @@ public class AutomatonState extends LustreAst{
         this.weakTrans      = weakTrans;
     } 
     
-    public AutomatonState(boolean isInit, String name, List<LustreVar> locals, List<LustreEq> equations, List<LustreExpr> weakTrans) {
+    public AutomatonState(String name, List<LustreVar> locals, List<LustreEq> equations, List<LustreExpr> weakTrans) {
         this.name           = name;
         this.locals         = locals;
         this.equations      = equations;
-        this.isInit         = isInit;
         this.strongTrans    = new ArrayList<>();
         this.weakTrans      = weakTrans;
     }
 
-    public AutomatonState(boolean isInit, String name, List<LustreEq> equations, List<LustreExpr> weakTrans) {
+    public AutomatonState(String name, List<LustreEq> equations, List<LustreExpr> weakTrans) {
         this.name           = name;
         this.locals         = new ArrayList<>();
         this.equations      = equations;
-        this.isInit         = isInit;
         this.strongTrans    = new ArrayList<>();        
         this.weakTrans      = weakTrans;        
     }
     
-    public AutomatonState(boolean isInit, String name, List<LustreEq> equations, LustreExpr weakTrans) {
+    public AutomatonState(String name, List<LustreEq> equations, LustreExpr weakTrans) {
         this.name           = name;
         this.locals         = new ArrayList<>();
         this.equations      = equations;
-        this.isInit         = isInit;
         this.strongTrans    = new ArrayList<>();        
         this.weakTrans      = new ArrayList<>();        
         this.weakTrans.add(weakTrans);
-    }    
+    }  
+    
+    public AutomatonState(String name, List<LustreVar> locals, List<LustreEq> equations, LustreExpr weakTrans) {
+        this.name           = name;
+        this.locals         = locals;
+        this.equations      = equations;
+        this.strongTrans    = new ArrayList<>();        
+        this.weakTrans      = new ArrayList<>();        
+        this.weakTrans.add(weakTrans);
+    }      
 
     
-    public AutomatonState(boolean isInit, String name, List<LustreEq> equations) {
-        this.isInit     = isInit;
+    public AutomatonState(String name, List<LustreEq> equations) {
         this.name       = name;
         this.locals     = new ArrayList<>();
         this.equations  = equations;
