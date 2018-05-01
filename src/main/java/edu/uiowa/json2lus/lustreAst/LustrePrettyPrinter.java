@@ -454,6 +454,7 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
 
     @Override
     public void visit(LustreAutomaton automaton) {
+        sb.append(NL);
         sb.append("automaton ");
         sb.append(automaton.name);
         sb.append(NL).append(NL);
