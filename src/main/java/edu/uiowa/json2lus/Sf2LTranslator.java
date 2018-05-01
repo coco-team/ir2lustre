@@ -33,7 +33,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.antlr.v4.runtime.CharStream;
@@ -779,7 +778,7 @@ public class Sf2LTranslator {
                 if(this.varToInitVal.containsKey(varName)) {
                     initVal = this.varToInitVal.get(varName).toString() + "->";
                 }
-                ((VarIdExpr)expr).setVarId(initVal+"last("+varName+")");
+                ((VarIdExpr)expr).setVarId(initVal+"(last "+varName+")");
             }
         } else if(expr instanceof NodeCallExpr) {
             if(this.fcnNameToPath.containsKey(((NodeCallExpr)expr).nodeName)) {
