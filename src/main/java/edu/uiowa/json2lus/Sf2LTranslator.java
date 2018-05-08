@@ -175,11 +175,12 @@ public class Sf2LTranslator {
         // Start translating states       
         JsonNode            centerNode              = null;       
         List<LustreExpr>    strongTransitExprs      = new ArrayList<>();
-        VarIdExpr           inActiveStateVarId      = new VarIdExpr(ACTSTATEID);        
-        VarIdExpr           nextActiveStateVarId    = new VarIdExpr(NXTACTSTATEID);        
+        VarIdExpr           curActStateVarId        = new VarIdExpr(ACTSTATEID);        
+        VarIdExpr           nxtActStateVarId        = new VarIdExpr(NXTACTSTATEID);        
         String              automatonName           = getPath(automatonNode);
         
         // Create node inputs, locals and outputs
+        List<LustreVar> tempInputs     = new ArrayList<>();
         List<LustreVar> finalInputs    = new ArrayList<>();
         List<LustreVar> finalOutputs   = new ArrayList<>();
         List<LustreVar> finalLocals    = new ArrayList<>();
@@ -187,20 +188,18 @@ public class Sf2LTranslator {
         Map<String, LustreType>     inputNameToType    = new HashMap<>();
         Map<String, LustreType>     localNameToType    = new HashMap<>();
         Map<String, LustreType>     outputNameToType   = new HashMap<>();
+        Map<String, String>         outVarIdMap        = new HashMap<>();
       
         // Create the input variable activeStateId
-        finalInputs.add(new LustreVar(inActiveStateVarId.id, PrimitiveType.INT));
-        
-        // Create the output variable nextActiveStateId
-        finalOutputs.add(new LustreVar(nextActiveStateVarId.id, PrimitiveType.INT));
+        finalInputs.add(new LustreVar(curActStateVarId.id, PrimitiveType.INT));        
         
         for(int i = 1; i <= this.inputs.size(); ++i) {
             JsonNode    inputNode   = this.inputs.get(this.inPortToId.get(i));
             String      inputName   = inputNode.get(NAME).asText();
-            LustreType  type        = J2LUtils.getLustreTypeFromStrRep(inputNode.get(COMPILEDTYPE).asText());
-            finalInputs.add(new LustreVar(inputName, type));
+            LustreType  type        = J2LUtils.getLustreTypeFromStrRep(inputNode.get(COMPILEDTYPE).asText());            
+            tempInputs.add(new LustreVar(inputName, type));
             inputNameToType.put(inputName, type);
-        }      
+        }                      
         for(JsonNode localNode : this.locals) {
             String      localName   = localNode.get(NAME).asText();
             LustreType  type        = J2LUtils.getLustreTypeFromStrRep(localNode.get(COMPILEDTYPE).asText());
@@ -209,11 +208,19 @@ public class Sf2LTranslator {
         }      
         for(int i = 1; i <= this.outputs.size(); ++i) {
             JsonNode    outputNode  = this.outputs.get(this.outPortToId.get(i));
-            String      outputName  = outputNode.get(NAME).asText();
+            String      outputName  = outputNode.get(NAME).asText();            
             LustreType  type        = J2LUtils.getLustreTypeFromStrRep(outputNode.get(COMPILEDTYPE).asText());
+            LustreVar   preOutVar   = new LustreVar(J2LUtils.getFreshVarAtInst(outputName, 1), type);
             finalOutputs.add(new LustreVar(outputName, type));   
             outputNameToType.put(outputName, type);
-        }                
+            finalInputs.add(preOutVar);
+            outVarIdMap.put(outputName, preOutVar.name);
+        }
+        // Add tempInputs to the final input variables
+        finalInputs.addAll(tempInputs);
+        
+        // Create the output variable nextActiveStateId as the last output
+        finalOutputs.add(new LustreVar(nxtActStateVarId.id, PrimitiveType.INT));        
         
         // Set the entry state
         if(this.stateIdToNode.containsKey(this.centerStateId)) {
@@ -238,7 +245,7 @@ public class Sf2LTranslator {
             
             String  stateName   = getStatePath(stateNode);                                   
             List<LustreEq>      stateEqs            = new ArrayList<>();
-            LustreExpr          strongExpr          = new BinaryExpr(inActiveStateVarId, BinaryExpr.Op.EQ, new IntExpr(new BigInteger(String.valueOf(this.stateIdToActId.get(stateId)))));
+            LustreExpr          strongExpr          = new BinaryExpr(curActStateVarId, BinaryExpr.Op.EQ, new IntExpr(new BigInteger(String.valueOf(this.stateIdToActId.get(stateId)))));
             JsonNode            actionNode          = stateNode.get(ACTIONS);            
             List<LustreEq>      entryExprs          = new ArrayList<>();    
             List<LustreEq>      duringExprs         = new ArrayList<>();    
@@ -322,7 +329,7 @@ public class Sf2LTranslator {
                 switch(transitionType) {
                     case JUNCTION: {
                         condExprs.add(strongExpr);
-                        translateJunctionTransition(nextActiveStateVarId, stateNode, junctOrStateId, condExprs, condActEqs, exitExprs, transitActEqs, transitNameToAllActs, transitNameToCond);
+                        translateJunctionTransition(nxtActStateVarId, stateNode, junctOrStateId, condExprs, condActEqs, exitExprs, transitActEqs, transitNameToAllActs, transitNameToCond);
                         break;
                     }
                     case STATE: {
@@ -361,7 +368,7 @@ public class Sf2LTranslator {
                                 }                       
                             }
                             // Set the next active state
-                            transitEqs.add(new LustreEq(nextActiveStateVarId, new IntExpr(actStateId)));
+                            transitEqs.add(new LustreEq(nxtActStateVarId, new IntExpr(actStateId)));
                             
                             // Create strong transition expression
                             newConditionExprs.add(strongExpr);
@@ -385,8 +392,8 @@ public class Sf2LTranslator {
         }        
 
         // Create SSA form for each state's equations        
-        for(AutomatonState state : this.autoStates) {                 
-            convertToSSAForm(state.equations, inputNameToType, outputNameToType, localNameToType, state.locals);
+        for(AutomatonState state : this.autoStates) {
+            convertToSSAForm(state.equations, inputNameToType, outputNameToType, localNameToType, state.locals, outVarIdMap);
         }
         
         // Create states for transitions to junctions
@@ -401,7 +408,7 @@ public class Sf2LTranslator {
                 List<LustreVar> transitStateLocals  = new ArrayList<>();
                 
                 // Convert to SSA form
-                convertToSSAForm(allActEqs, inputNameToType, outputNameToType, localNameToType, transitStateLocals);
+                convertToSSAForm(allActEqs, inputNameToType, outputNameToType, localNameToType, transitStateLocals, outVarIdMap);
                 
                 this.autoStates.add(new AutomatonState(transitName, transitStateLocals, allActEqs, weakTransitExpr));            
             }           
@@ -409,7 +416,7 @@ public class Sf2LTranslator {
         
         // Set the default strong transition conditions to states
         for(Map.Entry<String, Integer> entry : this.stateIdToActId.entrySet()) {
-            strongTransitExprs.add(new AutomatonIteExpr(new BinaryExpr(inActiveStateVarId, BinaryExpr.Op.EQ, new IntExpr(entry.getValue())), new VarIdExpr(getStatePath(this.stateIdToNode.get(entry.getKey()))), null));
+            strongTransitExprs.add(new AutomatonIteExpr(new BinaryExpr(curActStateVarId, BinaryExpr.Op.EQ, new IntExpr(entry.getValue())), new VarIdExpr(getStatePath(this.stateIdToNode.get(entry.getKey()))), null));
         }
         
         // Create the initial state
@@ -434,8 +441,10 @@ public class Sf2LTranslator {
      */
     protected void translateJunctionTransition(VarIdExpr nextActState, JsonNode startStateNode, String junctionId, List<LustreExpr> condExprs, List<LustreEq> condActEqs, List<LustreEq> exitExprs, List<LustreEq> transitActEqs, LinkedHashMap<String, List<LustreEq>> transitNameToActs, LinkedHashMap<String, LustreExpr> transitNameToCond) {
         // If a state transit to a junction
-        if(this.junctionIdToNode.containsKey(junctionId)) {                                                                  
+        if(this.junctionIdToNode.containsKey(junctionId)) {                 
+            List<LustreExpr>    negPrevCondExprs         = new ArrayList<>();
             JsonNode            junctionNode             = this.junctionIdToNode.get(junctionId);                        
+            String              junctionName             = getJunctionPath(junctionNode);
             List<JsonNode>      outerTransitions         = getJunctionOuterTransitions(junctionNode);
             
             // Handle outer transitions
@@ -466,6 +475,7 @@ public class Sf2LTranslator {
                     // Parse the condition expression
                     if(conditionStr != null) {
                         LustreExpr condExpr = (LustreExpr)parseAndTranslateStrExpr(conditionStr);
+                        negPrevCondExprs.add(new UnaryExpr(UnaryExpr.Op.NOT, condExpr));
                         newCondExprs.add(condExpr);
                     }
                     // Parse the condition action expression
@@ -486,10 +496,18 @@ public class Sf2LTranslator {
                     }
                     
                     // Call the translation recursively
-                    translateJunctionTransition(nextActState, startStateNode, transNode, newTransitActEqs, newCondActEqs, newCondExprs, exitExprs, transitNameToActs, transitNameToCond);                   
+                    translateJunctionTransition(nextActState, startStateNode, transNode, newTransitActEqs, newCondActEqs, newCondExprs, exitExprs, transitNameToActs, transitNameToCond);                                      
                 } else {
                     LOGGER.log(Level.SEVERE, "A junction does not have outer transition destination!");
                 }
+            }
+            // If there are some previous condition action expressions,
+            // we negated all the current conditions and execute the condition
+            // action expressions.
+            if(!condActEqs.isEmpty()) {
+                String transitionName = J2LUtils.getFreshVarName(getStatePath(startStateNode) + "_" + EXIT + "_" + junctionName + "_" + CENTRY);                    
+                transitNameToActs.put(transitionName, condActEqs);
+                transitNameToCond.put(transitionName, J2LUtils.andExprs(negPrevCondExprs));                   
             }
         } else {
             LOGGER.log(Level.SEVERE, "There is no junction with ID {0}", junctionId);
@@ -515,12 +533,14 @@ public class Sf2LTranslator {
 
             switch (transitType) {
                 case JUNCTION: {
-                    List<JsonNode> outerTransitions = getJunctionOuterTransitions(transNode);
+                    String              junctionName     = getJunctionPath(transNode);
+                    List<LustreExpr>    negPrevCondExprs = new ArrayList<>();
+                    List<JsonNode>      outerTransitions = getJunctionOuterTransitions(transNode);
                     
                     for(int i = 0; i < outerTransitions.size(); ++i) {
                         JsonNode outerTransitNode = outerTransitions.get(i);
                         
-                        String junctionName    = getJunctionTransitDestName(outerTransitNode);
+                        String destJunctName   = getJunctionTransitDestName(outerTransitNode);
                         String condStr         = getCondForTransition(outerTransitNode);
                         String condActStrs     = getCondActForTransition(outerTransitNode);
                         String transitActStrs  = getTransitActForTransition(outerTransitNode);
@@ -542,7 +562,9 @@ public class Sf2LTranslator {
                         
                         // Parse the current condition expression
                         if(condStr != null) {
-                            newCondExprs.add((LustreExpr)parseAndTranslateStrExpr(condStr));
+                            LustreExpr newCondExpr = (LustreExpr)parseAndTranslateStrExpr(condStr);
+                            negPrevCondExprs.add(new UnaryExpr(UnaryExpr.Op.NOT, newCondExpr));
+                            newCondExprs.add(newCondExpr);
                         }                        
                         // Parse the current condition action expression
                         if(condActStrs != null) {
@@ -557,18 +579,26 @@ public class Sf2LTranslator {
                             for(LustreAst ast : parseAndTranslate(transitActStrs)) {
                                 if(ast instanceof LustreEq) {
                                     newTransitActEqs.add((LustreEq)ast);
-                                }                        
+                                }
                             }
                         }
                         // Continue the translation
-                        translateJunctionTransition(nextActState, startStateNode, transNode, newTransitActEqs, newCondActEqs, newCondExprs, exitExprs, transitNameToActs, transitNameToCond);                                                
+                        translateJunctionTransition(nextActState, startStateNode, transNode, newTransitActEqs, newCondActEqs, newCondExprs, exitExprs, transitNameToActs, transitNameToCond);
                         
                         // Build the intermediate transitioins
-                        String transitionName = J2LUtils.getFreshVar(getStatePath(startStateNode) + "_" + EXIT + "_" + junctionName + "_" + CENTRY);                    
+                        String transitionName = J2LUtils.getFreshVarName(getStatePath(startStateNode) + "_" + EXIT + "_" + destJunctName + "_" + CENTRY);                    
                         newCondActEqs.add(new LustreEq(nextActState, new IntExpr(this.stateIdToActId.get(getStateId(startStateNode)))));                            
                         transitNameToActs.put(transitionName, newCondActEqs);
-                        transitNameToCond.put(transitionName, J2LUtils.andExprs(condExprs));                                                                        
+                        transitNameToCond.put(transitionName, J2LUtils.andExprs(condExprs));                                                                                                                        
                     }
+                    // If there are some previous condition action expressions,
+                    // we negated all the current conditions and execute the condition
+                    // action expressions.
+                    if(!condActEqs.isEmpty()) {
+                        String transitionName = J2LUtils.getFreshVarName(getStatePath(startStateNode) + "_" + EXIT + "_" + junctionName + "_" + CENTRY);                    
+                        transitNameToActs.put(transitionName, condActEqs);
+                        transitNameToCond.put(transitionName, J2LUtils.andExprs(negPrevCondExprs));                   
+                    }                    
                     break;
                 }
                 case STATE: {
@@ -603,7 +633,7 @@ public class Sf2LTranslator {
                     allActEqs.add(new LustreEq(nextActState, new IntExpr(this.stateIdToActId.get(getStateId(destStateNode)))));                    
                     
                     // Build a new state for this transition
-                    String transitionName = J2LUtils.getFreshVar(getStatePath(startStateNode) + "_" + EXIT + "_" + destStateName + "_" + CENTRY);                                        
+                    String transitionName = J2LUtils.getFreshVarName(getStatePath(startStateNode) + "_" + EXIT + "_" + destStateName + "_" + CENTRY);                                        
                     transitNameToActs.put(transitionName, allActEqs);
                     transitNameToCond.put(transitionName, J2LUtils.andExprs(condExprs));
                     break;
@@ -678,7 +708,7 @@ public class Sf2LTranslator {
             
             // Create the function body equations
             if(!noGuardActExprs.isEmpty()) {
-                convertToSSAForm(noGuardActExprs, inputs, outputs, locals, fcnLocals);
+                convertToSSAForm(noGuardActExprs, inputs, outputs, locals, fcnLocals, new HashMap<String, String>());
                 fcnBody.addAll(noGuardActExprs);
             }
             
@@ -702,7 +732,7 @@ public class Sf2LTranslator {
         return fcns;
     }
     
-    protected void convertToSSAForm(List<LustreEq> equations, Map<String, LustreType> inputs, Map<String, LustreType> outputs, Map<String, LustreType> locals, List<LustreVar> fcnLocals) {                
+    protected void convertToSSAForm(List<LustreEq> equations, Map<String, LustreType> inputs, Map<String, LustreType> outputs, Map<String, LustreType> locals, List<LustreVar> fcnLocals, Map<String, String> outVarIdMap) {                
         Map<String, String> varToLastName = new HashMap<>();
         
         for(int i = 0; i < equations.size(); ++i) {
@@ -710,14 +740,14 @@ public class Sf2LTranslator {
             List<LustreExpr>    lhs = equations.get(i).getLhs();
             
             // Replace the right hand side expression variables            
-            replaceRhsVars(i, rhs, varToLastName, new HashMap<String, LustreType>());
+            replaceRhsVars(i, rhs, varToLastName, new HashMap<String, LustreType>(), outVarIdMap);
             
             // Replace the first occurence of an output variable with pre(outputVar)
             if(i == 0) {
                 Map<String, LustreType> subVarToType = new HashMap<>();
                 subVarToType.putAll(locals);
                 subVarToType.putAll(outputs);
-                replaceRhsVars(0, rhs, varToLastName, subVarToType);
+                replaceRhsVars(0, rhs, varToLastName, subVarToType, outVarIdMap);
             }              
             
             // Replace variables in the lhs expression with new variables
@@ -727,7 +757,7 @@ public class Sf2LTranslator {
                     
                     if(inputs.containsKey(lhsExprName) || outputs.containsKey(lhsExprName)) {
                         LustreType type;
-                        String newVarName = J2LUtils.getFreshVar(lhsExprName);                        
+                        String newVarName = J2LUtils.getFreshVarName(lhsExprName);                        
                         
                         if(inputs.containsKey(lhsExprName)) {
                             type = inputs.get(lhsExprName);
@@ -754,16 +784,16 @@ public class Sf2LTranslator {
         }
     }
     
-    protected void replaceRhsVars(int i, LustreExpr expr, Map<String, String> varToLastName, Map<String, LustreType> outputs) {
+    protected void replaceRhsVars(int i, LustreExpr expr, Map<String, String> varToLastName, Map<String, LustreType> outputs, Map<String, String> outVarIdMap) {
         if(expr instanceof BinaryExpr) {
-            replaceRhsVars(i, ((BinaryExpr)expr).left, varToLastName, outputs);
-            replaceRhsVars(i, ((BinaryExpr)expr).right, varToLastName, outputs);
+            replaceRhsVars(i, ((BinaryExpr)expr).left, varToLastName, outputs, outVarIdMap);
+            replaceRhsVars(i, ((BinaryExpr)expr).right, varToLastName, outputs, outVarIdMap);
         } else if(expr instanceof UnaryExpr) {
-            replaceRhsVars(i, ((UnaryExpr)expr).expr, varToLastName, outputs);
+            replaceRhsVars(i, ((UnaryExpr)expr).expr, varToLastName, outputs, outVarIdMap);
         } else if(expr instanceof IteExpr) {
-            replaceRhsVars(i, ((IteExpr)expr).ifExpr, varToLastName, outputs);
-            replaceRhsVars(i, ((IteExpr)expr).thenExpr, varToLastName, outputs);
-            replaceRhsVars(i, ((IteExpr)expr).elseExpr, varToLastName, outputs);
+            replaceRhsVars(i, ((IteExpr)expr).ifExpr, varToLastName, outputs, outVarIdMap);
+            replaceRhsVars(i, ((IteExpr)expr).thenExpr, varToLastName, outputs, outVarIdMap);
+            replaceRhsVars(i, ((IteExpr)expr).elseExpr, varToLastName, outputs, outVarIdMap);
         } else if(expr instanceof VarIdExpr) {
             String varName = ((VarIdExpr)expr).id;
             
@@ -771,21 +801,17 @@ public class Sf2LTranslator {
                 if(varToLastName.containsKey(varName)) {
                     ((VarIdExpr)expr).setVarId(varToLastName.get(varName));
                 }             
-            } else if(outputs.containsKey(varName)){
-                String initVal = "";
-                
-                // Todo: need to fix here....
-                if(this.varToInitVal.containsKey(varName)) {
-                    initVal = this.varToInitVal.get(varName).toString() + "->";
-                }
-                ((VarIdExpr)expr).setVarId(initVal+"(last "+varName+")");
+            } else if(outVarIdMap.containsKey(varName)){
+                ((VarIdExpr)expr).setVarId(outVarIdMap.get(varName));
+            } else {
+                LOGGER.log(Level.SEVERE, "Unhandled case: do not know which variable to replace");
             }
         } else if(expr instanceof NodeCallExpr) {
             if(this.fcnNameToPath.containsKey(((NodeCallExpr)expr).nodeName)) {
                 ((NodeCallExpr)expr).setNodeName(this.fcnNameToPath.get(((NodeCallExpr)expr).nodeName));
             }
             for(LustreExpr e : ((NodeCallExpr)expr).parameters) {
-                replaceRhsVars(i, e, varToLastName, outputs);
+                replaceRhsVars(i, e, varToLastName, outputs, outVarIdMap);
             }
         }
     }
@@ -1269,33 +1295,36 @@ public class Sf2LTranslator {
                 
                 switch(cat) {
                     case STATES: {
+                        // If the state is the entry state, we collect all the information we need here
                         if(internalNode.has(COMPOSITION) && internalNode.get(COMPOSITION).has(SUBSTATES) 
                                 && internalNode.get(COMPOSITION).get(SUBSTATES).isArray() && internalNode.get(COMPOSITION).get(SUBSTATES).size() > 1) {
-                            int id = 1;
-                            JsonNode substateNodeIds = internalNode.get(COMPOSITION).get(STATES);                            
+
+                            JsonNode substateNodeIds = internalNode.get(COMPOSITION).get(STATES);
                             Iterator<JsonNode> elementIt = substateNodeIds.elements();
                             
                             while(elementIt.hasNext()) {
                                 JsonNode element = elementIt.next();
-                                this.stateIdToActId.put(element.asText(), id);
-                                ++id;
+                                this.stateIdToActId.put(element.asText(), element.asInt());
                             }
-                            this.centerStateId   = getStateId(internalNode);  
-                            this.initStateId    = internalNode.get(COMPOSITION).get(DEFAULTTRANS).get(DEST).get(ID).asText();
+                            this.centerStateId  = getStateId(internalNode);  
+                            String initId       = internalNode.get(COMPOSITION).get(DEFAULTTRANS).get(DEST).get(ID).asText();
+                            this.initStateId    = "0";
+                            this.stateIdToActId.put(initId, 0);
+                            
                         }
-                        addToMapToNode(getStateId(internalNode), internalNode, this.stateIdToNode);
+                        addToMap(getStateId(internalNode), internalNode, this.stateIdToNode);
                         break;
                     }
                     case EVENTS: {
-                        addToMapToNode(getStateId(internalNode), internalNode, events);
+                        addToMap(getStateId(internalNode), internalNode, events);
                         break;
                     }
                     case JUNCTIONS: {
-                        addToMapToNode(getStateId(internalNode), internalNode, this.junctionIdToNode);
+                        addToMap(getStateId(internalNode), internalNode, this.junctionIdToNode);
                         break;
                     } 
                     case GRAPHFCN: {
-                        addToMapToNode(getStateId(internalNode), internalNode, functions);
+                        addToMap(getStateId(internalNode), internalNode, functions);
                         break;
                     }                     
                     default:
@@ -1354,7 +1383,7 @@ public class Sf2LTranslator {
         }
     }
     
-    public void addToMapToNode(String key, JsonNode value, Map<String, JsonNode> map) {
+    public void addToMap(String key, JsonNode value, Map<String, JsonNode> map) {
         if(map.containsKey(key)) {
             LOGGER.log(Level.SEVERE, "Unexpected behavior from input: two states or events or junctions have the same id: {0}", key);
         } else {

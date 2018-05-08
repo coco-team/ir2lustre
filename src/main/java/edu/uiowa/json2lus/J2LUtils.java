@@ -99,7 +99,7 @@ public class J2LUtils {
     } 
     
     
-    public static String getFreshVar(String varName) {
+    public static String getFreshVarName(String varName) {
         String newVarName = varName;
         
         if(newVarName == null) {
@@ -108,5 +108,16 @@ public class J2LUtils {
             newVarName += "_"+(++COUNT);
         }
         return newVarName;
-    }     
+    }
+    
+    public static String getFreshVarAtInst(String varName, int instance) {
+        String newVarName = varName;
+        
+        if(newVarName == null) {
+            newVarName = "_" + instance;
+        } else {
+            newVarName += "_" + instance;
+        }
+        return newVarName;
+    }    
 }

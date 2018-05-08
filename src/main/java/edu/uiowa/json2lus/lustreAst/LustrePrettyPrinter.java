@@ -552,4 +552,21 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
             }            
         }
     }
+
+    @Override
+    public void visit(ArrayConst arrConst) {
+        if(arrConst.value != null) {
+            sb.append(arrConst.value);
+        }
+        if(arrConst.exprs.size() > 0) {
+            sb.append("[");
+            for(int i = 0; i < arrConst.exprs.size(); ++i) {
+                arrConst.exprs.get(i).accept(this);
+                if(i != arrConst.exprs.size()-1) {
+                    sb.append(", ");
+                }
+            }
+            sb.append("]");
+        }
+    }
 }

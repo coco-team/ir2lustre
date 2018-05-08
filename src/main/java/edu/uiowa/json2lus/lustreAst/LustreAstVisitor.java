@@ -40,4 +40,6 @@ public interface LustreAstVisitor {
 
     public void visit(AutomatonIteExpr aThis);
 
+    public void visit(ArrayConst aThis);
+
 }
