@@ -66,6 +66,8 @@ public class ArrayExpr extends LustreExpr {
         this.exprs      = null;
     }    
     
+    // This is to construct array constant, where each cell of the array
+    // is an expression. 
     public ArrayExpr(List<Integer> dimensions, List<LustreExpr> exprs) {
         this.name       = null;
         this.expr       = null;

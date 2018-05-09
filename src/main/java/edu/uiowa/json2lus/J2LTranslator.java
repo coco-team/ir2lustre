@@ -134,6 +134,7 @@ public class J2LTranslator {
     private final String X0             = "InitialCondition";
     private final String MAX            = "max";
     private final String MIN            = "min";
+    private final String MODE           = "Mode"; 
     private final String GAIN           = "Gain";
     private final String FIRST          = "First";            
     private final String MERGE          = "Merge";
@@ -142,13 +143,18 @@ public class J2LTranslator {
     private final String MEMORY         = "Memory";
     private final String OUTPUTS        = "Outputs";        
     private final String ROUNDING       = "Rounding";     
-    private final String MULTARRAY      = "Multidimensional array";         
+    private final String VECTOR         = "Vector"; 
+    private final String MULTARRAY      = "Multidimensional array";       
+    private final String CONCATEDIM     = "ConcatenateDimension";       
+    
     
     /** Aux string constants */
     private final String IN             = "in";
-    private final String OUT            = "out";    
-    private final String MUXOUT         = "mux_output";
+    private final String OUT            = "out";        
+    private final String MUXOUT         = "mux_output";    
     private final String DEMUXOUT       = "demux_output";
+    private final String NUMINPUTS      = "NumInputs";    
+    private final String CONCATEOUT     = "concate_output";
     
     /** State flow language features */
     private final String OUTPUT         = "Output";
@@ -173,6 +179,19 @@ public class J2LTranslator {
     private final String MATRIXCONST    = "matrix";
     private final String ELEMENTWISE    = "Element-wise(.*)";
     private final String DIMENSION      = "CompiledPortDimensions";       
+    
+    private final String SELECTOR       = "Selector";
+    private final String INDEXMODE      = "IndexMode";
+    private final String ONEBASED       = "One-based";
+    private final String ZEROBASED      = "Zero-based";
+    private final String INDOPTARR      = "IndexOptionArray";
+    private final String SELECTALL      = "Select all";
+    private final String INDVECD        = "Index vector (dialog)";
+    private final String INDVECP        = "Index vector (dialog)";
+    private final String STARTINDD      = "Starting index (dialog)";
+    private final String STARTINDP      = "Starting index (port)";
+    private final String STARTENDINDP   = "Starting and ending indices (port)";    
+    
     
     private final String COLLAPSEDIM        = "CollapseDim"; 
     private final String COLLAPSEMODE       = "CollapseMode"; 
@@ -1709,6 +1728,8 @@ public class J2LTranslator {
     }
     
     /**
+     * The Compare To Constant block compares an input signal to a constant. 
+     * 
      * @param blkNode
      * @param constExpr
      * @param inExpr
@@ -1796,19 +1817,155 @@ public class J2LTranslator {
         enforceTargetType(newInExprs, newHandles, getBlkOutportType(blkNode), hdlToBlkNodeMap);
         return new IteExpr(condExpr, newInExprs.get(0), newInExprs.get(1));        
     }
+    
+    /**
+     * Select input elements from vector, matrix, or multidimensional signal.
+     * The Selector block generates as output selected or reordered elements 
+     * of an input vector, matrix, or multidimensional signal.
+     * Based on the value you enter for the Number of input dimensions parameter, 
+     * a table of indexing settings is displayed. Each row of the table corresponds 
+     * to one of the input dimensions in Number of input dimensions. 
+     * For each dimension, you define the elements of the signal to work with. 
+     * Specify a vector signal as a 1-D signal and a matrix signal as a 2-D signal. 
+     * When you configure the Selector block for multidimensional signal operations, 
+     * the block icon changes.
+     * For example, assume a 6-D signal with a one-based index mode. 
+     * The table of the Selector block dialog changes to include one row for each 
+     * dimension. 
+     * 
+     * @param blkNode
+     * @param inExprs
+     * @return 
+     */
+    protected LustreExpr mkSelectorExpr(JsonNode blkNode, List<LustreExpr> inExprs) {
+        
+        
+        return null;
+    }
 
     /**
      * The Concatenate block concatenates the input signals to create an output signal whose 
      * elements reside in contiguous locations in memory.
+     * 
+     * In vector mode, all input signals must be either vectors or row vectors (1-by-M matrices) 
+     * or column vectors (M-by-1 matrices) or a combination of vectors and either row or column 
+     * vectors. 
+     * When all inputs are vectors, the output is a vector. If any of the inputs are row or 
+     * column vectors, the output is a row or column vector, respectively.
+     * 
+     * Multidimensional array mode accepts vectors and arrays of any size. 
+     * It assumes that the trailing dimensions are all ones for input signals with lower 
+     * dimensionality. 
      * 
      * @param blkNode
      * @param inExprs
      * @return a Lustre expression for blkNode
      */    
     protected LustreExpr mkConcateExpr(JsonNode blkNode, List<LustreExpr> inExprs) {
-        return null;
+        List<Integer>   outDimensions   = getBlkOutportDimensions(blkNode);        
+        boolean         isScalar        = (outDimensions.get(0) == 1) && (outDimensions.get(1) == 1);
+        
+        if(isScalar) {
+            return inExprs.get(0);
+        }
+                
+        String mode = blkNode.get(MODE).asText();
+        LustreType baseType = getBlkOutportType(blkNode);
+        List<Integer>   inDimensions    = getBlkInportDimensions(blkNode);        
+        outDimensions.remove(0);
+        String          outVarName      = J2LUtils.getFreshVarName(CONCATEOUT);
+        LustreVar       outVar          = isScalar ? new LustreVar(outVarName, baseType) : new LustreVar(outVarName, new ArrayType(baseType, outDimensions));
+        VarIdExpr       outVarIdExpr    = new VarIdExpr(outVarName);
+        List<List<Integer>>     inDims          = new ArrayList<>();
+        List<LustreExpr>        finalOutExprs   = new ArrayList<>();
+                            
+        
+        // Get all the values of in-dimensions
+        for(int i = 0; i < inDimensions.size();) {
+            int             j       = inDimensions.get(i);
+            List<Integer> dimension = new ArrayList<>();         
+                        
+            for(int k = i+1; k <= i+j; ++k) {
+                dimension.add(inDimensions.get(k));
+            }
+            inDims.add(dimension);
+            i += (j+1);
+        }     
+        
+        List<List<LustreExpr>> outExprs = new ArrayList<>();
+        getConcateExprs(inDims, inExprs, outExprs);   
+            
+        if(mode.equals(MULTARRAY)) {
+            int concateDim = blkNode.get(CONCATEDIM).asInt();
+            
+            switch (concateDim) {
+                case 1: {       
+                    for(int i = 0; i < outExprs.size(); ++i) {                       
+                        finalOutExprs.addAll(outExprs.get(i));                        
+                    }               
+                    break;
+                }
+                case 2: {
+                    for(int i = 0; i < outDimensions.size(); ++i) {
+                        int curInDim  = 0;                        
+                        int curOutDim = outDimensions.get(i);
+
+                        for(int j = 0; j < outExprs.size(); ++j) {
+                            List<Integer> inDim = inDims.get(j);
+                            curInDim += inDim.get(i);
+                            for(int k = 0; k < inDim.get(i); ++k) {
+                                finalOutExprs.add(outExprs.get(j).get(k));
+                            }
+                        }
+                        // Append 1(1.0) if the dimensions of inputs are lower
+                        if(curInDim < curOutDim) {
+                            for(int l = 0; l < (curOutDim-curInDim); ++l) {
+                                if(baseType == PrimitiveType.INT) {
+                                    finalOutExprs.add(new IntExpr(1));
+                                } else if(baseType == PrimitiveType.REAL) {
+                                    finalOutExprs.add(new RealExpr(new BigDecimal("1.0")));
+                                } else {
+                                    LOGGER.log(Level.SEVERE, "Unhandled case for type: {0}", baseType);
+                                }
+                            }
+                        }
+                    }                         
+                    break;
+                }             
+                default:
+                    LOGGER.log(Level.SEVERE, "Unhandled case for multi-dimensional concatenation for {0}", concateDim);
+                    break;
+            }            
+        } else {
+            for(int i = 0; i < outExprs.size(); ++i) {
+                finalOutExprs.addAll(outExprs.get(i));
+            }
+        }
+        this.auxNodeLocalVars.add(outVar);        
+        this.auxNodeEqs.add(new LustreEq(outVarIdExpr, new ArrayExpr(outDimensions, finalOutExprs)));
+        return outVarIdExpr;
     }    
     
+    protected void getConcateExprs(List<List<Integer>> inDims, List<LustreExpr> inExprs, List<List<LustreExpr>> outExprs) {
+        for(int i = 0; i < inExprs.size(); ++i) {
+            List<LustreExpr> exprs = new ArrayList<>();
+            getConcateExprs(0, new ArrayList<Integer>(), inDims.get(i), inExprs.get(i), exprs);
+            outExprs.add(exprs);
+        }
+    }
+    
+    protected void getConcateExprs(int curIndex, List<Integer> allDims, List<Integer> inDims, LustreExpr inExpr, List<LustreExpr> outExprs) {
+        if(curIndex == inDims.size()-1) {
+            outExprs.add(new ArrayExpr(allDims, inExpr));
+        } else {
+            for(int i = 0; i < inDims.get(curIndex); ++i) {
+                List<Integer> newAllDims = new ArrayList<>();
+                newAllDims.addAll(allDims);
+                newAllDims.add(i);
+                getConcateExprs(curIndex+1, newAllDims, inDims, inExpr, outExprs);
+            }
+        }
+    }    
     
     /**
      * The Mux block combines its inputs into a single vector output. 
@@ -1914,6 +2071,8 @@ public class J2LTranslator {
     }
     
     /**
+     * The Product block outputs the result of multiplying two inputs: two scalars, a scalar and a nonscalar, 
+     * or two nonscalars that have the same dimensions.
      * 
      * @param blkNode
      * @param inExprs
@@ -1964,6 +2123,7 @@ public class J2LTranslator {
                 break;
             }
         }
+        // If all inputs are scalars, we do the normal product and division
         if(oneDimProd) {
             if(ops.charAt(0) == '/') {
                 if(inBaseTypes.get(0) == PrimitiveType.INT) {
@@ -1986,7 +2146,7 @@ public class J2LTranslator {
         }        
             
         if(multType.equals(MATRIX)) {
-            // Create dimensions as input and output variables
+            // Create dimensions as expressions
             for(List<Integer> ds : newInDims) {
                 for(int d : ds) {
                     exprs.add(new IntExpr(BigInteger.valueOf(d)));
@@ -2045,17 +2205,13 @@ public class J2LTranslator {
                 for(int i = 1; i < ops.length(); ++i) {
                     switch (ops.charAt(i)) {
                         case '*': {
-                            if(dimensions.isEmpty()) {
-                                
-                            } else {
+                            if(!dimensions.isEmpty()) {                               
                                 rhsExpr = new BinaryExpr(rhsExpr, BinaryExpr.Op.MULTIPLY, new ArrayExpr(inVars.get(i), dimensions));
                             }                            
                             break;
                         }
                         case '/': {
-                            if(dimensions.isEmpty()) {
-                                
-                            } else {
+                            if(!dimensions.isEmpty()) {
                                 rhsExpr = new BinaryExpr(rhsExpr, BinaryExpr.Op.DIVIDE, new ArrayExpr(inVars.get(i), dimensions));
                             }                                                         
                             break;
@@ -2248,11 +2404,28 @@ public class J2LTranslator {
     
     
     /**
-     * 
-     * @param blkNode
-     * @param inExprs
-     * @return 
-     */    
+    * The Sum block performs addition or subtraction on its inputs. 
+    * The Add, Subtract, Sum of Elements, and Sum blocks are identical blocks. 
+    * This block can add or subtract scalar, vector, or matrix inputs. 
+    * It can also collapse the elements of a signal and perform a summation.
+    * You specify the operations of the block with the List of signs parameter 
+    * with plus (+), minus (-), and spacer (|).
+    * The number of + and - characters equals the number of inputs. 
+    * For example, +-+ requires three inputs. The block subtracts the second 
+    * (middle) input from the first (top) input, and then adds the third (bottom) input.
+    * A spacer character creates extra space between ports on the block icon.
+    * If performing only addition, you can use a numerical value equal to the number of inputs.
+    * If only there is only one input port, a single + or - adds or subtracts the 
+    * elements over all dimensions or in the specified dimension.
+    * The Sum block first converts the input data type to its accumulator data type, 
+    * then performs the specified operations. 
+    * The block converts the result to its output data type using the specified 
+    * rounding and overflow modes.
+    * 
+    * @param blkNode
+    * @param inExprs
+    * @return 
+    */    
     protected LustreExpr mkSumExpr(JsonNode blkNode, List<LustreExpr> inExprs) {
         boolean    oneDimSum = true;
         LustreExpr blkExpr  = null;
