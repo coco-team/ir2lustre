@@ -466,9 +466,10 @@ public class J2LTranslator {
         // Set up data structures for storing contract information
         int aIndex = 1, gIndex = 1;             
         Map<String, List<LustreExpr>>   modeToRequires  = new HashMap<>();
-        Map<String, Map<String, LustreExpr>>   modeToEnsures   = new HashMap<>();           
+        
         Map<String, LustreExpr>         assumptions     = new HashMap<>();            
-        Map<String, LustreExpr>         guarantees      = new HashMap<>();                                  
+        Map<String, LustreExpr>         guarantees      = new HashMap<>();                             
+        Map<String, Map<String, LustreExpr>>   modeToEnsures   = new HashMap<>();                   
         List<String>                    inHdls          = blkNodeToSrcBlkHdlsMap.get(validatorBlkNode);
         List<Integer>                   inPorts         = blkNodeToSrcBlkPortsMap.get(validatorBlkNode);         
         
@@ -477,15 +478,16 @@ public class J2LTranslator {
             JsonNode    inBlk       = hdlToBlkNodeMap.get(inHdls.get(i));            
             // Get the origin path
             String      originPath  = inBlk.get(ORIGIN).asText();
+            String      propName    = J2LUtils.sanitizeName(originPath);
             
             // Translate assumption blocks
             if(isAssumeBlk(inBlk)) {
-                assumptions.put(originPath, translateBlock(false, inHdls.get(i), contractNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, new HashSet<String>(), null, inPorts.get(i)));
-                addMappingInfo(originPath, null, contractName, null, ASSUME, String.valueOf(aIndex++), null);                
+                assumptions.put(propName, translateBlock(false, inHdls.get(i), contractNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, new HashSet<String>(), null, inPorts.get(i)));
+                addMappingInfo(originPath, null, contractName, null, propName, String.valueOf(aIndex++), null);                
             // Translate guarantee blocks                
             } else if(isGuaranteeBlk(inBlk)) {
-                guarantees.put(originPath, translateBlock(false, inHdls.get(i), contractNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, new HashSet<String>(), null, inPorts.get(i)));
-                addMappingInfo(originPath, null, contractName, null, GUARANTEE, String.valueOf(gIndex++), null);                
+                guarantees.put(propName, translateBlock(false, inHdls.get(i), contractNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, new HashSet<String>(), null, inPorts.get(i)));
+                addMappingInfo(originPath, null, contractName, null, propName, String.valueOf(gIndex++), null);                
             } else if(isModeBlk(inBlk)) {
                 // Set up data structures for requires and ensures of modes
                 int rIndex = 1, eIndex = 1;
@@ -500,13 +502,14 @@ public class J2LTranslator {
                     JsonNode    modeInBlk       = hdlToBlkNodeMap.get(modeInHdls.get(j));
                     LustreExpr  modeInBlkExpr   = translateBlock(false, modeInHdls.get(j), contractNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, new HashSet<String>(), null, modeInPorts.get(j));
                     originPath  = modeInBlk.get(ORIGIN).asText();
+                    propName    = J2LUtils.sanitizeName(originPath);
                     
                     if(isRequireBlk(modeInBlk)) {
                         requires.add(modeInBlkExpr);
                         addMappingInfo(originPath, null, contractName, modeName, REQUIRE, String.valueOf(rIndex++), null);
                     } else if(isEnsureBlk(modeInBlk)) {
-                        ensures.put(originPath, modeInBlkExpr);
-                        addMappingInfo(originPath, null, contractName, modeName, ENSURE, String.valueOf(eIndex++), null);                        
+                        ensures.put(propName, modeInBlkExpr);
+                        addMappingInfo(originPath, null, contractName, modeName, propName, String.valueOf(eIndex++), null);                        
                     }
                 }
                 if(!requires.isEmpty()) {
@@ -1514,7 +1517,6 @@ public class J2LTranslator {
                             } else if(outVarIdExprs.size() >= 2){                                                         
                                 this.auxHdlToExprMap.put(blkHdl, outVarIdExprs);
                                 this.auxNodeEqs.add(new LustreEq(outVarIdExprs, nodeCall));
-//                                blkExpr = new TupleExpr(outVarIdExprs);
                                 blkExpr = outVarIdExprs.get(portNum);                                   
                             } else {
                                 this.auxHdlToExprMap.put(blkHdl, outVarIdExprs);
@@ -1892,9 +1894,9 @@ public class J2LTranslator {
         List<Integer>   inDimensions    = getBlkInportDimensions(blkNode);  
         String          indexMode       = blkNode.get(INDEXMODE).asText();
         List<String>    indexOpts       = getIndexOpts(blkNode);
-        List<List<Integer>>     indices     = new ArrayList<>();
-        List<LustreExpr>        outExprs    = new ArrayList<>();
-        Map<String, List<Integer>> dimIndexMap = new LinkedHashMap<>();
+        List<List<Integer>>         indices     = new ArrayList<>();
+        List<LustreExpr>            outExprs    = new ArrayList<>();
+        Map<String, List<Integer>>  dimIndexMap = new LinkedHashMap<>();
                                     
         // Remove the dimension number
         inDimensions.remove(0);
@@ -1954,7 +1956,8 @@ public class J2LTranslator {
                     }    
                     default:
                         break;
-                }                 
+                } 
+                optIndices.addAll(optIndices);
             }
         }
         return null;
