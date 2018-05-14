@@ -1452,11 +1452,11 @@ public class J2LTranslator {
                         this.auxHdlToExprMap.put(blkHdl, outVarIdExprs);
                     } else {            
                         
-                        List<LustreExpr>        vars        = new ArrayList<>();
-                        List<LustreExpr>        inputs      = new ArrayList<>();
-                        List<LustreVar>         inputVars   = new ArrayList<>();
-                        List<LustreVar>         outputVars  = new ArrayList<>();
-                        Map<Integer, String>    portNameMap = getBlkOutportNameAndPort(blkNode);
+                        List<LustreExpr>        outVarIdExprs   = new ArrayList<>();
+                        List<LustreExpr>        inputs          = new ArrayList<>();
+                        List<LustreVar>         inputVars       = new ArrayList<>();
+                        List<LustreVar>         outputVars      = new ArrayList<>();
+                        Map<Integer, String>    portNameMap     = getBlkOutportNameAndPort(blkNode);
                         
                         if(visitedHdls != null && !visitedHdls.contains(blkHdl)) { 
                             visitedHdls.add(blkHdl);
@@ -1477,7 +1477,7 @@ public class J2LTranslator {
                             for(int i = 0; i < types.size(); i++) {
                                 LustreVar var = new LustreVar(blkName+"_"+J2LUtils.sanitizeName(portNameMap.get(i+1)), types.get(i));
                                 
-                                vars.add(new VarIdExpr(blkName+"_"+J2LUtils.sanitizeName(portNameMap.get(i+1))));
+                                outVarIdExprs.add(new VarIdExpr(blkName+"_"+J2LUtils.sanitizeName(portNameMap.get(i+1))));
                                 this.auxNodeLocalVars.add(var);  
                                 
                                 if(isContractBlk(parentSubsystemNode)) {
@@ -1488,16 +1488,16 @@ public class J2LTranslator {
                                 outputVars.add(var);
                             }   
                             // This is to create auxiliary nodes for node calls in contract that returns multiple output
-                            if(vars.size() >= 2 && isContractBlk(parentSubsystemNode)) {
+                            if(outVarIdExprs.size() >= 2 && isContractBlk(parentSubsystemNode)) {
                                 int n = 1;
                                 String              nodeName = getQualifiedBlkName(blkNode);
                                 List<LustreExpr>    newVars = new ArrayList<>();
                                 
-                                for(int m = 0; m < vars.size(); ++m) {                                    
+                                for(int m = 0; m < outVarIdExprs.size(); ++m) {                                    
                                     List<LustreEq>      eqs         = new ArrayList<>();                                     
                                     List<LustreExpr>    elements    = new ArrayList<>();
                                     
-                                    for(int l = 0; l < vars.size(); ++l) {
+                                    for(int l = 0; l < outVarIdExprs.size(); ++l) {
                                         if(m==l) {
                                             elements.add(new VarIdExpr(outputVars.get(m).name));
                                         } else {
@@ -1511,20 +1511,21 @@ public class J2LTranslator {
                                 }
                                 this.auxHdlToExprMap.put(blkHdl, newVars);
                                 blkExpr = newVars.get(portNum);   
-                            } else if(vars.size() >= 2){                                                         
-                                this.auxHdlToExprMap.put(blkHdl, vars);
-                                this.auxNodeEqs.add(new LustreEq(vars, nodeCall));
-                                blkExpr = new TupleExpr(vars);
+                            } else if(outVarIdExprs.size() >= 2){                                                         
+                                this.auxHdlToExprMap.put(blkHdl, outVarIdExprs);
+                                this.auxNodeEqs.add(new LustreEq(outVarIdExprs, nodeCall));
+//                                blkExpr = new TupleExpr(outVarIdExprs);
+                                blkExpr = outVarIdExprs.get(portNum);                                   
                             } else {
-                                this.auxHdlToExprMap.put(blkHdl, vars);
-                                this.auxNodeEqs.add(new LustreEq(vars, nodeCall));
-                                blkExpr = vars.get(portNum);                                   
+                                this.auxHdlToExprMap.put(blkHdl, outVarIdExprs);
+                                this.auxNodeEqs.add(new LustreEq(outVarIdExprs, nodeCall));
+                                blkExpr = outVarIdExprs.get(portNum);                                   
                             }
                         } else {                                                        
                             for(int k = 0; k < portNameMap.size(); k++) {
-                                vars.add(new VarIdExpr(blkName+"_"+J2LUtils.sanitizeName(portNameMap.get(k+1))));
+                                outVarIdExprs.add(new VarIdExpr(blkName+"_"+J2LUtils.sanitizeName(portNameMap.get(k+1))));
                             }
-                            blkExpr = vars.get(portNum);
+                            blkExpr = outVarIdExprs.get(portNum);
                         }                       
                     }                                     
                     break;
