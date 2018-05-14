@@ -7,12 +7,20 @@ package edu.uiowa.json2lus;
 
 import edu.uiowa.json2lus.lustreAst.BinaryExpr;
 import edu.uiowa.json2lus.lustreAst.BooleanExpr;
+import edu.uiowa.json2lus.lustreAst.LustreAst;
 import edu.uiowa.json2lus.lustreAst.LustreExpr;
 import edu.uiowa.json2lus.lustreAst.LustreType;
 import edu.uiowa.json2lus.lustreAst.PrimitiveType;
+import edu.uiowa.json2lus.stateflowparser.StateflowVisitor;
+import edu.uiowa.json2lus.stateflowparser.antlr.StateflowLexer;
+import edu.uiowa.json2lus.stateflowparser.antlr.StateflowParser;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.antlr.v4.runtime.CharStream;
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.TokenStream;
 
 /**
  *
@@ -120,4 +128,26 @@ public class J2LUtils {
         }
         return newVarName;
     }    
+    
+    public static List<LustreAst> parseAndTranslate(String sf) {
+        CharStream          charStream  = CharStreams.fromString(sf);
+        StateflowLexer      lexer       = new StateflowLexer(charStream);
+        TokenStream         tokens      = new CommonTokenStream(lexer);    
+        StateflowParser     parser      = new StateflowParser(tokens);
+        
+        StateflowVisitor    visitor     = new StateflowVisitor();
+        List<LustreAst>     asts        = visitor.visitFileDecl(parser.fileDecl());
+        return asts;
+    }
+    
+    public static List<LustreAst> parseAndTranslateStrExpr(String sf) {
+        CharStream          charStream  = CharStreams.fromString(sf);
+        StateflowLexer      lexer       = new StateflowLexer(charStream);
+        TokenStream         tokens      = new CommonTokenStream(lexer);    
+        StateflowParser     parser      = new StateflowParser(tokens);
+        
+        StateflowVisitor    visitor     = new StateflowVisitor();
+        List<LustreAst>     asts        = visitor.visitExpr(parser.expr());
+        return asts;
+    }       
 }

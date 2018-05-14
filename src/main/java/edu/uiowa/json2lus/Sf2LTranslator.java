@@ -258,7 +258,7 @@ public class Sf2LTranslator {
             // Add entry expressions
             if(stateId.equals(this.initStateId)) {
                 if(entryStr != null) {
-                    for(LustreAst ast : parseAndTranslate(entryStr)) {
+                    for(LustreAst ast : J2LUtils.parseAndTranslate(entryStr)) {
                         LustreEq eq = (LustreEq)ast;
                         
                         if(eq.getLhs().size() == 1) {
@@ -273,13 +273,13 @@ public class Sf2LTranslator {
             }
             // Add during expressions            
             if(durStr != null) {
-                for(LustreAst ast : parseAndTranslate(durStr)) {
+                for(LustreAst ast : J2LUtils.parseAndTranslate(durStr)) {
                     duringExprs.add((LustreEq)ast);
                 }   
             }             
             // Add exit expressions
             if(exitStr != null) {
-                for(LustreAst ast : parseAndTranslate(exitStr)) {
+                for(LustreAst ast : J2LUtils.parseAndTranslate(exitStr)) {
                     exitExprs.add((LustreEq)ast);
                 }                     
             }             
@@ -306,11 +306,11 @@ public class Sf2LTranslator {
                 
                 // Parse the condition expression
                 if(conditionStr != null) { 
-                    condExprs.add((LustreExpr)parseAndTranslateStrExpr(conditionStr));
+                    condExprs.add((LustreExpr)J2LUtils.parseAndTranslateStrExpr(conditionStr));
                 }
                 // Parse the condition action expression
                 if(condActStrs != null) {
-                    for(LustreAst ast : parseAndTranslate(condActStrs)) {
+                    for(LustreAst ast : J2LUtils.parseAndTranslate(condActStrs)) {
                         if(ast instanceof LustreEq) {
                             condActEqs.add((LustreEq)ast);
                         }                        
@@ -318,7 +318,7 @@ public class Sf2LTranslator {
                 }                 
                 // Parse the transition action expression
                 if(transitActStrs != null) {
-                    for(LustreAst ast : parseAndTranslate(transitActStrs)) {
+                    for(LustreAst ast : J2LUtils.parseAndTranslate(transitActStrs)) {
                         if(ast instanceof LustreEq) {
                             transitActEqs.add((LustreEq)ast);
                         }                        
@@ -362,7 +362,7 @@ public class Sf2LTranslator {
                             if(destNode.has(ACTIONS) && destNode.get(ACTIONS).has(ENTRY)) {
                                 String entryExprStr = getActionStrEntryExpr(destNode.get(ACTIONS));
                                 if(entryExprStr != null) {
-                                    for(LustreAst ast : parseAndTranslate(entryExprStr)) {
+                                    for(LustreAst ast : J2LUtils.parseAndTranslate(entryExprStr)) {
                                         transitEqs.add((LustreEq) ast);
                                     }                                                                         
                                 }                       
@@ -474,13 +474,13 @@ public class Sf2LTranslator {
                     
                     // Parse the condition expression
                     if(conditionStr != null) {
-                        LustreExpr condExpr = (LustreExpr)parseAndTranslateStrExpr(conditionStr);
+                        LustreExpr condExpr = (LustreExpr)J2LUtils.parseAndTranslateStrExpr(conditionStr);
                         negPrevCondExprs.add(new UnaryExpr(UnaryExpr.Op.NOT, condExpr));
                         newCondExprs.add(condExpr);
                     }
                     // Parse the condition action expression
                     if(condActStrs != null) {
-                        for(LustreAst ast : parseAndTranslate(condActStrs)) {
+                        for(LustreAst ast : J2LUtils.parseAndTranslate(condActStrs)) {
                             if(ast instanceof LustreEq) {
                                 newCondActEqs.add((LustreEq)ast);
                             }                        
@@ -488,7 +488,7 @@ public class Sf2LTranslator {
                     }                 
                     // Parse the transition action expression
                     if(transitActStrs != null) {
-                        for(LustreAst ast : parseAndTranslate(transitActStrs)) {
+                        for(LustreAst ast : J2LUtils.parseAndTranslate(transitActStrs)) {
                             if(ast instanceof LustreEq) {
                                 newTransitActEqs.add((LustreEq)ast);
                             }                        
@@ -562,13 +562,13 @@ public class Sf2LTranslator {
                         
                         // Parse the current condition expression
                         if(condStr != null) {
-                            LustreExpr newCondExpr = (LustreExpr)parseAndTranslateStrExpr(condStr);
+                            LustreExpr newCondExpr = (LustreExpr)J2LUtils.parseAndTranslateStrExpr(condStr);
                             negPrevCondExprs.add(new UnaryExpr(UnaryExpr.Op.NOT, newCondExpr));
                             newCondExprs.add(newCondExpr);
                         }                        
                         // Parse the current condition action expression
                         if(condActStrs != null) {
-                            for(LustreAst ast : parseAndTranslate(condActStrs)) {
+                            for(LustreAst ast : J2LUtils.parseAndTranslate(condActStrs)) {
                                 if(ast instanceof LustreEq) {
                                     newCondActEqs.add((LustreEq)ast);
                                 }                        
@@ -576,7 +576,7 @@ public class Sf2LTranslator {
                         }                 
                         // Parse the current transition action expression
                         if(transitActStrs != null) {
-                            for(LustreAst ast : parseAndTranslate(transitActStrs)) {
+                            for(LustreAst ast : J2LUtils.parseAndTranslate(transitActStrs)) {
                                 if(ast instanceof LustreEq) {
                                     newTransitActEqs.add((LustreEq)ast);
                                 }
@@ -624,7 +624,7 @@ public class Sf2LTranslator {
                         String entryExprStr = getActionStrEntryExpr(destStateNode.get(ACTIONS));
 
                         if(entryExprStr != null) {
-                            for(LustreAst ast : parseAndTranslate(entryExprStr)) {
+                            for(LustreAst ast : J2LUtils.parseAndTranslate(entryExprStr)) {
                                 allActEqs.add((LustreEq) ast);
                             }                                                                         
                         }                       
@@ -828,12 +828,19 @@ public class Sf2LTranslator {
         
         // Get condition in string format
         if(strCond != null) {
-            condExprs.add((LustreExpr)parseAndTranslateStrExpr(strCond));
+            condExprs.add((LustreExpr)J2LUtils.parseAndTranslateStrExpr(strCond));
         }
         
         // Convert condition actions in string to Lustre expressions
         for(String strCondAct : strCondActs) {
-            LustreAst ast = parseAndTranslateStrExpr(strCondAct);
+            LustreAst       ast  = null;
+            List<LustreAst> asts = J2LUtils.parseAndTranslateStrExpr(strCondAct);
+            
+            if(asts.size() == 1) {
+                ast = asts.get(0);
+            } else {
+                LOGGER.log(Level.SEVERE, "Unhandled case: multiple asts returned from parseAndTranslateStrExpr()!");
+            }
             
             if(ast instanceof LustreEq) {
                 condActExprs.add((LustreEq)ast);
@@ -869,10 +876,10 @@ public class Sf2LTranslator {
             String  strCondAct  = getJunctionOutTransitStrCondActExpr(outTransitNode);
 
             if(strCond != null) {
-                newCondExprs.add((LustreExpr)parseAndTranslateStrExpr(strCond));
+                newCondExprs.add((LustreExpr)J2LUtils.parseAndTranslateStrExpr(strCond));
             }
             if(strCondAct != null) {
-                for(LustreAst ast : parseAndTranslate(strCondAct)) {
+                for(LustreAst ast : J2LUtils.parseAndTranslate(strCondAct)) {
                     if(ast instanceof LustreEq) {
                         condActExprs.add((LustreEq)ast);
                     }
@@ -1389,27 +1396,5 @@ public class Sf2LTranslator {
         } else {
             map.put(key, value);
         }
-    }    
-    
-    public List<LustreAst> parseAndTranslate(String sf) {
-        CharStream          charStream  = CharStreams.fromString(sf);
-        StateflowLexer      lexer       = new StateflowLexer(charStream);
-        TokenStream         tokens      = new CommonTokenStream(lexer);    
-        StateflowParser     parser      = new StateflowParser(tokens);
-        
-        StateflowVisitor    visitor     = new StateflowVisitor();
-        List<LustreAst>     asts        = visitor.visitFileDecl(parser.fileDecl());
-        return asts;
-    }
-    
-    public LustreAst parseAndTranslateStrExpr(String sf) {
-        CharStream          charStream  = CharStreams.fromString(sf);
-        StateflowLexer      lexer       = new StateflowLexer(charStream);
-        TokenStream         tokens      = new CommonTokenStream(lexer);    
-        StateflowParser     parser      = new StateflowParser(tokens);
-        
-        StateflowVisitor    visitor     = new StateflowVisitor();
-        LustreAst           ast         = visitor.visitExpr(parser.expr());
-        return ast;
-    }    
+    }         
 }

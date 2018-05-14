@@ -70,7 +70,9 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
         
         sb.append(NL);                      
               
-        for(LustreNode node : program.nodes) {
+        for(int i = 0; i < program.nodes.size(); ++i) {
+            LustreNode node = program.nodes.get(i);
+            
             if(!nodeContractsMap.containsKey(node.name)) {
                 node.accept(this);sb.append(NL).append(NL);
             } else {

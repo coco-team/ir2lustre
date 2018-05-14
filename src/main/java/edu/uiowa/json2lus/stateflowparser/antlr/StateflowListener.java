@@ -358,27 +358,33 @@ public interface StateflowListener extends ParseTreeListener {
 	 */
 	void exitExprList(StateflowParser.ExprListContext ctx);
 	/**
-	 * Enter a parse tree produced by the {@code hcat}
-	 * labeled alternative in {@link StateflowParser#exprArrayList}.
+	 * Enter a parse tree produced by {@link StateflowParser#exprArrayList}.
 	 * @param ctx the parse tree
 	 */
-	void enterHcat(StateflowParser.HcatContext ctx);
+	void enterExprArrayList(StateflowParser.ExprArrayListContext ctx);
 	/**
-	 * Exit a parse tree produced by the {@code hcat}
-	 * labeled alternative in {@link StateflowParser#exprArrayList}.
+	 * Exit a parse tree produced by {@link StateflowParser#exprArrayList}.
 	 * @param ctx the parse tree
 	 */
-	void exitHcat(StateflowParser.HcatContext ctx);
+	void exitExprArrayList(StateflowParser.ExprArrayListContext ctx);
 	/**
-	 * Enter a parse tree produced by the {@code vcat}
-	 * labeled alternative in {@link StateflowParser#exprArrayList}.
+	 * Enter a parse tree produced by {@link StateflowParser#verticalArrayExpr}.
 	 * @param ctx the parse tree
 	 */
-	void enterVcat(StateflowParser.VcatContext ctx);
+	void enterVerticalArrayExpr(StateflowParser.VerticalArrayExprContext ctx);
 	/**
-	 * Exit a parse tree produced by the {@code vcat}
-	 * labeled alternative in {@link StateflowParser#exprArrayList}.
+	 * Exit a parse tree produced by {@link StateflowParser#verticalArrayExpr}.
 	 * @param ctx the parse tree
 	 */
-	void exitVcat(StateflowParser.VcatContext ctx);
+	void exitVerticalArrayExpr(StateflowParser.VerticalArrayExprContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link StateflowParser#horizontalArrayExpr}.
+	 * @param ctx the parse tree
+	 */
+	void enterHorizontalArrayExpr(StateflowParser.HorizontalArrayExprContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link StateflowParser#horizontalArrayExpr}.
+	 * @param ctx the parse tree
+	 */
+	void exitHorizontalArrayExpr(StateflowParser.HorizontalArrayExprContext ctx);
 }

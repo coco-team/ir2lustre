@@ -187,12 +187,13 @@ public class J2LTranslator {
     private final String INDOPTARR      = "IndexOptionArray";
     private final String SELECTALL      = "Select all";
     private final String INDVECD        = "Index vector (dialog)";
-    private final String INDVECP        = "Index vector (dialog)";
+    private final String INDVECP        = "Index vector (port)";
     private final String STARTINDD      = "Starting index (dialog)";
     private final String STARTINDP      = "Starting index (port)";
-    private final String STARTENDINDP   = "Starting and ending indices (port)";    
-    
-    
+    private final String STARTENDINDP   = "Starting and ending indices (port)";        
+    private final String NUMOFDIM       = "NumberOfDimensions";            
+        
+    private final String INDEXPARAMARRAY    = "IndexParamArray";             
     private final String COLLAPSEDIM        = "CollapseDim"; 
     private final String COLLAPSEMODE       = "CollapseMode"; 
     private final String MULTIPLICATIOIN    = "Multiplication";    
@@ -223,7 +224,8 @@ public class J2LTranslator {
     private final String VALIDATOR      = "ContractValidatorBlock";    
              
     
-    /** CoCoSim block type to indicate property block */            
+    /** CoCoSim block type to indicate property block */           
+    
     private final String HELD               = "held";
     private final String RESET              = "reset";
     private final String LOCAL              = "Local";      
@@ -1341,7 +1343,11 @@ public class J2LTranslator {
                 case CONCATE: {
                     blkExpr = mkConcateExpr(blkNode, inExprs);
                     break;
-                }                
+                } 
+                case SELECTOR: {
+                    blkExpr = mkSelectorExpr(blkNode, inExprs);
+                    break;
+                }                 
                 case DEMUX: {
                     List<LustreExpr> outVarIdExprs;
                     if(this.auxHdlToExprMap.containsKey(blkHdl)) {
@@ -1528,28 +1534,7 @@ public class J2LTranslator {
                     break;
                 }
                 case CONSTANT: {
-                    List<Integer>   blkDims = getBlkOutportDimensions(blkNode);
-                    LustreType      type    = getBlkOutportType(blkNode);
-                    String          value   = blkNode.get(VALUE).asText().trim();
-                    
-                    if(isOneValConst(blkDims)) {                        
-                        if(isValidConst(value)) {
-                            blkExpr = getLustreConst(value, type);
-                        //The value of the constant field of CompareToConstant block refers to the "value" of its parent node
-                        } else if(parentSubsystemNode.has(value)) {
-                            blkExpr = getLustreConst(parentSubsystemNode.get(value).asText().trim(), type);
-                        } else {
-                            LOGGER.log(Level.SEVERE, "Unexpected constant value in JSON node: {0}", blkNode);
-                        }                        
-                    } else {
-                        blkDims.remove(0);
-                        String      matrixName  = J2LUtils.getFreshVarName(MATRIXCONST);
-                        VarIdExpr   matrixId    = new VarIdExpr(matrixName);
-                        
-                        this.auxNodeLocalVars.add(new LustreVar(matrixName, new ArrayType(type, blkDims)));
-                        this.auxNodeEqs.add(new LustreEq(matrixId, mkArrayConst(value)));
-                        blkExpr = matrixId;
-                    }                    
+                    blkExpr = mkConstantExpr(blkNode, parentSubsystemNode);                   
                     break;
                 }
                 case PRODUCT: {
@@ -1727,6 +1712,50 @@ public class J2LTranslator {
         return blkExpr;
     }
     
+    
+    /**
+     * The Constant block generates a real or complex constant value. 
+     * The block generates scalar, vector, or matrix output, depending on:
+     * 1. The dimensionality of the Constant value parameter
+     * 2. The setting of the Interpret vector parameters as 1-D parameter
+     * 
+     * @param blkNode
+     * @param parentSubsystemNode
+     * @return 
+     */
+    protected LustreExpr mkConstantExpr(JsonNode blkNode, JsonNode parentSubsystemNode) {
+        LustreExpr      blkExpr     = null;
+        List<Integer>   blkDims     = getBlkOutportDimensions(blkNode);
+        LustreType      baseType    = getBlkOutportType(blkNode);
+        String          value       = blkNode.get(VALUE).asText().trim();
+
+        if(isScalarConstant(blkDims)) {
+            if(isValidConst(value)) {
+                blkExpr = getLustreConst(value, baseType);
+            //The value of the constant field of CompareToConstant block refers to the "value" of its parent node
+            } else if(parentSubsystemNode.has(value)) {
+                blkExpr = getLustreConst(parentSubsystemNode.get(value).asText().trim(), baseType);
+            } else {
+                LOGGER.log(Level.SEVERE, "Unexpected constant value in JSON node: {0}", blkNode);
+            }                        
+        } else {
+            blkDims.remove(0);
+            String      matrixName  = J2LUtils.getFreshVarName(MATRIXCONST);
+            VarIdExpr   matrixId    = new VarIdExpr(matrixName);
+            List<LustreAst>  asts   = J2LUtils.parseAndTranslateStrExpr(value);
+            List<LustreExpr> exprs  = new ArrayList<>();
+            
+            for(LustreAst ast : asts) {
+                exprs.add((LustreExpr)ast);
+            }
+            
+            this.auxNodeLocalVars.add(new LustreVar(matrixName, new ArrayType(baseType, blkDims)));
+            this.auxNodeEqs.add(new LustreEq(matrixId, new ArrayExpr(blkDims, exprs)));
+            blkExpr = matrixId;
+        }  
+        return blkExpr;
+    }
+    
     /**
      * The Compare To Constant block compares an input signal to a constant. 
      * 
@@ -1829,19 +1858,127 @@ public class J2LTranslator {
      * Specify a vector signal as a 1-D signal and a matrix signal as a 2-D signal. 
      * When you configure the Selector block for multidimensional signal operations, 
      * the block icon changes.
-     * For example, assume a 6-D signal with a one-based index mode. 
-     * The table of the Selector block dialog changes to include one row for each 
-     * dimension. 
+
+     * Defines, by dimension, how the elements of the signal are to be indexed. 
+     * From the list, select:
+     * 1. Select all
+     * No further configuration is required. All elements are selected.
+     * 2. Index vector (dialog)
+     * Enables the Index column. Enter the vector of indices of the elements.
+     * 3. Index vector (port)
+     * No further configuration is required.
+     * 4. Starting index (dialog)
+     * Enables the Index and Output Size columns. Enter the starting index of 
+     * the range of elements to select in the Index column and the number of 
+     * elements to select in the Output Size column.
+     * 5. Starting index (port)
+     * Enables the Output Size column. Enter the number of elements to be selected 
+     * in the Output Size column.
+     * 6. Starting and ending indices (port)
+     * No further configuration is required.
+     * Using this option results in a variable-size output signal. When you update, 
+     * the output dimension is set to be the same as the input signal dimension. 
+     * During execution, the output dimension is updated based on the signal feeding the index.
+     * When logging output signal data, signals not selected are padded with NaN values.
      * 
      * @param blkNode
      * @param inExprs
      * @return 
      */
     protected LustreExpr mkSelectorExpr(JsonNode blkNode, List<LustreExpr> inExprs) {
+        ArrayExpr inExpr = null;
+        int             numOfDims       = blkNode.get(NUMOFDIM).asInt();
+        List<Integer>   inDimensions    = getBlkInportDimensions(blkNode);  
+        String          indexMode       = blkNode.get(INDEXMODE).asText();
+        List<String>    indexOpts       = getIndexOpts(blkNode);
+        List<List<Integer>>     indices     = getIndexParamArray(blkNode);
+        List<LustreExpr>        outExprs    = new ArrayList<>();
+        Map<String, List<Integer>> dimIndexMap = new LinkedHashMap<>();
+                                    
+        // Remove the dimension number
+        inDimensions.remove(0);
         
-        
+        if(numOfDims != indexOpts.size()) {
+            LOGGER.log(Level.SEVERE, "The number of dimensions is not equal to the number of index options!");
+            return null;
+        } else {
+            // The input is a matrix
+            inExpr = (ArrayExpr)inExprs.get(0);
+                        
+            for(int i = 0; i < numOfDims; ++i) {
+                String          indexOpt    = indexOpts.get(i);
+                List<Integer>   optIndices  = indices.get(i);
+                
+                switch(indexOpt) {
+                    case SELECTALL: {
+                        break;
+                    }
+                    case INDVECD: {
+                        break;
+                    }
+                    case STARTINDD: {                                           
+                        break;
+                    }                    
+                    case INDVECP: {
+                        break;
+                    }
+                    case STARTINDP: {
+                        break;
+                    }   
+                    case STARTENDINDP: {
+                        break;
+                    }    
+                    default:
+                        break;
+                }                 
+            }
+        }
         return null;
     }
+    
+    protected List<String> getIndexOpts(JsonNode blkNode) {
+        List<String> indexOpts = new ArrayList<>();
+        JsonNode indexOptsNode = blkNode.get(INDOPTARR);
+        
+        if(indexOptsNode.isArray()) {
+            Iterator<JsonNode> indexOptsIt = indexOptsNode.elements();
+            
+            while(indexOptsIt.hasNext()) {
+                indexOpts.add(indexOptsIt.next().asText());
+            }
+        } else {
+            LOGGER.log(Level.SEVERE, "Do not know what it is: {0}", blkNode);
+        }
+        return indexOpts;
+    }
+    
+    protected List<List<Integer>> getIndexParamArray(JsonNode blkNode) {
+        List<List<Integer>> indexOpts = new ArrayList<>();
+        JsonNode indexNode = blkNode.get(INDEXPARAMARRAY);
+        
+        if(indexNode.isArray()) {
+            Iterator<JsonNode> indexOptsIt = indexNode.elements();
+            
+            while(indexOptsIt.hasNext()) {
+                List<Integer> range = new ArrayList<>();
+                String indices = indexOptsIt.next().asText();
+                
+                if(indices.contains("[") && indices.contains("]")) {
+                    indices = indices.trim().replace("[", "").replace("]", "").trim();
+                    String[] tokens = indices.split("\\s+");
+                    
+                    for(String t : tokens) {
+                        range.add(Integer.parseInt(t.trim()));
+                    }
+                } else {
+                    range.add(Integer.parseInt(indices.trim()));
+                }
+            }
+        } else {
+            LOGGER.log(Level.SEVERE, "Do not know what it is: {0}", blkNode);
+        }
+        return indexOpts;
+    }    
 
     /**
      * The Concatenate block concatenates the input signals to create an output signal whose 
@@ -1932,9 +2069,13 @@ public class J2LTranslator {
                     }                         
                     break;
                 }             
-                default:
-                    LOGGER.log(Level.SEVERE, "Unhandled case for multi-dimensional concatenation for {0}", concateDim);
+                default: {
+                    // Not sure if this is correct
+                    for(int i = 0; i < outExprs.size(); ++i) {                       
+                        finalOutExprs.addAll(outExprs.get(i));                        
+                    }                       
                     break;
+                }
             }            
         } else {
             for(int i = 0; i < outExprs.size(); ++i) {
@@ -3873,7 +4014,7 @@ public class J2LTranslator {
         return results;
     }        
     
-    protected boolean isOneValConst(List<Integer> dims) {
+    protected boolean isScalarConstant(List<Integer> dims) {
         boolean isOneVal = true;
         
         for(int dim : dims) {
