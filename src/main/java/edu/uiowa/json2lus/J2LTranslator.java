@@ -466,9 +466,9 @@ public class J2LTranslator {
         // Set up data structures for storing contract information
         int aIndex = 1, gIndex = 1;             
         Map<String, List<LustreExpr>>   modeToRequires  = new HashMap<>();
-        Map<String, List<LustreExpr>>   modeToEnsures   = new HashMap<>();           
-        List<LustreExpr>                assumptions     = new ArrayList<>();            
-        List<LustreExpr>                guarantees      = new ArrayList<>();                                  
+        Map<String, Map<String, LustreExpr>>   modeToEnsures   = new HashMap<>();           
+        Map<String, LustreExpr>         assumptions     = new HashMap<>();            
+        Map<String, LustreExpr>         guarantees      = new HashMap<>();                                  
         List<String>                    inHdls          = blkNodeToSrcBlkHdlsMap.get(validatorBlkNode);
         List<Integer>                   inPorts         = blkNodeToSrcBlkPortsMap.get(validatorBlkNode);         
         
@@ -480,20 +480,20 @@ public class J2LTranslator {
             
             // Translate assumption blocks
             if(isAssumeBlk(inBlk)) {
-                assumptions.add(translateBlock(false, inHdls.get(i), contractNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, new HashSet<String>(), null, inPorts.get(i)));
+                assumptions.put(originPath, translateBlock(false, inHdls.get(i), contractNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, new HashSet<String>(), null, inPorts.get(i)));
                 addMappingInfo(originPath, null, contractName, null, ASSUME, String.valueOf(aIndex++), null);                
             // Translate guarantee blocks                
             } else if(isGuaranteeBlk(inBlk)) {
-                guarantees.add(translateBlock(false, inHdls.get(i), contractNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, new HashSet<String>(), null, inPorts.get(i)));
+                guarantees.put(originPath, translateBlock(false, inHdls.get(i), contractNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, new HashSet<String>(), null, inPorts.get(i)));
                 addMappingInfo(originPath, null, contractName, null, GUARANTEE, String.valueOf(gIndex++), null);                
             } else if(isModeBlk(inBlk)) {
                 // Set up data structures for requires and ensures of modes
                 int rIndex = 1, eIndex = 1;
                 String modeName                 = getBlkName(inBlk);
-                List<LustreExpr>    requires    = new ArrayList<>();
-                List<LustreExpr>    ensures     = new ArrayList<>();
+                List<LustreExpr>    requires    = new ArrayList<>();                
                 List<String>        modeInHdls  = blkNodeToSrcBlkHdlsMap.get(inBlk);
                 List<Integer>       modeInPorts = blkNodeToSrcBlkPortsMap.get(inBlk);
+                Map<String, LustreExpr>    ensures     = new HashMap<>();                
                 
                 // Translate requires and ensures
                 for(int j = 0; j < modeInHdls.size(); j++) {
@@ -505,7 +505,7 @@ public class J2LTranslator {
                         requires.add(modeInBlkExpr);
                         addMappingInfo(originPath, null, contractName, modeName, REQUIRE, String.valueOf(rIndex++), null);
                     } else if(isEnsureBlk(modeInBlk)) {
-                        ensures.add(modeInBlkExpr);
+                        ensures.put(originPath, modeInBlkExpr);
                         addMappingInfo(originPath, null, contractName, modeName, ENSURE, String.valueOf(eIndex++), null);                        
                     }
                 }
@@ -1892,7 +1892,7 @@ public class J2LTranslator {
         List<Integer>   inDimensions    = getBlkInportDimensions(blkNode);  
         String          indexMode       = blkNode.get(INDEXMODE).asText();
         List<String>    indexOpts       = getIndexOpts(blkNode);
-        List<List<Integer>>     indices     = getIndexParamArray(blkNode);
+        List<List<Integer>>     indices     = new ArrayList<>();
         List<LustreExpr>        outExprs    = new ArrayList<>();
         Map<String, List<Integer>> dimIndexMap = new LinkedHashMap<>();
                                     
@@ -1903,30 +1903,53 @@ public class J2LTranslator {
             LOGGER.log(Level.SEVERE, "The number of dimensions is not equal to the number of index options!");
             return null;
         } else {
+            // Index for getting the input constant blocks
+            int j = 1;
             // The input is a matrix
             inExpr = (ArrayExpr)inExprs.get(0);
                         
             for(int i = 0; i < numOfDims; ++i) {
                 String          indexOpt    = indexOpts.get(i);
-                List<Integer>   optIndices  = indices.get(i);
+                List<Integer>   optIndices  = new ArrayList<>();
                 
                 switch(indexOpt) {
                     case SELECTALL: {
+                        optIndices.addAll(getIndexFromParamArray(blkNode, i));
                         break;
                     }
                     case INDVECD: {
+                        optIndices.addAll(getIndexFromParamArray(blkNode, i));
                         break;
                     }
-                    case STARTINDD: {                                           
+                    case STARTINDD: {                                         
+                        optIndices.addAll(getIndexFromParamArray(blkNode, i));
                         break;
                     }                    
                     case INDVECP: {
+                        if(j < inExprs.size()) {                            
+                            optIndices.addAll(getIndexFromConstantBlk(inExprs.get(j)));
+                            ++j;
+                        } else {
+                            LOGGER.log(Level.SEVERE, "Unexpected case: no input expression to choose for index vector port!");
+                        }
                         break;
                     }
                     case STARTINDP: {
+                        if(j < inExprs.size()) {
+                            optIndices.addAll(getIndexFromConstantBlk(inExprs.get(j)));
+                            ++j;
+                        } else {
+                            LOGGER.log(Level.SEVERE, "Unexpected case: no input expression to choose for starting index port!");
+                        }                        
                         break;
                     }   
                     case STARTENDINDP: {
+                        if(j < inExprs.size()) {
+                            optIndices.addAll(getIndexFromConstantBlk(inExprs.get(j)));
+                            ++j;
+                        } else {
+                            LOGGER.log(Level.SEVERE, "Unexpected case: no input expression to choose for starting and end index port!");
+                        }                        
                         break;
                     }    
                     default:
@@ -1935,6 +1958,34 @@ public class J2LTranslator {
             }
         }
         return null;
+    }
+    
+    protected List<Integer> getIndexFromConstantBlk(LustreExpr indexExpr) {
+        List<Integer> indices = new ArrayList<>();
+        
+        if(indexExpr instanceof ArrayExpr) {
+            ArrayExpr e = ((ArrayExpr)indexExpr);
+            
+            for(int k = 0; k < e.exprs.size(); ++k) {
+                LustreExpr kthIndex = e.exprs.get(k);
+                
+                if(kthIndex instanceof RealExpr) {
+                    String index = ((RealExpr)kthIndex).value.toString();
+                    
+                    if(index.contains(".")) {
+                        index = index.substring(0, index.charAt('.'));
+                    }
+                    indices.add(Integer.parseInt(index));
+                } else if(kthIndex instanceof IntExpr) {
+                    indices.add(Integer.parseInt(((RealExpr)kthIndex).value.toString()));
+                } else {
+                    LOGGER.log(Level.SEVERE, "Unexpected case: the expression is not a real or integer type!");
+                }
+            } 
+        } else {
+            LOGGER.log(Level.SEVERE, "Unexpected expression type: it is not an array expression!");
+        }  
+        return indices;
     }
     
     protected List<String> getIndexOpts(JsonNode blkNode) {
@@ -1953,26 +2004,32 @@ public class J2LTranslator {
         return indexOpts;
     }
     
-    protected List<List<Integer>> getIndexParamArray(JsonNode blkNode) {
-        List<List<Integer>> indexOpts = new ArrayList<>();
-        JsonNode indexNode = blkNode.get(INDEXPARAMARRAY);
+    protected List<Integer> getIndexFromParamArray(JsonNode blkNode, int index) {
+        List<Integer>   indexOpts = new ArrayList<>();
+        JsonNode        indexNode = blkNode.get(INDEXPARAMARRAY);
         
         if(indexNode.isArray()) {
+            int i = 0;
             Iterator<JsonNode> indexOptsIt = indexNode.elements();
             
             while(indexOptsIt.hasNext()) {
-                List<Integer> range = new ArrayList<>();
-                String indices = indexOptsIt.next().asText();
-                
-                if(indices.contains("[") && indices.contains("]")) {
-                    indices = indices.trim().replace("[", "").replace("]", "").trim();
-                    String[] tokens = indices.split("\\s+");
-                    
-                    for(String t : tokens) {
-                        range.add(Integer.parseInt(t.trim()));
-                    }
+                if(i == index) {
+                    String indices = indexOptsIt.next().asText();
+
+                    if(indices.contains("[") && indices.contains("]")) {
+                        indices = indices.trim().replace("[", "").replace("]", "").trim();
+                        String[] tokens = indices.split("\\s+");
+
+                        for(String t : tokens) {
+                            indexOpts.add(Integer.parseInt(t.trim()));
+                        }
+                    } else {
+                        indexOpts.add(Integer.parseInt(indices.trim()));
+                    }  
+                    break;
                 } else {
-                    range.add(Integer.parseInt(indices.trim()));
+                    ++i;
+                    indexOptsIt.next();
                 }
             }
         } else {

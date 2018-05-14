@@ -268,12 +268,16 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
                 sb.append(";").append(NL).append(NL);
             }
         }
-        for(LustreExpr assume : contract.assumptions) {
-            sb.append(TAB).append("assume ");assume.accept(this);sb.append(";").append(NL);
+        for(Map.Entry<String, LustreExpr> assume : contract.assumptions.entrySet()) {
+            sb.append(TAB).append("assume ");
+            sb.append(" \"").append(assume.getKey()).append("\" ");
+            assume.getValue().accept(this);sb.append(";").append(NL);
         }
         sb.append(NL);
-        for(LustreExpr assume : contract.guarantees) {
-            sb.append(TAB).append("guarantee ");assume.accept(this);sb.append(";").append(NL);
+        for(Map.Entry<String, LustreExpr> gurantee : contract.guarantees.entrySet()) {
+            sb.append(TAB).append("guarantee ");
+            sb.append(" \"").append(gurantee.getKey()).append("\" ");
+            gurantee.getValue().accept(this);sb.append(";").append(NL);
         }
         sb.append(NL);
         
@@ -291,9 +295,10 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
                 }
             }
             if(contract.modeToEnsures.containsKey(mode)) {
-                for(LustreExpr ensure : contract.modeToEnsures.get(mode)) {
+                for(Map.Entry<String, LustreExpr> ensure : contract.modeToEnsures.get(mode).entrySet()) {
                     sb.append(TAB).append(TAB).append("ensure ");
-                    ensure.accept(this);
+                    sb.append(" \"").append(ensure.getKey()).append("\" ");
+                    ensure.getValue().accept(this);
                     sb.append(";").append(NL);
                 }
             }            
