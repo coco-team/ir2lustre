@@ -430,11 +430,10 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
     }
     
     public void visitArrayExpr(int curDim, List<Integer> intDims, List<LustreExpr> exprs) {
-        if(curDim < intDims.size() - 1) {
-            int i = 0;
+        if(curDim < intDims.size() - 1) {            
             int dim = intDims.get(curDim);
             sb.append("[");
-            for(; i < dim; ++i) {
+            for(int i = 0; i < dim; ++i) {
                 visitArrayExpr(curDim+1, intDims, exprs);
                 if(i != dim-1) {
                     sb.append(", ");
@@ -445,7 +444,7 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
             int dim = intDims.get(curDim);  
             
             sb.append("[");
-            for(int i = 0; i < dim; ++i) {
+            for(int i = 0; i < dim && i < exprs.size(); ++i) {
                 exprs.get(i).accept(this);
                 if(i != dim-1) {
                     sb.append(", ");
@@ -453,7 +452,7 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
             }
             sb.append("]");
             //Remove the ones that have been printed
-            for(int i = 0; i < dim; ++i) {
+            for(int i = 0; i < dim && i < exprs.size(); ++i) {
                 exprs.remove(0);
             }
         }
