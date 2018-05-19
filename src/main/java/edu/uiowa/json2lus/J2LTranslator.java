@@ -628,10 +628,10 @@ public class J2LTranslator {
             String          inportName      = getBlkName(inports.get(i));
             List<Integer>   dimensions      = getDimensions(inports.get(i));
             LustreType      baseType        = getBlkOutportType(inports.get(i));
-//            boolean         isMatrixMode    = getMatrixMode(inports.get(i), hdlToBlkNodeMap, blkNodeToDstBlkHdlsMap);
+            boolean         isMatrixMode    = getMatrixMode(inports.get(i), hdlToBlkNodeMap, blkNodeToDstBlkHdlsMap);
             
             
-            if(dimensions.size() == 1 && dimensions.get(0) == 1) {
+            if(dimensions.size() == 1 && dimensions.get(0) == 1 && !isMatrixMode) {
                 inputs.add(new LustreVar(inportName, baseType));                     
             } else {
                 ArrayType array = new ArrayType(baseType, dimensions);
@@ -642,9 +642,9 @@ public class J2LTranslator {
             String          outportName     = getBlkName(outports.get(i));     
             List<Integer>   dimensions      = getDimensions(outports.get(i));
             LustreType      baseType        = getBlkInportType(outports.get(i));  
-//            boolean         isMatrixMode    = getMatrixMode(inports.get(i), hdlToBlkNodeMap, blkNodeToDstBlkHdlsMap);
+            boolean         isMatrixMode    = getMatrixMode(outports.get(i), hdlToBlkNodeMap, blkNodeToDstBlkHdlsMap);
             
-            if(dimensions.size() == 1 && dimensions.get(0) == 1) {
+            if(dimensions.size() == 1 && dimensions.get(0) == 1 && !isMatrixMode) {
                 outputs.add(new LustreVar(outportName, baseType));
             } else {
                 ArrayType array = new ArrayType(baseType, dimensions);
@@ -704,14 +704,15 @@ public class J2LTranslator {
     }
     
     protected boolean getMatrixMode(JsonNode blkNode,  Map<String, JsonNode> hdlBlkNodeMap, Map<JsonNode, List<String>> blkNodeToDstBlkHandlesMap) {
-        for(String dstHdl : blkNodeToDstBlkHandlesMap.get(blkNode)) {
-            JsonNode dstBlkNode = hdlBlkNodeMap.get(dstHdl);
-            
-            if(dstBlkNode.has(MULTIPLICATIOIN)) {
-                return dstBlkNode.get(MULTIPLICATIOIN).asText().equals(MATRIX);
-            }            
-        }
+        if(blkNodeToDstBlkHandlesMap.containsKey(blkNode)) {
+            for(String dstHdl : blkNodeToDstBlkHandlesMap.get(blkNode)) {
+                JsonNode dstBlkNode = hdlBlkNodeMap.get(dstHdl);
 
+                if(dstBlkNode.has(MULTIPLICATIOIN)) {
+                    return dstBlkNode.get(MULTIPLICATIOIN).asText().equals(MATRIX);
+                }            
+            }            
+        } 
         return false;
     }
 
@@ -1367,7 +1368,7 @@ public class J2LTranslator {
                         outVarIdExprs = mkDemuxExpr(blkNode, inExprs);
                         this.auxHdlToExprMap.put(blkHdl, outVarIdExprs);
                     }   
-                    outVarIdExprs.get(portNum);
+                    blkExpr = outVarIdExprs.get(portNum);
                     break;
                 }                
                 case SUM: {
@@ -1902,8 +1903,9 @@ public class J2LTranslator {
      * @param inExprs
      * @return 
      */
-    protected LustreExpr mkSelectorExpr(JsonNode blkNode, List<LustreExpr> inExprs) {               
-        String          outVarName      = J2LUtils.getFreshVarName(SELECTOROUT);        
+    protected LustreExpr mkSelectorExpr(JsonNode blkNode, List<LustreExpr> inExprs) {        
+        String          blkName         = getBlkName(blkNode);
+        String          outVarName      = J2LUtils.getFreshVarName(blkName + "_" + OUTPUT);        
         VarIdExpr       blkExpr         = new VarIdExpr(outVarName);
         int             numOfDims       = blkNode.get(NUMOFDIM).asInt();
         String          indexMode       = blkNode.get(INDEXMODE).asText();
@@ -1957,7 +1959,7 @@ public class J2LTranslator {
                 } 
                 indices.add(optIndices);
             }
-        }                
+        }
         
         if(!indices.isEmpty()) {
             List<LustreExpr> allExprs = new ArrayList<>();
@@ -2159,13 +2161,13 @@ public class J2LTranslator {
         if(isScalar) {
             return inExprs.get(0);
         }
-                
+        String blkName = getBlkName(blkNode);
         String mode = blkNode.get(MODE).asText();
         LustreType baseType = getBlkOutportType(blkNode);
         List<Integer>   inDimensions    = getBlkInportDimensions(blkNode);        
         // Remove the out dimension number
         outDimensions.remove(0);
-        String          outVarName      = J2LUtils.getFreshVarName(CONCATEOUT);
+        String          outVarName      = J2LUtils.getFreshVarName(blkName + "_" + OUTPUT);
         LustreVar       outVar          = isScalar ? new LustreVar(outVarName, baseType) : new LustreVar(outVarName, new ArrayType(baseType, outDimensions));
         VarIdExpr       outVarIdExpr    = new VarIdExpr(outVarName);
         List<List<Integer>>     inDims          = new ArrayList<>();
@@ -2203,35 +2205,7 @@ public class J2LTranslator {
                 // Horizontal matrix concatenation and places the input matrices 
                 // side-by-side to create the output matrix
                 case 2: {
-                    mkConcateExpr(finalOutExprs, outDimensions, inDims, concateExprs);
-                    for(int i = 0; i < outDimensions.size(); ++i) {
-                        int curInDim  = 0;                        
-                        int curOutDim = outDimensions.get(i);                       
-                                                 
-//                        for(int j = 0; j < concateExprs.size(); ++j) {
-//                            List<Integer>       inDim       = inDims.get(j);
-//                            List<LustreExpr>    concateExpr = concateExprs.get(j);
-//                            
-////                            curInDim += inDim.get(i);
-//                            
-//                            for(int k = 0; k < curOutDim; ++k) {
-//                                
-//                                finalOutExprs.add();
-//                            }
-//                        }
-                        // Append 1(1.0) if the dimensions of inputs are lower
-                        if(curInDim < curOutDim) {
-                            for(int l = 0; l < (curOutDim-curInDim); ++l) {
-                                if(baseType == PrimitiveType.INT) {
-                                    finalOutExprs.add(new IntExpr(1));
-                                } else if(baseType == PrimitiveType.REAL) {
-                                    finalOutExprs.add(new RealExpr(new BigDecimal("1.0")));
-                                } else {
-                                    LOGGER.log(Level.SEVERE, "Unhandled case for type: {0}", baseType);
-                                }
-                            }
-                        }
-                    }                         
+                    mkConcateExpr(0, outDimensions, new ArrayList<Integer>(), finalOutExprs, inDims, concateExprs);                      
                     break;
                 }             
                 default: {
@@ -2252,23 +2226,41 @@ public class J2LTranslator {
         return outVarIdExpr;
     }   
     
-    protected void mkConcateExpr(List<LustreExpr> finalOutputs, List<Integer> outDimensions, List<List<Integer>> inDims, List<List<LustreExpr>> concateExprs) {
-        int outDim = outDimensions.get(0);
-        
-        for(int j = 0; j < outDim; ++j) {
-            for(int i = 0; i < inDims.size(); ++i) {
-                List<Integer>       inDim   = inDims.get(i);
-                List<LustreExpr>    concateExpr = concateExprs.get(i);
-                int lastLen = inDim.get(inDim.size()-1);
-                mkConcateExpr(j, lastLen, finalOutputs, concateExpr);
-            }            
+    protected void mkConcateExpr(int curDim, List<Integer> outDims, List<Integer> allDims, List<LustreExpr> finalOutputs, List<List<Integer>> inDims, List<List<LustreExpr>> concateExprs) {        
+        if(curDim == outDims.size()-1) {
+            int lastOutDim = outDims.get(curDim);
+            
+            for(int i = 0; i < lastOutDim;) {
+                for(int j = 0; j < inDims.size(); ++j) {
+                    List<Integer>       inDim   = inDims.get(j);
+                    List<LustreExpr>    concateExpr = concateExprs.get(j);
+                    int lastColumnDim = inDim.get(inDim.size()-1);
+                    mkConcateExpr(inDim.size()==1, lastColumnDim, finalOutputs, concateExpr);
+                    i += lastColumnDim;
+                }
+            }
+        } else if(curDim < outDims.size()-1) {
+            int d = outDims.get(curDim);
+            
+            for(int i = 0; i < d; ++i) {
+                List<Integer> tempAllDims = new ArrayList<>();
+                tempAllDims.addAll(allDims);
+                allDims.add(i);
+                mkConcateExpr(curDim+1, outDims, tempAllDims, finalOutputs, inDims, concateExprs);
+            }
         }
     }
     
-    protected void mkConcateExpr(int k, int lastLen, List<LustreExpr> finalOutputs, List<LustreExpr> concateExpr) {
-        for(int j = k*lastLen; j < (k+1)*lastLen; ++j) {
-            finalOutputs.add(concateExpr.get(j));
-        }           
+    protected void mkConcateExpr(boolean isOneDim, int lastColumnDim, List<LustreExpr> finalOutputs, List<LustreExpr> concateExpr) {
+        if(isOneDim) {
+            finalOutputs.add(concateExpr.get(0));
+            concateExpr.remove(0);            
+        } else {
+            for(int j = 0; j < lastColumnDim; ++j) {
+                finalOutputs.add(concateExpr.get(0));
+                concateExpr.remove(0);
+            }                   
+        }    
     }
     
     protected void getConcateExprs(List<List<Integer>> inDims, List<LustreExpr> inExprs, List<List<LustreExpr>> concateExprs) {
@@ -2310,7 +2302,7 @@ public class J2LTranslator {
         LustreType      baseType        = getBlkOutportType(blkNode);
         List<Integer>   inDimensions    = getBlkInportDimensions(blkNode);
         List<Integer>   outDimensions   = getBlkOutportDimensions(blkNode);
-        String          muxOutputName   = J2LUtils.getFreshVarName(MUXOUT);
+        String          muxOutputName   = J2LUtils.getFreshVarName(getBlkName(blkNode)+"_"+OUTPUT);
         List<Integer>   newOutDims      = new ArrayList<>();
         LustreExpr      lhs             = new VarIdExpr(muxOutputName);
         List<LustreExpr> rhs            = new ArrayList<>();
@@ -2354,51 +2346,81 @@ public class J2LTranslator {
      * @return 
      */    
     protected List<LustreExpr> mkDemuxExpr(JsonNode blkNode, List<LustreExpr> inExprs) {
-        List<LustreExpr> demuxExprs     = new ArrayList<>();
+        String blkName = getBlkName(blkNode);
         LustreType      baseType        = getBlkInportType(blkNode);
         List<Integer>   inDimensions    = getBlkInportDimensions(blkNode);
         List<Integer>   outDimensions   = getBlkOutportDimensions(blkNode);
         int             numOfOutputs    = getDemuxBlkNumOfOutputs(blkNode);        
-        List<Integer>   newOutDims      = new ArrayList<>();     
         List<LustreExpr> outVarIds          = new ArrayList<>();
+        List<LustreExpr> finalOutVarIds          = new ArrayList<>();
         
-        for(int i = 0; i < outDimensions.size();) {
-            String          varName = J2LUtils.getFreshVarName(DEMUXOUT);
-            int             outDim  = outDimensions.get(i);
-            List<Integer>   varDims = new ArrayList<>();
-            
-            for(int j = i+1; j < i+outDim+1 && j < outDimensions.size(); ++j) {
-                varDims.add(outDimensions.get(j));
-            }
-            outVarIds.add(new VarIdExpr(varName));
-            this.auxNodeLocalVars.add(new LustreVar(varName, (outDim == 1 && varDims.get(0) == 1)? baseType : new ArrayType(baseType, varDims)));            
-            i = i+outDim+1;
+        for(int i = 0; i < numOfOutputs; ++i) {
+            String  varName = J2LUtils.getFreshVarName(blkName + "_" + OUTPUT);
+            VarIdExpr outVarId = new VarIdExpr(varName);
+            outVarIds.add(outVarId);
+            finalOutVarIds.add(outVarId);
+            this.auxNodeLocalVars.add(new LustreVar(varName, baseType));
         }
-        int inDim = inDimensions.get(0);
         inDimensions.remove(0);
-        mkDemuxExpr(0, inDim, 0, inExprs.get(0), outVarIds, new ArrayList<Integer>(), inDimensions);
-        return outVarIds;
+        mkDemuxExpr(0, new ArrayList<Integer>(), outVarIds, inExprs.get(0), inDimensions);
+//        for(int i = 0; i < outDimensions.size();) {
+//            String          varName = J2LUtils.getFreshVarName(DEMUXOUT);
+//            int             outDim  = outDimensions.get(i);
+//            List<Integer>   varDims = new ArrayList<>();
+//            
+//            for(int j = i+1; j < i+outDim+1 && j < outDimensions.size(); ++j) {
+//                varDims.add(outDimensions.get(j));
+//            }
+//            outVarIds.add(new VarIdExpr(varName));
+//            this.auxNodeLocalVars.add(new LustreVar(varName, (outDim == 1 && varDims.get(0) == 1)? baseType : new ArrayType(baseType, varDims)));            
+//            i = i+outDim+1;
+//        }
+//        int inDim = inDimensions.get(0);
+//        inDimensions.remove(0);
+//        mkDemuxExpr(0, inDim, 0, inExprs.get(0), outVarIds, new ArrayList<Integer>(), inDimensions);
+        return finalOutVarIds;
     } 
     
-    protected void mkDemuxExpr(int curIndex, int inDim, int outVarIndex, LustreExpr inExpr, List<LustreExpr> outVarIds, List<Integer> indices, List<Integer> inDimensions) {
-        if(curIndex+1 == inDim) {
-            for(int i = 0; i < inDimensions.get(curIndex); ++i) {
-                List<Integer> finalIndices = new ArrayList<>();
-                
-                finalIndices.addAll(indices);
-                this.auxNodeEqs.add(new LustreEq(outVarIds.get(outVarIndex), new ArrayExpr(finalIndices, inExpr)));
-                outVarIndex++;
+    protected void mkDemuxExpr(int curDim, List<Integer> allInDims, List<LustreExpr> outVarIds, LustreExpr inExpr, List<Integer> inDims) {
+        if(curDim == inDims.size()-1) {
+            int inDim = inDims.get(curDim);
+            for(int i = 0; i < inDim; ++i) {
+                List<Integer> tempAllDims = new ArrayList<>();
+                tempAllDims.addAll(allInDims);
+                tempAllDims.add(i);
+                this.auxNodeEqs.add(new LustreEq(outVarIds.get(0), new ArrayExpr(tempAllDims, inExpr)));
+                outVarIds.remove(0);
             }
-        } else {
-            for(int i = 0; i < inDimensions.get(curIndex); ++i) {
-                int nxtIndex = curIndex+1;
-                List<Integer> finalIndices = new ArrayList<>();
-                finalIndices.addAll(indices);
-                finalIndices.add(i);
-                mkDemuxExpr(nxtIndex, inDim, outVarIndex, inExpr, outVarIds, finalIndices, inDimensions);
-            }            
+        } else if(curDim < inDims.size()-1) {
+            int inDim = inDims.get(curDim);
+            for(int i = 0; i < inDim;++i) {
+                List<Integer> tempAllDims = new ArrayList<>();
+                tempAllDims.addAll(allInDims);
+                tempAllDims.add(i);
+                mkDemuxExpr(curDim+1, tempAllDims, outVarIds, inExpr, inDims);
+            }
         }
     }
+    
+//    protected void mkDemuxExpr(int curIndex, int inDim, int outVarIndex, LustreExpr inExpr, List<LustreExpr> outVarIds, List<Integer> indices, List<Integer> inDimensions) {
+//        if(curIndex+1 == inDim) {
+//            for(int i = 0; i < inDimensions.get(curIndex); ++i) {
+//                List<Integer> finalIndices = new ArrayList<>();
+//                
+//                finalIndices.addAll(indices);
+//                this.auxNodeEqs.add(new LustreEq(outVarIds.get(outVarIndex), new ArrayExpr(finalIndices, inExpr)));
+//                outVarIndex++;
+//            }
+//        } else {
+//            for(int i = 0; i < inDimensions.get(curIndex); ++i) {
+//                int nxtIndex = curIndex+1;
+//                List<Integer> finalIndices = new ArrayList<>();
+//                finalIndices.addAll(indices);
+//                finalIndices.add(i);
+//                mkDemuxExpr(nxtIndex, inDim, outVarIndex, inExpr, outVarIds, finalIndices, inDimensions);
+//            }            
+//        }
+//    }
     
     /**
      * The Product block outputs the result of multiplying two inputs: two scalars, a scalar and a nonscalar, 
