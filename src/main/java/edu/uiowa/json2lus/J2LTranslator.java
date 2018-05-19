@@ -1747,12 +1747,13 @@ public class J2LTranslator {
             if(isValidConst(value)) {
                 blkExpr = getLustreConst(value, baseType);
             //The value of the constant field of CompareToConstant block refers to the "value" of its parent node
-            } else if(parentSubsystemNode.has(value)) {
-                blkExpr = getLustreConst(parentSubsystemNode.get(value).asText().trim(), baseType);
+            } else if(parentSubsystemNode.has(VALUE)) {
+                blkExpr = getLustreConst(parentSubsystemNode.get(VALUE).asText().trim(), baseType);
             } else {
                 LOGGER.log(Level.SEVERE, "Unexpected constant value in JSON node: {0}", blkNode);
             }                        
         } else {
+            // Remove the dimension number
             blkDims.remove(0);
             String      matrixName  = J2LUtils.getFreshVarName(MATRIXCONST);
             VarIdExpr   matrixId    = new VarIdExpr(matrixName);
@@ -1762,7 +1763,7 @@ public class J2LTranslator {
             for(LustreAst ast : asts) {
                 exprs.add((LustreExpr)ast);
             }
-            
+            // If the dst block is a selector, we return the constant expression directly
             if(dstBlkType.equals(SELECTOR)) {
                 blkExpr = new ArrayExpr(blkDims, exprs);
             } else {
@@ -2299,35 +2300,33 @@ public class J2LTranslator {
      * @return a Lustre expression for blkNode
      */    
     protected LustreExpr mkMuxExpr(JsonNode blkNode, List<LustreExpr> inExprs) {
+        List<List<Integer>>   inDims          = new ArrayList<>();
         LustreType      baseType        = getBlkOutportType(blkNode);
         List<Integer>   inDimensions    = getBlkInportDimensions(blkNode);
         List<Integer>   outDimensions   = getBlkOutportDimensions(blkNode);
         String          muxOutputName   = J2LUtils.getFreshVarName(getBlkName(blkNode)+"_"+OUTPUT);
-        List<Integer>   newOutDims      = new ArrayList<>();
         LustreExpr      lhs             = new VarIdExpr(muxOutputName);
-        List<LustreExpr> rhs            = new ArrayList<>();
-        
-        int outDim = outDimensions.get(1);
-        
-        newOutDims.add(outDim);
-        LustreVar muxVar = (outDim > 1) ? new LustreVar(muxOutputName, new ArrayType(baseType, newOutDims)): new LustreVar(muxOutputName, baseType);                
+        List<LustreExpr> rhs            = new ArrayList<>();       
+        LustreVar muxVar = new LustreVar(muxOutputName, baseType);                              
         
         // If the output dimension is an array
-        if(outDim > 1) {
-            List<Integer> newInDims = new ArrayList<>();
+        if(outDimensions.get(1) > 1) {
+            outDimensions.remove(0);
+            muxVar = new LustreVar(muxOutputName, new ArrayType(baseType, outDimensions));
+            // Get all the values of in-dimensions
+            for(int i = 0; i < inDimensions.size();) {
+                int             j       = inDimensions.get(i);
+                List<Integer> dimension = new ArrayList<>();         
+
+                for(int k = i+1; k <= i+j; ++k) {
+                    dimension.add(inDimensions.get(k));
+                }
+                inDims.add(dimension);
+                i += (j+1);
+            }              
             
-            for(int i = 1; i < inDimensions.size();) {
-                newInDims.add(inDimensions.get(i));
-                i += 2;
-            }
-            for(int j = 0; j < inExprs.size(); ++j) {
-                if(newInDims.get(j) == 1) {
-                    rhs.add(inExprs.get(j));
-                } else {
-                    for(int k = 0; k < newInDims.get(j); ++k) {
-                        rhs.add(new ArrayExpr(inExprs.get(j), k));
-                    }                        
-                }                 
+            for(int i = 0; i < inExprs.size(); ++i) {
+                mkMuxExpr(0, inExprs.get(i), inDims.get(i), new ArrayList<Integer>(), rhs);
             }
         } else {
             this.auxNodeEqs.add(new LustreEq(lhs, inExprs.get(0)));
@@ -2335,6 +2334,30 @@ public class J2LTranslator {
         this.auxNodeEqs.add(new LustreEq(lhs, new ArrayConst(rhs)));
         this.auxNodeLocalVars.add(muxVar);
         return new VarIdExpr(muxOutputName);
+    }
+    
+    protected void mkMuxExpr(int curDim, LustreExpr inExpr, List<Integer> inDim, List<Integer> allDims, List<LustreExpr> rhs) {
+        if(curDim == inDim.size()-1) {
+            int dim = inDim.get(curDim);
+            
+            if(dim == 1 && curDim == 0) {
+                rhs.add(inExpr);
+            } else {
+                for(int i = 0; i < inDim.get(curDim); ++i) {
+                    List<Integer> tempAllDims = new ArrayList<>();
+                    tempAllDims.addAll(allDims);
+                    tempAllDims.add(i);
+                    rhs.add(new ArrayExpr(tempAllDims, inExpr));
+                }                 
+            }           
+        } else if(curDim < inDim.size()-1) {            
+            for(int i = 0; i < inDim.get(curDim); ++i) {
+                List<Integer> tempAllDims = new ArrayList<>();
+                tempAllDims.addAll(allDims);
+                tempAllDims.add(i);
+                mkMuxExpr(curDim+1, inExpr, inDim, tempAllDims, rhs);
+            }
+        }
     }
     
     /**
@@ -2348,18 +2371,37 @@ public class J2LTranslator {
     protected List<LustreExpr> mkDemuxExpr(JsonNode blkNode, List<LustreExpr> inExprs) {
         String blkName = getBlkName(blkNode);
         LustreType      baseType        = getBlkInportType(blkNode);
+        List<List<Integer>>   outDims   = new ArrayList<>();
         List<Integer>   inDimensions    = getBlkInportDimensions(blkNode);
         List<Integer>   outDimensions   = getBlkOutportDimensions(blkNode);
         int             numOfOutputs    = getDemuxBlkNumOfOutputs(blkNode);        
         List<LustreExpr> outVarIds          = new ArrayList<>();
         List<LustreExpr> finalOutVarIds          = new ArrayList<>();
         
+        // Get all the values of in-dimensions
+        for(int i = 0; i < outDimensions.size();) {
+            int             j       = outDimensions.get(i);
+            List<Integer> dimension = new ArrayList<>();         
+
+            for(int k = i+1; k <= i+j; ++k) {
+                dimension.add(outDimensions.get(k));
+            }
+            outDims.add(dimension);
+            i += (j+1);
+        }           
         for(int i = 0; i < numOfOutputs; ++i) {
             String  varName = J2LUtils.getFreshVarName(blkName + "_" + OUTPUT);
             VarIdExpr outVarId = new VarIdExpr(varName);
             outVarIds.add(outVarId);
             finalOutVarIds.add(outVarId);
-            this.auxNodeLocalVars.add(new LustreVar(varName, baseType));
+            
+            List<Integer> outDim = outDims.get(i);
+            
+            if(outDim.size()==1 && outDim.get(0)==1) {
+                this.auxNodeLocalVars.add(new LustreVar(varName, baseType));
+            } else {
+                this.auxNodeLocalVars.add(new LustreVar(varName, new ArrayType(baseType, outDim)));
+            }
         }
         inDimensions.remove(0);
         mkDemuxExpr(0, new ArrayList<Integer>(), outVarIds, inExprs.get(0), inDimensions);
