@@ -1425,7 +1425,7 @@ public class J2LTranslator {
                         // Create local variables for outputs
                         for(LustreType type : outportTypes) {
                             LustreExpr fstInstExpr  = null;
-                            String nxtOutVarName    = J2LUtils.getFreshVarName(blkName + "_" + OUT);
+                            String nxtOutVarName    = J2LUtils.mkFreshVarName(blkName + "_" + OUT);
                             String curOutVarName    = J2LUtils.getFreshVarAtInst(nxtOutVarName, 1);
                             VarIdExpr curOutVarId   = new VarIdExpr(curOutVarName);
                             VarIdExpr nxtOutVarId   = new VarIdExpr(nxtOutVarName);
@@ -1737,13 +1737,14 @@ public class J2LTranslator {
      * @param dstBlkType
      * @return 
      */
-    protected LustreExpr mkConstantExpr(JsonNode blkNode, JsonNode parentSubsystemNode, String dstBlkType) {
+    protected LustreExpr mkConstantExpr(JsonNode blkNode, JsonNode parentSubsystemNode, String dstBlkType) {        
         LustreExpr      blkExpr     = null;
+        String          blkName     = getBlkName(blkNode);
         List<Integer>   blkDims     = getBlkOutportDimensions(blkNode);
         LustreType      baseType    = getBlkOutportType(blkNode);
         String          value       = blkNode.get(VALUE).asText().trim();
 
-        if(isScalarConstant(blkDims)) {
+        if(isScalarConst(blkDims)) {
             if(isValidConst(value)) {
                 blkExpr = getLustreConst(value, baseType);
             //The value of the constant field of CompareToConstant block refers to the "value" of its parent node
@@ -1754,22 +1755,38 @@ public class J2LTranslator {
             }                        
         } else {
             // Remove the dimension number
+            int blkDim = blkDims.get(0);
             blkDims.remove(0);
-            String      matrixName  = J2LUtils.getFreshVarName(MATRIXCONST);
-            VarIdExpr   matrixId    = new VarIdExpr(matrixName);
-            List<LustreAst>  asts   = J2LUtils.parseAndTranslateStrExpr(value);
-            List<LustreExpr> exprs  = new ArrayList<>();
+            String      matrixName          = J2LUtils.mkFreshVarName(blkName + "_" +MATRIXCONST);
+            VarIdExpr   matrixIdExpr        = new VarIdExpr(matrixName);
+            List<LustreExpr> exprs          = new ArrayList<>();
+            List<LustreExpr> finalExprs     = new ArrayList<>();
             
-            for(LustreAst ast : asts) {
+            for(LustreAst ast : J2LUtils.parseAndTranslateStrExpr(value)) {
                 exprs.add((LustreExpr)ast);
-            }
+            }              
+            
+            // Convert expression types
+            for(LustreExpr expr : exprs) {
+                if(baseType == PrimitiveType.REAL) {
+                    if(expr instanceof IntExpr) {
+                        String strVal = ((IntExpr) expr).value.toString();
+                        RealExpr realExpr = new RealExpr(new BigDecimal(strVal + ".0"));
+                        finalExprs.add(realExpr);
+                    } else {
+                        finalExprs.add(expr);
+                    }
+                } else {
+                    finalExprs.add(expr);
+                }
+            }                
             // If the dst block is a selector, we return the constant expression directly
-            if(dstBlkType.equals(SELECTOR)) {
-                blkExpr = new ArrayExpr(blkDims, exprs);
+            if(dstBlkType.equals(SELECTOR) && blkDim <= 1) {
+                blkExpr = new ArrayExpr(blkDims, finalExprs);
             } else {
                 this.auxNodeLocalVars.add(new LustreVar(matrixName, new ArrayType(baseType, blkDims)));
-                this.auxNodeEqs.add(new LustreEq(matrixId, new ArrayExpr(blkDims, exprs)));
-                blkExpr = matrixId;                
+                this.auxNodeEqs.add(new LustreEq(matrixIdExpr, new ArrayExpr(blkDims, finalExprs)));
+                blkExpr = matrixIdExpr;                
             }
         }  
         return blkExpr;
@@ -1906,20 +1923,25 @@ public class J2LTranslator {
      */
     protected LustreExpr mkSelectorExpr(JsonNode blkNode, List<LustreExpr> inExprs) {        
         String          blkName         = getBlkName(blkNode);
-        String          outVarName      = J2LUtils.getFreshVarName(blkName + "_" + OUTPUT);        
+        String          outVarName      = J2LUtils.mkFreshVarName(blkName + "_" + OUTPUT);        
         VarIdExpr       blkExpr         = new VarIdExpr(outVarName);
         int             numOfDims       = blkNode.get(NUMOFDIM).asInt();
         String          indexMode       = blkNode.get(INDEXMODE).asText();
         LustreType      baseType        = getBlkOutportType(blkNode);
         List<String>    indexOpts       = getIndexOpts(blkNode);
+        List<Integer>   inVarDims       = new ArrayList<>();
         List<Integer>   inDimensions    = getBlkInportDimensions(blkNode);
         List<Integer>   outDimensions   = getBlkOutportDimensions(blkNode);
         List<List<Integer>>     indices     = new ArrayList<>();
-                                    
-        // Remove the dimension number        
+        
+        // Get the dimensions for the input matrix
+        for(int i = 1; i < inDimensions.get(0)+1; ++i) {
+            inVarDims.add(inDimensions.get(i));
+        }
+        // Remove the dimension number
         inDimensions.remove(0);
         outDimensions.remove(0);
-        
+                
         if(numOfDims != indexOpts.size()) {
             LOGGER.log(Level.SEVERE, "The number of dimensions is not equal to the number of index options!");
             return null;
@@ -1963,8 +1985,20 @@ public class J2LTranslator {
         }
         
         if(!indices.isEmpty()) {
-            List<LustreExpr> allExprs = new ArrayList<>();
-            mkSelectorExpr(inExprs.get(0), allExprs, indices, new ArrayList<Integer>(), 0);
+            LustreExpr          inExpr      = inExprs.get(0);
+            List<LustreExpr>    allExprs    = new ArrayList<>();
+            
+            if(inExpr instanceof ArrayExpr) {
+                String      varIdName   = J2LUtils.mkFreshVarName(MATRIXCONST + "_" + OUTPUT);
+                VarIdExpr   inVarIdExpr = new VarIdExpr(varIdName);
+                this.auxNodeLocalVars.add(new LustreVar(varIdName, (inVarDims.size()==1&&inVarDims.get(0)==1)?baseType:new ArrayType(baseType, inVarDims)));
+                this.auxNodeEqs.add(new LustreEq(inVarIdExpr, inExpr));
+                mkSelectorExpr(inVarIdExpr, allExprs, indices, new ArrayList<Integer>(), 0);
+            } else if(inExpr instanceof VarIdExpr) {
+                mkSelectorExpr(inExpr, allExprs, indices, new ArrayList<Integer>(), 0);
+            } else {
+                LOGGER.log(Level.SEVERE, "Unhandled case for in expression: {0} in mkSelectorExpr", inExpr.toString());
+            }            
             
             this.auxNodeEqs.add(new LustreEq(blkExpr, new ArrayExpr(outDimensions, allExprs)));
             this.auxNodeLocalVars.add(new LustreVar(outVarName, new ArrayType(baseType, outDimensions)));
@@ -1998,13 +2032,13 @@ public class J2LTranslator {
         List<Integer> indices = new ArrayList<>();        
         
         if(indexVarExpr instanceof ArrayExpr) {
-            ArrayExpr e = ((ArrayExpr)indexVarExpr);
+            ArrayExpr arrayExpr = ((ArrayExpr)indexVarExpr);
 
-            for(int k = 0; k < e.exprs.size(); ++k) {
-                LustreExpr kthIndex = e.exprs.get(k);
+            for(int k = 0; k < arrayExpr.exprs.size(); ++k) {
+                LustreExpr indExpr = arrayExpr.exprs.get(k);
 
-                if(kthIndex instanceof RealExpr) {
-                    String index = ((RealExpr)kthIndex).value.toString().trim();
+                if(indExpr instanceof RealExpr) {
+                    String index = ((RealExpr)indExpr).value.toString().trim();
 
                     if(index.contains(".")) {
                         index = index.substring(0, index.indexOf("."));
@@ -2015,8 +2049,8 @@ public class J2LTranslator {
                         intIndex -= 1;
                     }
                     indices.add(intIndex);
-                } else if(kthIndex instanceof IntExpr) {
-                    int intIndex = ((IntExpr)kthIndex).value.intValueExact();
+                } else if(indExpr instanceof IntExpr) {
+                    int intIndex = ((IntExpr)indExpr).value.intValueExact();
                     if(isOneBased) {
                         intIndex -= 1;
                     }                    
@@ -2168,7 +2202,7 @@ public class J2LTranslator {
         List<Integer>   inDimensions    = getBlkInportDimensions(blkNode);        
         // Remove the out dimension number
         outDimensions.remove(0);
-        String          outVarName      = J2LUtils.getFreshVarName(blkName + "_" + OUTPUT);
+        String          outVarName      = J2LUtils.mkFreshVarName(blkName + "_" + OUTPUT);
         LustreVar       outVar          = isScalar ? new LustreVar(outVarName, baseType) : new LustreVar(outVarName, new ArrayType(baseType, outDimensions));
         VarIdExpr       outVarIdExpr    = new VarIdExpr(outVarName);
         List<List<Integer>>     inDims          = new ArrayList<>();
@@ -2304,7 +2338,7 @@ public class J2LTranslator {
         LustreType      baseType        = getBlkOutportType(blkNode);
         List<Integer>   inDimensions    = getBlkInportDimensions(blkNode);
         List<Integer>   outDimensions   = getBlkOutportDimensions(blkNode);
-        String          muxOutputName   = J2LUtils.getFreshVarName(getBlkName(blkNode)+"_"+OUTPUT);
+        String          muxOutputName   = J2LUtils.mkFreshVarName(getBlkName(blkNode)+"_"+OUTPUT);
         LustreExpr      lhs             = new VarIdExpr(muxOutputName);
         List<LustreExpr> rhs            = new ArrayList<>();       
         LustreVar muxVar = new LustreVar(muxOutputName, baseType);                              
@@ -2390,7 +2424,7 @@ public class J2LTranslator {
             i += (j+1);
         }           
         for(int i = 0; i < numOfOutputs; ++i) {
-            String  varName = J2LUtils.getFreshVarName(blkName + "_" + OUTPUT);
+            String  varName = J2LUtils.mkFreshVarName(blkName + "_" + OUTPUT);
             VarIdExpr outVarId = new VarIdExpr(varName);
             outVarIds.add(outVarId);
             finalOutVarIds.add(outVarId);
@@ -4268,7 +4302,7 @@ public class J2LTranslator {
         return results;
     }        
     
-    protected boolean isScalarConstant(List<Integer> dims) {
+    protected boolean isScalarConst(List<Integer> dims) {
         boolean isOneVal = true;
         
         for(int dim : dims) {

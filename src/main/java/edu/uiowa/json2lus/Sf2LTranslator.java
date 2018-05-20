@@ -498,7 +498,7 @@ public class Sf2LTranslator {
             // we negated all the current conditions and execute the condition
             // action expressions.
             if(!condActEqs.isEmpty()) {
-                String transitionName = J2LUtils.getFreshVarName(getStatePath(startStateNode) + "_" + EXIT + "_" + junctionName + "_" + CENTRY);                    
+                String transitionName = J2LUtils.mkFreshVarName(getStatePath(startStateNode) + "_" + EXIT + "_" + junctionName + "_" + CENTRY);                    
                 transitNameToActs.put(transitionName, condActEqs);
                 transitNameToCond.put(transitionName, J2LUtils.andExprs(negPrevCondExprs));                   
             }
@@ -579,7 +579,7 @@ public class Sf2LTranslator {
                         translateJunctionTransition(nextActState, startStateNode, transNode, newTransitActEqs, newCondActEqs, newCondExprs, exitExprs, transitNameToActs, transitNameToCond);
                         
                         // Build the intermediate transitioins
-                        String transitionName = J2LUtils.getFreshVarName(getStatePath(startStateNode) + "_" + EXIT + "_" + destJunctName + "_" + CENTRY);                    
+                        String transitionName = J2LUtils.mkFreshVarName(getStatePath(startStateNode) + "_" + EXIT + "_" + destJunctName + "_" + CENTRY);                    
                         newCondActEqs.add(new LustreEq(nextActState, new IntExpr(this.stateIdToActId.get(getStateId(startStateNode)))));                            
                         transitNameToActs.put(transitionName, newCondActEqs);
                         transitNameToCond.put(transitionName, J2LUtils.andExprs(condExprs));                                                                                                                        
@@ -588,7 +588,7 @@ public class Sf2LTranslator {
                     // we negated all the current conditions and execute the condition
                     // action expressions.
                     if(!condActEqs.isEmpty()) {
-                        String transitionName = J2LUtils.getFreshVarName(getStatePath(startStateNode) + "_" + EXIT + "_" + junctionName + "_" + CENTRY);                    
+                        String transitionName = J2LUtils.mkFreshVarName(getStatePath(startStateNode) + "_" + EXIT + "_" + junctionName + "_" + CENTRY);                    
                         transitNameToActs.put(transitionName, condActEqs);
                         transitNameToCond.put(transitionName, J2LUtils.andExprs(negPrevCondExprs));                   
                     }                    
@@ -626,7 +626,7 @@ public class Sf2LTranslator {
                     allActEqs.add(new LustreEq(nextActState, new IntExpr(this.stateIdToActId.get(getStateId(destStateNode)))));                    
                     
                     // Build a new state for this transition
-                    String transitionName = J2LUtils.getFreshVarName(getStatePath(startStateNode) + "_" + EXIT + "_" + destStateName + "_" + CENTRY);                                        
+                    String transitionName = J2LUtils.mkFreshVarName(getStatePath(startStateNode) + "_" + EXIT + "_" + destStateName + "_" + CENTRY);                                        
                     transitNameToActs.put(transitionName, allActEqs);
                     transitNameToCond.put(transitionName, J2LUtils.andExprs(condExprs));
                     break;
@@ -750,7 +750,7 @@ public class Sf2LTranslator {
                     
                     if(inputs.containsKey(lhsExprName) || outputs.containsKey(lhsExprName)) {
                         LustreType type;
-                        String newVarName = J2LUtils.getFreshVarName(lhsExprName);                        
+                        String newVarName = J2LUtils.mkFreshVarName(lhsExprName);                        
                         
                         if(inputs.containsKey(lhsExprName)) {
                             type = inputs.get(lhsExprName);

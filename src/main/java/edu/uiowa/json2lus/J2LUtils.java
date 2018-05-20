@@ -107,7 +107,7 @@ public class J2LUtils {
     } 
     
     
-    public static String getFreshVarName(String varName) {
+    public static String mkFreshVarName(String varName) {
         String newVarName = varName;
         
         if(newVarName == null) {

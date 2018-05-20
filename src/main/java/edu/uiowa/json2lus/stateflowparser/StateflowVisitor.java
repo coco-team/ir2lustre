@@ -16,7 +16,6 @@ import edu.uiowa.json2lus.lustreAst.TupleExpr;
 import edu.uiowa.json2lus.lustreAst.UnaryExpr;
 import edu.uiowa.json2lus.lustreAst.VarIdExpr;
 import edu.uiowa.json2lus.stateflowparser.antlr.StateflowBaseVisitor;
-import edu.uiowa.json2lus.stateflowparser.antlr.StateflowParser;
 import edu.uiowa.json2lus.stateflowparser.antlr.StateflowParser.AdditiveExprContext;
 import edu.uiowa.json2lus.stateflowparser.antlr.StateflowParser.AndExprContext;
 import edu.uiowa.json2lus.stateflowparser.antlr.StateflowParser.ArithExprContext;
