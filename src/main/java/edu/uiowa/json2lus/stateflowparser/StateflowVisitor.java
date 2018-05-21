@@ -95,6 +95,11 @@ public class StateflowVisitor extends StateflowBaseVisitor {
                 LOGGER.log(Level.SEVERE, "Unhandled case for multiple expressions returned from calling visit expressions: {0}", ctx.expr());
             }
             asts.add(new LustreEq(visitDotRef(ctx.dotRef()), rhsExpr));
+        } else if(ctx.ID() != null) {
+            LOGGER.log(Level.SEVERE, "We do not handle the case : a statement has a label!");
+            if(ctx.expr() != null) {
+                asts = visitExpr(ctx.expr());
+            }
         } else if(ctx.expr() != null) {
             asts = visitExpr(ctx.expr());
         } else {
@@ -112,7 +117,7 @@ public class StateflowVisitor extends StateflowBaseVisitor {
             ifExprs.addAll(visitExpr(expr));
         }
         for(StatBlockContext statBlockExpr : ifStat.statBlock()) {
-            statExprs.addAll(visitStatBlock(statBlockExpr));
+//            statExprs.addAll(visitStatBlock(statBlockExpr));
         }
         
         return null;
@@ -225,21 +230,23 @@ public class StateflowVisitor extends StateflowBaseVisitor {
                 } else if(assignmentExpr.DIVIDEASSIGN() != null) {
                     op = BinaryExpr.Op.DIVIDE;
                 }
-                if(op != null) {
-                    LustreExpr  rhsExpr = null;
-                    LustreAst   rhsAst  = null;
-                    List<LustreAst>   rhsAsts = visitExpr(assignmentExpr.expr(0));
-                    
-                    if(rhsAsts.size()==1) {
-                        rhsAst = rhsAsts.get(0);
-                    }
+                LustreExpr  rhsExpr = null;
 
+                List<LustreAst>   rhsAsts = visitExpr(assignmentExpr.expr(0));         
+                
+                if(rhsAsts.size()==1) {
+                    LustreAst   rhsAst  = rhsAsts.get(0);                    
                     if(rhsAst instanceof LustreExpr) {
                         rhsExpr = (LustreExpr)rhsAst;
-                    }
+                    }                    
+                } else {
+                    LOGGER.log(Level.SEVERE, "Unhandled case: multiple expressions returned from ANTLR parsing expression!");
+                }
+              
+                if(op != null) {                    
                     equation = new LustreEq(varId, new BinaryExpr(varId, op, rhsExpr));                        
                 } else {
-                    equation = new LustreEq(varId, (LustreExpr)visitExpr(assignmentExpr.expr(0)));
+                    equation = new LustreEq(varId, rhsExpr);
                 }            
             }
         } else {            

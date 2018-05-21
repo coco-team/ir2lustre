@@ -5,6 +5,7 @@
  */
 package edu.uiowa.json2lus;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import edu.uiowa.json2lus.lustreAst.BinaryExpr;
 import edu.uiowa.json2lus.lustreAst.BooleanExpr;
 import edu.uiowa.json2lus.lustreAst.LustreAst;
@@ -28,7 +29,8 @@ import org.antlr.v4.runtime.TokenStream;
  */
 public class J2LUtils {
     public static int COUNT = 0;
-    private static final Logger LOGGER = Logger.getLogger(J2LUtils.class.getName());    
+    private static final String PATH    = "Path";
+    private static final Logger LOGGER  = Logger.getLogger(J2LUtils.class.getName());    
     
     public static String sanitizeName(String name) {
         return name.trim().replace(" ", "_").replace("\n", "_").replace("=", "_")
@@ -105,7 +107,24 @@ public class J2LUtils {
         }
         return orExpr;
     } 
+
+    public static String getSanitizedBlkPath(JsonNode node) {
+        String path = null;
+        
+        if(node.has(PATH)) {
+            path = sanitizeName(node.get(PATH).asText());
+        }
+        return path;
+    }
     
+    public static String getBlkPath(JsonNode node) {
+        String path = null;
+        
+        if(node.has(PATH)) {
+            path = node.get(PATH).asText();
+        }
+        return path;
+    }    
     
     public static String mkFreshVarName(String varName) {
         String newVarName = varName;
@@ -133,11 +152,10 @@ public class J2LUtils {
         CharStream          charStream  = CharStreams.fromString(sf);
         StateflowLexer      lexer       = new StateflowLexer(charStream);
         TokenStream         tokens      = new CommonTokenStream(lexer);    
-        StateflowParser     parser      = new StateflowParser(tokens);
-        
+        StateflowParser     parser      = new StateflowParser(tokens);        
         StateflowVisitor    visitor     = new StateflowVisitor();
-        List<LustreAst>     asts        = visitor.visitFileDecl(parser.fileDecl());
-        return asts;
+        
+        return visitor.visitFileDecl(parser.fileDecl());
     }
     
     public static List<LustreAst> parseAndTranslateStrExpr(String sf) {

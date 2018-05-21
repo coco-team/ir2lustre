@@ -340,7 +340,7 @@ public class J2LTranslator {
             
             if(subsystemNode.has(SFCONTENT) && subsystemNode.get(SFCONTENT).size() > 0) {
                 Sf2LTranslator sfTranslator = new Sf2LTranslator();                
-                asts = sfTranslator.translate(subsystemNode);
+                asts = sfTranslator.execute(subsystemNode);
             } else if(subsystemNode.has(CONTENT) && subsystemNode.get(CONTENT) != null) {
                 asts.add(translateSubsystemNode(subsystemNode));
             }
@@ -467,13 +467,12 @@ public class J2LTranslator {
         // Set up data structures for storing contract information
         int aIndex = 1, gIndex = 1;    
         String      validatorHdl = getBlkHandle(validatorBlk);
-        Map<String, List<LustreExpr>>   modeToRequires  = new HashMap<>();
-        
+        Map<String, List<LustreExpr>>   modeToRequires  = new HashMap<>();        
         Map<String, LustreExpr>         assumptions     = new HashMap<>();            
-        Map<String, LustreExpr>         guarantees      = new HashMap<>();                             
-        Map<String, Map<String, LustreExpr>>   modeToEnsures   = new HashMap<>();                   
+        Map<String, LustreExpr>         guarantees      = new HashMap<>();                                     
         List<String>                    inHdls          = blkNodeToSrcBlkHdlsMap.get(validatorBlk);
-        List<Integer>                   inPorts         = blkNodeToSrcBlkPortsMap.get(validatorBlk);         
+        List<Integer>                   inPorts         = blkNodeToSrcBlkPortsMap.get(validatorBlk);   
+        Map<String, Map<String, LustreExpr>>   modeToEnsures   = new HashMap<>();                           
         
         for(int i = 0; i < inHdls.size(); i++) {
             // Get the in block to the validator block node
@@ -1458,9 +1457,8 @@ public class J2LTranslator {
                         }
                         
                         // Create the node call expression
-                        this.auxNodeEqs.add(new LustreEq(outVarIdExprs, new NodeCallExpr(qualifiedName, inExprs)));
-                        
                         blkExpr = outVarIdExprs.get(portNum);
+                        this.auxNodeEqs.add(new LustreEq(outVarIdExprs, new NodeCallExpr(qualifiedName, inExprs)));                                                
                         this.auxHdlToExprMap.put(blkHdl, outVarIdExprs);
                     } else {            
                         

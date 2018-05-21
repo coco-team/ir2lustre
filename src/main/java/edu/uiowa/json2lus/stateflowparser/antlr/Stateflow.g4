@@ -97,7 +97,7 @@ stat
     | ifStat
     | whileStat
     | caseStat
-    | expr 
+    | (ID COLON) ? expr
     | NL
     ;
 
