@@ -484,7 +484,7 @@ public class Sf2LTranslator {
         if(this.junctionIdToNode.containsKey(junctionId)) {                 
             List<LustreExpr>    negPrevCondExprs         = new ArrayList<>();
             JsonNode            junctionNode             = this.junctionIdToNode.get(junctionId);                        
-            String              junctionName             = getJunctionPath(junctionNode);
+            String              junctionName             = getSanitizedJunctionPath(junctionNode);
             List<JsonNode>      outerTransitions         = getJunctionOuterTransitions(junctionNode);
             
             // Handle outer transitions
@@ -570,7 +570,7 @@ public class Sf2LTranslator {
 
             switch (transitType) {
                 case JUNCTION: {
-                    String              junctionName     = getJunctionPath(transNode);
+                    String              junctionName     = getSanitizedJunctionPath(transNode);
                     List<LustreExpr>    negPrevCondExprs = new ArrayList<>();
                     List<JsonNode>      outerTransitions = getJunctionOuterTransitions(transNode);
                     
@@ -762,19 +762,18 @@ public class Sf2LTranslator {
             fcns.add(new LustreNode(fcnPath, fcnInputs, fcnFinalOutputs, fcnLocals, fcnBody));
         }
         
-        // Truth tables
+        // Start translating truth tables
         for(JsonNode ttNode : this.truthTableNodes) {
-            List<LustreExpr> conditions  = new ArrayList<>();
-            List<LustreVar> fcnLocals    = new ArrayList<>();
-            List<LustreVar> fcnInputs    = new ArrayList<>();
-            List<LustreVar> fcnOutputs   = new ArrayList<>();  
-            List<LustreEq>  fcnBody      = new ArrayList<>();                           
-            Map<String, LustreType> inputs     = new HashMap<>();
-            Map<String, LustreType> outputs    = new HashMap<>();
-            Map<String, LustreType> locals     = new HashMap<>();           
-            Map<String, List<LustreEq>>   labelToActions  = new HashMap<>();            
-            Map<String, List<LustreEq>>   indexToActions  = new HashMap<>();
-            Map<LustreExpr, List<LustreEq>> condToActions = new HashMap<>();
+            List<LustreVar>                 fcnLocals       = new ArrayList<>();
+            List<LustreVar>                 fcnInputs       = new ArrayList<>();
+            List<LustreVar>                 fcnOutputs      = new ArrayList<>();  
+            List<LustreEq>                  fcnBody         = new ArrayList<>();                           
+            Map<String, LustreType>         inputs          = new HashMap<>();
+            Map<String, LustreType>         outputs         = new HashMap<>();
+            Map<String, LustreType>         locals          = new HashMap<>();           
+            Map<String, List<LustreEq>>     labelToActions  = new HashMap<>();            
+            Map<String, List<LustreEq>>     indexToActions  = new HashMap<>();
+            Map<LustreExpr, List<LustreEq>> condToActions   = new HashMap<>();
             
             // Get inputs, locals and outputs
             if(ttNode.has(DATA)) {
@@ -1485,7 +1484,7 @@ public class Sf2LTranslator {
         return name;
     }
     
-    protected String getStateName(JsonNode stateNode) {
+    protected String getSanitizedStateName(JsonNode stateNode) {
         String name = null;
         if(stateNode.has(NAME)) {
             String strName = stateNode.get(NAME).asText();
@@ -1498,7 +1497,7 @@ public class Sf2LTranslator {
         return name;
     }    
     
-    protected String getJunctionPath(JsonNode junctionNode) {
+    protected String getSanitizedJunctionPath(JsonNode junctionNode) {
         String name = null;
         if(junctionNode.has(PATH)) {
             String strName = junctionNode.get(PATH).asText();
@@ -1512,7 +1511,7 @@ public class Sf2LTranslator {
         return name;
     }    
     
-    protected String getJunctionName(JsonNode junctionNode) {
+    protected String getSanitizedJunctionName(JsonNode junctionNode) {
         String name = null;
         if(junctionNode.has(NAME)) {
             String strName = junctionNode.get(NAME).asText();
@@ -1599,8 +1598,63 @@ public class Sf2LTranslator {
                         break;
                 }
             }
-        // Process a normal portConns    
+        // Process a flattened EVENTS, JUNCTIONS, and so on
         } else {  
+            String nodeId = getNodeId(node);
+
+            switch(cat) {
+                case STATES: {                        
+                    // If the state is the entry state, we collect all the information we need here
+                    if(J2LUtils.getSanitizedBlkPath(node).equals(this.parentSubsysName)) {
+                        JsonNode            substateNodeIds     = node.get(COMPOSITION).get(STATES);
+                        Iterator<JsonNode>  substateIt          = substateNodeIds.elements();
+
+                        while(substateIt.hasNext()) {
+                            JsonNode substateNode = substateIt.next();
+                            this.stateIdToActId.put(substateNode.asText(), substateNode.asInt());
+                        }
+                        this.initStateId    = "0";                            
+                        this.centerStateId  = getNodeId(node);  
+                        this.stateIdToActId.put(node.get(COMPOSITION).get(DEFAULTTRANS).get(DEST).get(ID).asText(), 0);                            
+                    }
+                    // Populate the exclusive-or and parallel states maps
+                    if(node.has(COMPOSITION)) {
+                        List<String>        substateIds         = new ArrayList<>();
+                        String              substateType        = node.get(COMPOSITION).get(TYPE).asText();
+                        JsonNode            substateNodeIds     = node.get(COMPOSITION).get(STATES);
+                        Iterator<JsonNode>  substateIt          = substateNodeIds.elements();
+
+                        while(substateIt.hasNext()) {
+                            substateIds.add(substateIt.next().asText());
+                        }
+
+                        if(!substateIds.isEmpty()) {
+                            if(substateType.equals(EXCLUSIVEOR)) {
+                                this.stateIdToOrSubstateIds.put(nodeId, substateIds);
+                            } else {
+                                this.stateIdToAndSubstateIds.put(nodeId, substateIds);
+                            }                                
+                        }
+                    }
+
+                    addToMap(nodeId, node, this.stateIdToNode);
+                    break;
+                }
+                case EVENTS: {
+                    addToMap(nodeId, node, events);
+                    break;
+                }
+                case JUNCTIONS: {
+                    addToMap(nodeId, node, this.junctionIdToNode);
+                    break;
+                } 
+                case GRAPHFCN: {
+                    addToMap(nodeId, node, functions);
+                    break;
+                }                     
+                default:
+                    break;
+            }
         }           
     }
     
