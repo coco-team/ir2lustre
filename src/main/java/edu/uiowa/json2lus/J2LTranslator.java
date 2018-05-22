@@ -727,7 +727,7 @@ public class J2LTranslator {
         if(contractNodes != null) {
             for(JsonNode contractNode : contractNodes) {
                 // src is the handle of the block which we should attach the contract to
-                String          src         = null;                
+                String          dstNodeHdl         = null;                
                 // Get the in handles of the contract
                 List<String>    contractSrcHdls     = blkNodeToSrcBlkHdlsMap.get(contractNode);
                 // Get the contract handle
@@ -750,7 +750,7 @@ public class J2LTranslator {
                                     
                                     // No source nodes with handles that contains the contract handle
                                     if(sndHdls != null && !sndHdls.contains(contractHdl)) {
-                                        src = dstHdl;
+                                        dstNodeHdl = dstHdl;
                                         break;
                                     }
                                     
@@ -758,19 +758,19 @@ public class J2LTranslator {
                             }                            
                         }
                         // We found the handle of the node
-                        if(src != null) {
+                        if(dstNodeHdl != null) {
                             break;
                         }                       
                     }
                     
-                    if(src != null) {
+                    if(dstNodeHdl != null) {
                         // Get the contract name
                         String contractName = getQualifiedBlkName(contractNode);
                         
                         for(LustreContract contract : this.lustreProgram.contracts) {
                             if(contract.name.equals(contractName)) {
                                 // Reorganize the inputs and outputs of a contract
-                                JsonNode            srcNode         = hdlBlkNodeMap.get(src);
+                                JsonNode            srcNode         = hdlBlkNodeMap.get(dstNodeHdl);
                                 List<LustreVar>     finalOutputs    = new ArrayList<>();
                                 List<LustreVar>     oldInputs       = contract.inputs;                                
                                 List<LustreVar>     tempInputs      = new ArrayList<>();  
@@ -781,7 +781,7 @@ public class J2LTranslator {
                                     // If the contract in handle equals to src,
                                     // it means the outputs of src node connect
                                     // with the contract
-                                    if(contractInHdls.get(j).equals(src)) {
+                                    if(contractInHdls.get(j).equals(dstNodeHdl)) {
                                         finalOutputs.add(oldInputs.get(j));
                                     } else {
                                         tempInputs.add(oldInputs.get(j));
@@ -796,6 +796,8 @@ public class J2LTranslator {
                                     }
                                     finalInputs.addAll(tempInputs);
                                     finalOutputs.add(new LustreVar(DUMMY+"_"+OUTPUT, PrimitiveType.INT));
+                                } else {
+                                    finalInputs.addAll(tempInputs);
                                 }                                
                                 // Reset inputs and outputs
                                 contract.inputs     = finalInputs;
@@ -804,11 +806,11 @@ public class J2LTranslator {
                             }
                         }
                         
-                        // Attach the contract with contractName to the node with handle "src"
-                        this.lustreProgram.attachNodeContract(getQualifiedBlkName(hdlBlkNodeMap.get(src)), contractName);
+                        // Attach the contract with contractName to the node with handle "dstNodeHdl"
+                        this.lustreProgram.attachNodeContract(getQualifiedBlkName(hdlBlkNodeMap.get(dstNodeHdl)), contractName);
                     }                    
                 } else {
-                    LOGGER.log(Level.SEVERE, "Found a ghost contract: {0}", getBlkName(contractNode));
+                    LOGGER.log(Level.WARNING, "Found a ghost contract: {0}", getBlkName(contractNode));
                 }
             }
         }

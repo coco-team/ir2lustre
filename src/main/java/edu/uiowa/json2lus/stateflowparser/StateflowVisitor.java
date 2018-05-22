@@ -95,11 +95,6 @@ public class StateflowVisitor extends StateflowBaseVisitor {
                 LOGGER.log(Level.SEVERE, "Unhandled case for multiple expressions returned from calling visit expressions: {0}", ctx.expr());
             }
             asts.add(new LustreEq(visitDotRef(ctx.dotRef()), rhsExpr));
-        } else if(ctx.ID() != null) {
-            LOGGER.log(Level.SEVERE, "We do not handle the case : a statement has a label!");
-            if(ctx.expr() != null) {
-                asts = visitExpr(ctx.expr());
-            }
         } else if(ctx.expr() != null) {
             asts = visitExpr(ctx.expr());
         } else {
