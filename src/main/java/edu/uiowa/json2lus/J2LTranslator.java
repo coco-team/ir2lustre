@@ -796,11 +796,11 @@ public class J2LTranslator {
                                     }
                                     finalInputs.addAll(tempInputs);
                                     finalOutputs.add(new LustreVar(DUMMY+"_"+OUTPUT, PrimitiveType.INT));
+                                    contract.inputs = finalInputs;
                                 } else {
-                                    finalInputs.addAll(tempInputs);
+                                    contract.inputs = tempInputs;
                                 }                                
-                                // Reset inputs and outputs
-                                contract.inputs     = finalInputs;
+                                // Reset inputs and outputs                                
                                 contract.outputs    = finalOutputs;
                                 break;                                   
                             }
