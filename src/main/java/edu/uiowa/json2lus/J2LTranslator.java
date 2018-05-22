@@ -157,6 +157,7 @@ public class J2LTranslator {
     private final String CONCATEOUT     = "concate_output";
     
     /** State flow language features */
+    private final String INPUT          = "Input";
     private final String OUTPUT         = "Output";
     private final String SFCONTENT      = "StateflowContent";
     
@@ -285,6 +286,8 @@ public class J2LTranslator {
     private final String INTTOREAL      = "real";
     private final String REALTOINT      = "int";
     private final String RESULTMATRIX   = "result_matrix";
+    
+    private final String DUMMY          = "dummy";
                       
     private JsonNode                                topLevelNode;  
     private final List<LustreNode>                  auxLusNode;
@@ -633,8 +636,7 @@ public class J2LTranslator {
             if(dimensions.size() == 1 && dimensions.get(0) == 1 && !isMatrixMode) {
                 inputs.add(new LustreVar(inportName, baseType));                     
             } else {
-                ArrayType array = new ArrayType(baseType, dimensions);
-                inputs.add(new LustreVar(inportName, array));
+                inputs.add(new LustreVar(inportName, new ArrayType(baseType, dimensions)));
             }            
         }
         for(int i = 0; i < outports.size(); i++) {
@@ -646,8 +648,7 @@ public class J2LTranslator {
             if(dimensions.size() == 1 && dimensions.get(0) == 1 && !isMatrixMode) {
                 outputs.add(new LustreVar(outportName, baseType));
             } else {
-                ArrayType array = new ArrayType(baseType, dimensions);
-                outputs.add(new LustreVar(outportName, array));
+                outputs.add(new LustreVar(outportName, new ArrayType(baseType, dimensions)));
             }            
         } 
         
@@ -657,7 +658,7 @@ public class J2LTranslator {
             addMappingInfo(getPath(subsystemNode), null, lusNodeName, null, null, null, null);            
             return translateContractNode(subsystemNode, validatorBlk, inputs, outputs, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap);
         } else {
-            // For translated Lustre nodes
+            // For the translated Lustre nodes
             List<LustreAst>     lusNodes    = new ArrayList<>();
             
             // Add the Lustre node mapping info
@@ -677,20 +678,19 @@ public class J2LTranslator {
                     for(LustreExpr var : propEq.getLhs()) {
                         if(var instanceof VarIdExpr) {
                             addMappingInfo(propNode.get(ORIGIN).asText(), lusNodeName, null, null, ((VarIdExpr)var).id, null, null);
-                        }
-                        
+                        }                        
                     }                
                     props.add(propEq);                           
                 }
             }   
             
-            // Add auxilary node equations generated  translation
+            // Add auxilary node equations generated during the translation
             equations.addAll(this.auxNodeEqs);
             
             // Add auxilary local variables generated in the translation
             locals.addAll(this.auxNodeLocalVars);               
             
-            // Add translated nodes
+            // Create the Lustre node
             LustreNode node = new LustreNode(subsystemNode.equals(this.topLevelNode), lusNodeName, inputs, outputs, locals, equations, props);                                                
             
             // Clear the auxilary information
@@ -726,15 +726,15 @@ public class J2LTranslator {
         // Return nothing if contract nodes is null
         if(contractNodes != null) {
             for(JsonNode contractNode : contractNodes) {
-                // src is the handle of the source block of the contract
+                // src is the handle of the block which we should attach the contract to
                 String          src         = null;                
                 // Get the in handles of the contract
-                List<String>    srcHdls     = blkNodeToSrcBlkHdlsMap.get(contractNode);
+                List<String>    contractSrcHdls     = blkNodeToSrcBlkHdlsMap.get(contractNode);
                 // Get the contract handle
                 String          contractHdl = getBlkHandle(contractNode);
                 
-                if(srcHdls != null) {
-                    for(String srcHdl : srcHdls) {
+                if(contractSrcHdls != null) {
+                    for(String srcHdl : contractSrcHdls) {
                         // Get all the destination block handles of srcHdl
                         List<String> dstHdls = blkNodeToDstBlkHandlesMap.get(hdlBlkNodeMap.get(srcHdl));
                         
@@ -743,7 +743,7 @@ public class J2LTranslator {
                                 
                                 // If the in handles of the contract contains the dst handle
                                 // This is to say that there exists a source node with handle "dstHdl"
-                                if(srcHdls.contains(dstHdl)) {
+                                if(contractSrcHdls.contains(dstHdl)) {
                                     
                                     // Get all source handles of the dstHdl node
                                     List<String> sndHdls = blkNodeToSrcBlkHdlsMap.get(hdlBlkNodeMap.get(dstHdl));
@@ -770,21 +770,37 @@ public class J2LTranslator {
                         for(LustreContract contract : this.lustreProgram.contracts) {
                             if(contract.name.equals(contractName)) {
                                 // Reorganize the inputs and outputs of a contract
-                                List<String>        inHdls      = blkNodeToSrcBlkHdlsMap.get(contractNode);
-                                List<LustreVar>     newOutputs  = new ArrayList<>();
-                                List<LustreVar>     oldInputs   = contract.inputs;                                
-                                List<LustreVar>     newInputs   = new ArrayList<>();                                
-                                
-                                for(int j = 0; j < inHdls.size(); j++) {
-                                    if(inHdls.get(j).equals(src)) {
-                                        newOutputs.add(oldInputs.get(j));
+                                JsonNode            srcNode         = hdlBlkNodeMap.get(src);
+                                List<LustreVar>     finalOutputs    = new ArrayList<>();
+                                List<LustreVar>     oldInputs       = contract.inputs;                                
+                                List<LustreVar>     tempInputs      = new ArrayList<>();  
+                                List<LustreVar>     finalInputs     = new ArrayList<>();                                  
+                                List<String>        contractInHdls  = blkNodeToSrcBlkHdlsMap.get(contractNode);                                                               
+                                                                             
+                                for(int j = 0; j < contractInHdls.size(); j++) {
+                                    // If the contract in handle equals to src,
+                                    // it means the outputs of src node connect
+                                    // with the contract
+                                    if(contractInHdls.get(j).equals(src)) {
+                                        finalOutputs.add(oldInputs.get(j));
                                     } else {
-                                        newInputs.add(oldInputs.get(j));
+                                        tempInputs.add(oldInputs.get(j));
                                     }                                    
                                 }
-                                contract.inputs     = newInputs;
-                                contract.outputs    = newOutputs;
-                                break;
+                                // If the node is defined in a stateflow,
+                                // we need to add additional inputs and outpus
+                                if(srcNode.has(SFCONTENT)) {
+                                    finalInputs.add(new LustreVar(DUMMY+"_"+INPUT, PrimitiveType.INT));
+                                    for(LustreVar outVar : finalOutputs) {
+                                        finalInputs.add(new LustreVar(outVar.name+"_"+DUMMY, outVar.type));
+                                    }
+                                    finalInputs.addAll(tempInputs);
+                                    finalOutputs.add(new LustreVar(DUMMY+"_"+OUTPUT, PrimitiveType.INT));
+                                }                                
+                                // Reset inputs and outputs
+                                contract.inputs     = finalInputs;
+                                contract.outputs    = finalOutputs;
+                                break;                                   
                             }
                         }
                         
