@@ -658,9 +658,6 @@ public class J2LTranslator {
             addMappingInfo(getPath(subsystemNode), null, lusNodeName, null, null, null, null);            
             return translateContractNode(subsystemNode, validatorBlk, inputs, outputs, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap);
         } else {
-            // For the translated Lustre nodes
-            List<LustreAst>     lusNodes    = new ArrayList<>();
-            
             // Add the Lustre node mapping info
             addMappingInfo(getPath(subsystemNode), lusNodeName, null, null, null, null, null);            
             
@@ -1792,11 +1789,28 @@ public class J2LTranslator {
                     } else {
                         finalExprs.add(expr);
                     }
-                } else {
+                } else if(baseType == PrimitiveType.INT) {
                     finalExprs.add(expr);
+                } else {
+                    if(expr instanceof IntExpr) {
+                        if(((IntExpr) expr).value == new BigInteger("0")) {
+                            finalExprs.add(new BooleanExpr(false));
+                        } else {
+                            finalExprs.add(new BooleanExpr(true));
+                        }
+                    } else if(expr instanceof RealExpr) {
+                        if(((RealExpr) expr).value == BigDecimal.ZERO) {
+                            finalExprs.add(new BooleanExpr(false));
+                        } else {
+                            finalExprs.add(new BooleanExpr(true));
+                        }
+                    } else {
+                        finalExprs.add(expr);
+                    }
                 }
             }                
-            // If the dst block is a selector, we return the constant expression directly
+            // If the dst block is a selector and it is a 1-dimensional array, 
+            // we return the constant expression directly
             if(dstBlkType.equals(SELECTOR) && blkDim <= 1) {
                 blkExpr = new ArrayExpr(blkDims, finalExprs);
             } else {
