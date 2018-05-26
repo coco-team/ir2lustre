@@ -96,7 +96,7 @@ public class Sf2LTranslator {
     /**
      * Data structures
      */
-    String                      initStateId;
+    int                         initStateId;
     String                      centerStateId;
     String                      rootSubsysName;
     List<JsonNode>              truthTableNodes;
@@ -119,8 +119,8 @@ public class Sf2LTranslator {
     Map<String, List<String>>   stateIdToAndSubstateIds;
 
     public Sf2LTranslator() {
-        this.rootSubsysName             = null;
-        this.initStateId                = null;
+        this.initStateId                = 0;
+        this.rootSubsysName             = null;        
         this.centerStateId              = null;
         this.truthTableNodes            = new ArrayList<>();
         this.autoStates                 = new ArrayList<>();
@@ -292,8 +292,10 @@ public class Sf2LTranslator {
         LinkedHashMap<String, List<LustreEq>>   transitNameToAllActs    = new LinkedHashMap<>();
 
         // Translating states except for the entry state
-        for (JsonNode stateNode : this.stateIdToNode.values()) {
-            String stateId = getNodeId(stateNode);
+//        for (JsonNode stateNode : this.stateIdToNode.values()) {
+        for (Map.Entry<String, JsonNode> stateIdNode : this.stateIdToNode.entrySet()) {            
+            String      stateId     = stateIdNode.getKey();
+            JsonNode    stateNode   = stateIdNode.getValue();            
 
             // Skip the entry state node
             if (stateId.equals(this.centerStateId)) {
@@ -313,7 +315,7 @@ public class Sf2LTranslator {
             String exitStr  = getActionStrExitExpr(actionNode);
 
             // Add entry expressions
-            if (stateId.equals(this.initStateId)) {
+            if (this.stateIdToActId.get(stateId) == this.initStateId) {
                 if (entryStr != null) {
                     for (LustreAst ast : J2LUtils.parseAndTranslate(entryStr)) {
                         LustreEq eq = (LustreEq) ast;
@@ -1572,14 +1574,13 @@ public class Sf2LTranslator {
                     case STATES: {
                         // If the state is the entry state, we collect all the information we need here
                         if (J2LUtils.getSanitizedBlkPath(internalNode).equals(this.rootSubsysName)) {
-                            JsonNode substateNodeIds = internalNode.get(COMPOSITION).get(STATES);
-                            Iterator<JsonNode> substateIt = substateNodeIds.elements();
+                            JsonNode            substateNodeIds = internalNode.get(COMPOSITION).get(STATES);
+                            Iterator<JsonNode>  substateIt      = substateNodeIds.elements();
 
                             while (substateIt.hasNext()) {
                                 JsonNode substateNode = substateIt.next();
                                 this.stateIdToActId.put(substateNode.asText(), substateNode.asInt());
                             }
-                            this.initStateId = "0";
                             this.centerStateId = getNodeId(internalNode);
                             this.stateIdToActId.put(internalNode.get(COMPOSITION).get(DEFAULTTRANS).get(DEST).get(ID).asText(), 0);
                         }
@@ -1637,7 +1638,6 @@ public class Sf2LTranslator {
                             JsonNode substateNode = substateIt.next();
                             this.stateIdToActId.put(substateNode.asText(), substateNode.asInt());
                         }
-                        this.initStateId = "0";
                         this.centerStateId = getNodeId(node);
                         this.stateIdToActId.put(node.get(COMPOSITION).get(DEFAULTTRANS).get(DEST).get(ID).asText(), 0);
                     }
