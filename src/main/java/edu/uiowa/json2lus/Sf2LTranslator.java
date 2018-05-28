@@ -96,7 +96,7 @@ public class Sf2LTranslator {
     /**
      * Data structures
      */
-    int                         initStateId;
+    int                         initStateActiveId;
     String                      centerStateId;
     String                      rootSubsysName;
     List<JsonNode>              truthTableNodes;
@@ -119,7 +119,7 @@ public class Sf2LTranslator {
     Map<String, List<String>>   stateIdToAndSubstateIds;
 
     public Sf2LTranslator() {
-        this.initStateId                = 0;
+        this.initStateActiveId                = 0;
         this.rootSubsysName             = null;        
         this.centerStateId              = null;
         this.truthTableNodes            = new ArrayList<>();
@@ -315,7 +315,7 @@ public class Sf2LTranslator {
             String exitStr  = getActionStrExitExpr(actionNode);
 
             // Add entry expressions
-            if (this.stateIdToActId.get(stateId) == this.initStateId) {
+            if (this.stateIdToActId.get(stateId) == this.initStateActiveId) {
                 if (entryStr != null) {
                     for (LustreAst ast : J2LUtils.parseAndTranslate(entryStr)) {
                         LustreEq eq = (LustreEq) ast;
@@ -736,7 +736,8 @@ public class Sf2LTranslator {
             List<LustreEq> noGuardActExprs = new ArrayList<>();
             LinkedHashMap<LustreExpr, List<LustreEq>> condToCondActs = new LinkedHashMap<>();
 
-            // Add the mapping between name and path to the map
+            // Add the mapping between name and path to the map so that 
+            // we can reference it in the nodes
             this.fcnNameToPath.put(fcnName, fcnPath);
 
             // Get inputs and outputs
@@ -795,16 +796,20 @@ public class Sf2LTranslator {
 
         // Start translating truth tables
         for (JsonNode ttNode : this.truthTableNodes) {
+            // We do not create SSA form for truth table for now
+            String                      fcnName             = getSanitizedName(ttNode);
+            String                      fcnPath             = getSanitizedPath(ttNode);            
             List<LustreVar>             fcnLocals           = new ArrayList<>();
             List<LustreVar>             fcnInputs           = new ArrayList<>();
             List<LustreVar>             fcnOutputs          = new ArrayList<>();
             List<LustreEq>              fcnBody             = new ArrayList<>();
-            Map<String, LustreType>     inputs              = new HashMap<>();
-            Map<String, LustreType>     outputs             = new HashMap<>();
-            Map<String, LustreType>     locals              = new HashMap<>();
             Map<String, List<LustreEq>> labelToActions      = new HashMap<>();
             Map<String, List<LustreEq>> indexToActions      = new HashMap<>();
-            Map<LustreExpr, List<LustreEq>> condToActions   = new HashMap<>();
+            Map<LustreExpr, List<LustreEq>> condToActions   = new LinkedHashMap<>();
+            
+            // Add the mapping between name and path to the map so that 
+            // we can reference it in the nodes
+            this.fcnNameToPath.put(fcnName, fcnPath);            
 
             // Get inputs, locals and outputs
             if (ttNode.has(DATA)) {
@@ -819,17 +824,14 @@ public class Sf2LTranslator {
                     switch (dataNode.get(SCOPE).asText()) {
                         case INPUT: {
                             fcnInputs.add(var);
-                            inputs.put(name, type);
                             break;
                         }
                         case OUTPUT: {
                             fcnOutputs.add(var);
-                            outputs.put(name, type);
                             break;
                         }
                         case LOCAL: {
                             fcnLocals.add(var);
-                            locals.put(name, type);
                             break;
                         }
                         default:
@@ -886,9 +888,87 @@ public class Sf2LTranslator {
                     populateConditionsAndActions(decisionsNode, labelToActions, indexToActions, condToActions);
                 }
             }
+            
+            // Get all the keys of condToActions as a list for iteration purpose
+            List<LustreExpr> keyList = new ArrayList<>(condToActions.keySet());
+            
+            // construct if-then-else statement for output variables            
+            for(LustreVar outVar : fcnOutputs) {
+                LustreExpr  elseAssignment  = null;
+                IteExpr     iteExpr         = null;
+                String      outVarName      = outVar.name;                
+
+                for(Map.Entry<LustreExpr, List<LustreEq> > condToActsEntry : condToActions.entrySet()) {
+                    LustreExpr      condExpr    = condToActsEntry.getKey();
+                    List<LustreEq>  actionEqs   = condToActsEntry.getValue();
+
+                    if(isAllTrues(condExpr)) {
+                        elseAssignment = getVarAssignment(outVarName, actionEqs);
+                    }
+                    if(elseAssignment != null) {
+                        break;
+                    }
+                }
+                // We assume the last condition expression is the default expression
+                int lastNonTrueCondIndex = condToActions.size()-2;
+                
+                if(lastNonTrueCondIndex >= 0) {
+                    LustreExpr lastNonTrueCondExpr  = keyList.get(lastNonTrueCondIndex);
+                    LustreExpr lastCondVarAssExpr   = getVarAssignment(outVarName, condToActions.get(lastNonTrueCondExpr));
+                    
+                    iteExpr = new IteExpr(lastNonTrueCondExpr, lastCondVarAssExpr, elseAssignment);
+                    for(int i = condToActions.size()-3; i >= 0; --i) {
+                        LustreExpr condExpr             = keyList.get(i);
+                        LustreExpr varAssignmentExpr    = getVarAssignment(outVarName, condToActions.get(condExpr));
+                        iteExpr = new IteExpr(condExpr, varAssignmentExpr, iteExpr);
+                    }                                
+                }
+                if(iteExpr != null) {
+                    fcnBody.add(new LustreEq(new VarIdExpr(outVarName), iteExpr));
+                } else {
+                    fcnBody.add(new LustreEq(new VarIdExpr(outVarName), elseAssignment));
+                }                
+            }
+            fcns.add(new LustreNode(fcnPath, fcnInputs, fcnOutputs, fcnLocals, fcnBody));            
         }
 
         return fcns;
+    }
+    
+    protected boolean isAllTrues(LustreExpr condExpr) {
+        if(condExpr instanceof BinaryExpr) {
+            return isAllTrues(((BinaryExpr) condExpr).left) && isAllTrues(((BinaryExpr) condExpr).right);
+        } else if(condExpr instanceof UnaryExpr){
+            if(((UnaryExpr) condExpr).op == UnaryExpr.Op.NOT) {
+                return !isAllTrues(((UnaryExpr)condExpr).expr);
+            }
+            return isAllTrues(((UnaryExpr)condExpr).expr);            
+        } else if(condExpr instanceof BooleanExpr) {
+            return ((BooleanExpr) condExpr).value;
+        } else {
+            return false;
+        }
+    }
+    
+    protected LustreExpr getVarAssignment(String varName, List<LustreEq> actionEqs) {
+        LustreExpr  assignmentExpr  = null;
+        
+        for(LustreEq eq : actionEqs) {
+            List<LustreExpr> lhsExprs = eq.getLhs();
+
+            if(lhsExprs.size() == 1) {
+                if(lhsExprs.get(0) instanceof VarIdExpr) {
+                    if(varName.equals(((VarIdExpr)lhsExprs.get(0)).id)) {
+                        assignmentExpr = eq.getRhs();
+                        break;
+                    }
+                }
+            }
+            if(assignmentExpr != null) {
+                break;
+            }
+        }   
+        return assignmentExpr;
     }
 
     /**
