@@ -157,6 +157,7 @@ public class J2LTranslator {
     private final String CONCATEOUT     = "concate_output";
     
     /** State flow language features */
+    private final String INPUT          = "Input";
     private final String OUTPUT         = "Output";
     private final String SFCONTENT      = "StateflowContent";
     
@@ -179,7 +180,7 @@ public class J2LTranslator {
     private final String MATRIXCONST    = "matrix";
     private final String ELEMENTWISE    = "Element-wise(.*)";
     private final String DIMENSION      = "CompiledPortDimensions";       
-    
+        
     private final String SELECTOR       = "Selector";
     private final String INDEXMODE      = "IndexMode";
     private final String ONEBASED       = "One-based";
@@ -187,12 +188,14 @@ public class J2LTranslator {
     private final String INDOPTARR      = "IndexOptionArray";
     private final String SELECTALL      = "Select all";
     private final String INDVECD        = "Index vector (dialog)";
-    private final String INDVECP        = "Index vector (dialog)";
+    private final String INDVECP        = "Index vector (port)";
     private final String STARTINDD      = "Starting index (dialog)";
     private final String STARTINDP      = "Starting index (port)";
-    private final String STARTENDINDP   = "Starting and ending indices (port)";    
-    
-    
+    private final String NUMOFDIM       = "NumberOfDimensions";   
+    private final String SELECTOROUT    = "selector_output";
+    private final String STARTENDINDP   = "Starting and ending indices (port)";            
+        
+    private final String INDEXPARAMARRAY    = "IndexParamArray";             
     private final String COLLAPSEDIM        = "CollapseDim"; 
     private final String COLLAPSEMODE       = "CollapseMode"; 
     private final String MULTIPLICATIOIN    = "Multiplication";    
@@ -223,7 +226,8 @@ public class J2LTranslator {
     private final String VALIDATOR      = "ContractValidatorBlock";    
              
     
-    /** CoCoSim block type to indicate property block */            
+    /** CoCoSim block type to indicate property block */           
+    
     private final String HELD               = "held";
     private final String RESET              = "reset";
     private final String LOCAL              = "Local";      
@@ -282,6 +286,8 @@ public class J2LTranslator {
     private final String INTTOREAL      = "real";
     private final String REALTOINT      = "int";
     private final String RESULTMATRIX   = "result_matrix";
+    
+    private final String DUMMY          = "dummy";
                       
     private JsonNode                                topLevelNode;  
     private final List<LustreNode>                  auxLusNode;
@@ -337,7 +343,7 @@ public class J2LTranslator {
             
             if(subsystemNode.has(SFCONTENT) && subsystemNode.get(SFCONTENT).size() > 0) {
                 Sf2LTranslator sfTranslator = new Sf2LTranslator();                
-                asts = sfTranslator.translate(subsystemNode);
+                asts = sfTranslator.execute(subsystemNode);
             } else if(subsystemNode.has(CONTENT) && subsystemNode.get(CONTENT) != null) {
                 asts.add(translateSubsystemNode(subsystemNode));
             }
@@ -446,7 +452,7 @@ public class J2LTranslator {
     /**
      * 
      * @param contractNode
-     * @param validatorBlkNode
+     * @param validatorBlk
      * @param inputs
      * @param outputs
      * @param blkNodeToSrcBlkHdlsMap
@@ -455,56 +461,59 @@ public class J2LTranslator {
      * @param hdlToBlkNodeMap
      * @return A list of contracts corresponding to the contract node
      */    
-    protected LustreContract translateContractNode(JsonNode contractNode, JsonNode validatorBlkNode, List<LustreVar> inputs, List<LustreVar> outputs, Map<JsonNode, List<String>> blkNodeToSrcBlkHdlsMap, Map<JsonNode, List<Integer>> blkNodeToSrcBlkPortsMap, Map<JsonNode, List<String>> blkNodeToDstBlkHdlsMap, Map<String, JsonNode> hdlToBlkNodeMap) {        
+    protected LustreContract translateContractNode(JsonNode contractNode, JsonNode validatorBlk, List<LustreVar> inputs, List<LustreVar> outputs, Map<JsonNode, List<String>> blkNodeToSrcBlkHdlsMap, Map<JsonNode, List<Integer>> blkNodeToSrcBlkPortsMap, Map<JsonNode, List<String>> blkNodeToDstBlkHdlsMap, Map<String, JsonNode> hdlToBlkNodeMap) {        
         // Get the contract name
         String contractName = getQualifiedBlkName(contractNode); 
         
         LOGGER.log(Level.INFO, "Start translating the contract block: {0}", contractName);
         
         // Set up data structures for storing contract information
-        int aIndex = 1, gIndex = 1;             
-        Map<String, List<LustreExpr>>   modeToRequires  = new HashMap<>();
-        Map<String, List<LustreExpr>>   modeToEnsures   = new HashMap<>();           
-        List<LustreExpr>                assumptions     = new ArrayList<>();            
-        List<LustreExpr>                guarantees      = new ArrayList<>();                                  
-        List<String>                    inHdls          = blkNodeToSrcBlkHdlsMap.get(validatorBlkNode);
-        List<Integer>                   inPorts         = blkNodeToSrcBlkPortsMap.get(validatorBlkNode);         
+        int aIndex = 1, gIndex = 1;    
+        String      validatorHdl = getBlkHandle(validatorBlk);
+        Map<String, List<LustreExpr>>   modeToRequires  = new HashMap<>();        
+        Map<String, LustreExpr>         assumptions     = new HashMap<>();            
+        Map<String, LustreExpr>         guarantees      = new HashMap<>();                                     
+        List<String>                    inHdls          = blkNodeToSrcBlkHdlsMap.get(validatorBlk);
+        List<Integer>                   inPorts         = blkNodeToSrcBlkPortsMap.get(validatorBlk);   
+        Map<String, Map<String, LustreExpr>>   modeToEnsures   = new HashMap<>();                           
         
         for(int i = 0; i < inHdls.size(); i++) {
             // Get the in block to the validator block node
             JsonNode    inBlk       = hdlToBlkNodeMap.get(inHdls.get(i));            
             // Get the origin path
             String      originPath  = inBlk.get(ORIGIN).asText();
+            String      propName    = J2LUtils.sanitizeName(originPath);
             
             // Translate assumption blocks
             if(isAssumeBlk(inBlk)) {
-                assumptions.add(translateBlock(false, inHdls.get(i), contractNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, new HashSet<String>(), null, inPorts.get(i)));
-                addMappingInfo(originPath, null, contractName, null, ASSUME, String.valueOf(aIndex++), null);                
+                assumptions.put(propName, translateBlock(false, inHdls.get(i), validatorHdl, contractNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, new HashSet<String>(), null, inPorts.get(i)));
+                addMappingInfo(originPath, null, contractName, null, propName, String.valueOf(aIndex++), null);                
             // Translate guarantee blocks                
             } else if(isGuaranteeBlk(inBlk)) {
-                guarantees.add(translateBlock(false, inHdls.get(i), contractNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, new HashSet<String>(), null, inPorts.get(i)));
-                addMappingInfo(originPath, null, contractName, null, GUARANTEE, String.valueOf(gIndex++), null);                
+                guarantees.put(propName, translateBlock(false, inHdls.get(i), validatorHdl, contractNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, new HashSet<String>(), null, inPorts.get(i)));
+                addMappingInfo(originPath, null, contractName, null, propName, String.valueOf(gIndex++), null);                
             } else if(isModeBlk(inBlk)) {
                 // Set up data structures for requires and ensures of modes
                 int rIndex = 1, eIndex = 1;
                 String modeName                 = getBlkName(inBlk);
-                List<LustreExpr>    requires    = new ArrayList<>();
-                List<LustreExpr>    ensures     = new ArrayList<>();
+                List<LustreExpr>    requires    = new ArrayList<>();                
                 List<String>        modeInHdls  = blkNodeToSrcBlkHdlsMap.get(inBlk);
                 List<Integer>       modeInPorts = blkNodeToSrcBlkPortsMap.get(inBlk);
+                Map<String, LustreExpr>    ensures     = new HashMap<>();                
                 
                 // Translate requires and ensures
                 for(int j = 0; j < modeInHdls.size(); j++) {
                     JsonNode    modeInBlk       = hdlToBlkNodeMap.get(modeInHdls.get(j));
-                    LustreExpr  modeInBlkExpr   = translateBlock(false, modeInHdls.get(j), contractNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, new HashSet<String>(), null, modeInPorts.get(j));
+                    LustreExpr  modeInBlkExpr   = translateBlock(false, modeInHdls.get(j), validatorHdl, contractNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, new HashSet<String>(), null, modeInPorts.get(j));
                     originPath  = modeInBlk.get(ORIGIN).asText();
+                    propName    = J2LUtils.sanitizeName(originPath);
                     
                     if(isRequireBlk(modeInBlk)) {
                         requires.add(modeInBlkExpr);
                         addMappingInfo(originPath, null, contractName, modeName, REQUIRE, String.valueOf(rIndex++), null);
                     } else if(isEnsureBlk(modeInBlk)) {
-                        ensures.add(modeInBlkExpr);
-                        addMappingInfo(originPath, null, contractName, modeName, ENSURE, String.valueOf(eIndex++), null);                        
+                        ensures.put(propName, modeInBlkExpr);
+                        addMappingInfo(originPath, null, contractName, modeName, propName, String.valueOf(eIndex++), null);                        
                     }
                 }
                 if(!requires.isEmpty()) {
@@ -627,35 +636,30 @@ public class J2LTranslator {
             if(dimensions.size() == 1 && dimensions.get(0) == 1 && !isMatrixMode) {
                 inputs.add(new LustreVar(inportName, baseType));                     
             } else {
-                ArrayType array = new ArrayType(baseType, dimensions);
-                inputs.add(new LustreVar(inportName, array));
+                inputs.add(new LustreVar(inportName, new ArrayType(baseType, dimensions)));
             }            
         }
         for(int i = 0; i < outports.size(); i++) {
             String          outportName     = getBlkName(outports.get(i));     
             List<Integer>   dimensions      = getDimensions(outports.get(i));
             LustreType      baseType        = getBlkInportType(outports.get(i));  
-            boolean         isMatrixMode    = getMatrixMode(inports.get(i), hdlToBlkNodeMap, blkNodeToDstBlkHdlsMap);
+            boolean         isMatrixMode    = getMatrixMode(outports.get(i), hdlToBlkNodeMap, blkNodeToDstBlkHdlsMap);
             
             if(dimensions.size() == 1 && dimensions.get(0) == 1 && !isMatrixMode) {
                 outputs.add(new LustreVar(outportName, baseType));
             } else {
-                ArrayType array = new ArrayType(baseType, dimensions);
-                outputs.add(new LustreVar(outportName, array));
+                outputs.add(new LustreVar(outportName, new ArrayType(baseType, dimensions)));
             }            
         } 
         
         // Translate contract
         if(isContractBlk(subsystemNode)) {
             // Add the contract mapping info
-            addMappingInfo(getPath(subsystemNode), null, getQualifiedBlkName(subsystemNode), null, null, null, null);            
+            addMappingInfo(getPath(subsystemNode), null, lusNodeName, null, null, null, null);            
             return translateContractNode(subsystemNode, validatorBlk, inputs, outputs, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap);
         } else {
-            // For translated Lustre nodes
-            List<LustreAst>     lusNodes    = new ArrayList<>();
-            
             // Add the Lustre node mapping info
-            addMappingInfo(getPath(subsystemNode), getQualifiedBlkName(subsystemNode), null, null, null, null, null);            
+            addMappingInfo(getPath(subsystemNode), lusNodeName, null, null, null, null, null);            
             
             // Attach contracts to nodes
             attachContractsToNode(contractNodes, blkNodeToSrcBlkHdlsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap);
@@ -671,20 +675,19 @@ public class J2LTranslator {
                     for(LustreExpr var : propEq.getLhs()) {
                         if(var instanceof VarIdExpr) {
                             addMappingInfo(propNode.get(ORIGIN).asText(), lusNodeName, null, null, ((VarIdExpr)var).id, null, null);
-                        }
-                        
+                        }                        
                     }                
                     props.add(propEq);                           
                 }
             }   
             
-            // Add auxilary node equations generated  translation
+            // Add auxilary node equations generated during the translation
             equations.addAll(this.auxNodeEqs);
             
             // Add auxilary local variables generated in the translation
             locals.addAll(this.auxNodeLocalVars);               
             
-            // Add translated nodes
+            // Create the Lustre node
             LustreNode node = new LustreNode(subsystemNode.equals(this.topLevelNode), lusNodeName, inputs, outputs, locals, equations, props);                                                
             
             // Clear the auxilary information
@@ -697,14 +700,15 @@ public class J2LTranslator {
     }
     
     protected boolean getMatrixMode(JsonNode blkNode,  Map<String, JsonNode> hdlBlkNodeMap, Map<JsonNode, List<String>> blkNodeToDstBlkHandlesMap) {
-        for(String dstHdl : blkNodeToDstBlkHandlesMap.get(blkNode)) {
-            JsonNode dstBlkNode = hdlBlkNodeMap.get(dstHdl);
-            
-            if(dstBlkNode.has(MULTIPLICATIOIN)) {
-                return dstBlkNode.get(MULTIPLICATIOIN).asText().equals(MATRIX);
-            }            
-        }
+        if(blkNodeToDstBlkHandlesMap.containsKey(blkNode)) {
+            for(String dstHdl : blkNodeToDstBlkHandlesMap.get(blkNode)) {
+                JsonNode dstBlkNode = hdlBlkNodeMap.get(dstHdl);
 
+                if(dstBlkNode.has(MULTIPLICATIOIN)) {
+                    return dstBlkNode.get(MULTIPLICATIOIN).asText().equals(MATRIX);
+                }            
+            }            
+        } 
         return false;
     }
 
@@ -719,15 +723,15 @@ public class J2LTranslator {
         // Return nothing if contract nodes is null
         if(contractNodes != null) {
             for(JsonNode contractNode : contractNodes) {
-                // src is the handle of the source block of the contract
-                String          src         = null;                
+                // src is the handle of the block which we should attach the contract to
+                String          dstNodeHdl         = null;                
                 // Get the in handles of the contract
-                List<String>    srcHdls     = blkNodeToSrcBlkHdlsMap.get(contractNode);
+                List<String>    contractSrcHdls     = blkNodeToSrcBlkHdlsMap.get(contractNode);
                 // Get the contract handle
                 String          contractHdl = getBlkHandle(contractNode);
                 
-                if(srcHdls != null) {
-                    for(String srcHdl : srcHdls) {
+                if(contractSrcHdls != null) {
+                    for(String srcHdl : contractSrcHdls) {
                         // Get all the destination block handles of srcHdl
                         List<String> dstHdls = blkNodeToDstBlkHandlesMap.get(hdlBlkNodeMap.get(srcHdl));
                         
@@ -736,14 +740,14 @@ public class J2LTranslator {
                                 
                                 // If the in handles of the contract contains the dst handle
                                 // This is to say that there exists a source node with handle "dstHdl"
-                                if(srcHdls.contains(dstHdl)) {
+                                if(contractSrcHdls.contains(dstHdl)) {
                                     
                                     // Get all source handles of the dstHdl node
                                     List<String> sndHdls = blkNodeToSrcBlkHdlsMap.get(hdlBlkNodeMap.get(dstHdl));
                                     
                                     // No source nodes with handles that contains the contract handle
                                     if(sndHdls != null && !sndHdls.contains(contractHdl)) {
-                                        src = dstHdl;
+                                        dstNodeHdl = dstHdl;
                                         break;
                                     }
                                     
@@ -751,41 +755,59 @@ public class J2LTranslator {
                             }                            
                         }
                         // We found the handle of the node
-                        if(src != null) {
+                        if(dstNodeHdl != null) {
                             break;
                         }                       
                     }
                     
-                    if(src != null) {
+                    if(dstNodeHdl != null) {
                         // Get the contract name
                         String contractName = getQualifiedBlkName(contractNode);
                         
                         for(LustreContract contract : this.lustreProgram.contracts) {
                             if(contract.name.equals(contractName)) {
                                 // Reorganize the inputs and outputs of a contract
-                                List<String>        inHdls      = blkNodeToSrcBlkHdlsMap.get(contractNode);
-                                List<LustreVar>     newOutputs  = new ArrayList<>();
-                                List<LustreVar>     oldInputs   = contract.inputs;                                
-                                List<LustreVar>     newInputs   = new ArrayList<>();                                
-                                
-                                for(int j = 0; j < inHdls.size(); j++) {
-                                    if(inHdls.get(j).equals(src)) {
-                                        newOutputs.add(oldInputs.get(j));
+                                JsonNode            srcNode         = hdlBlkNodeMap.get(dstNodeHdl);
+                                List<LustreVar>     finalOutputs    = new ArrayList<>();
+                                List<LustreVar>     oldInputs       = contract.inputs;                                
+                                List<LustreVar>     tempInputs      = new ArrayList<>();  
+                                List<LustreVar>     finalInputs     = new ArrayList<>();                                  
+                                List<String>        contractInHdls  = blkNodeToSrcBlkHdlsMap.get(contractNode);                                                               
+                                                                             
+                                for(int j = 0; j < contractInHdls.size(); j++) {
+                                    // If the contract in handle equals to src,
+                                    // it means the outputs of src node connect
+                                    // with the contract
+                                    if(contractInHdls.get(j).equals(dstNodeHdl)) {
+                                        finalOutputs.add(oldInputs.get(j));
                                     } else {
-                                        newInputs.add(oldInputs.get(j));
+                                        tempInputs.add(oldInputs.get(j));
                                     }                                    
                                 }
-                                contract.inputs     = newInputs;
-                                contract.outputs    = newOutputs;
-                                break;
+                                // If the node is defined in a stateflow,
+                                // we need to add additional inputs and outpus
+                                if(srcNode.has(SFCONTENT)) {
+                                    finalInputs.add(new LustreVar(DUMMY+"_"+INPUT, PrimitiveType.INT));
+                                    for(LustreVar outVar : finalOutputs) {
+                                        finalInputs.add(new LustreVar(outVar.name+"_"+DUMMY, outVar.type));
+                                    }
+                                    finalInputs.addAll(tempInputs);
+                                    finalOutputs.add(new LustreVar(DUMMY+"_"+OUTPUT, PrimitiveType.INT));
+                                    contract.inputs = finalInputs;
+                                } else {
+                                    contract.inputs = tempInputs;
+                                }                                
+                                // Reset inputs and outputs                                
+                                contract.outputs    = finalOutputs;
+                                break;                                   
                             }
                         }
                         
-                        // Attach the contract with contractName to the node with handle "src"
-                        this.lustreProgram.attachNodeContract(getQualifiedBlkName(hdlBlkNodeMap.get(src)), contractName);
+                        // Attach the contract with contractName to the node with handle "dstNodeHdl"
+                        this.lustreProgram.attachNodeContract(getQualifiedBlkName(hdlBlkNodeMap.get(dstNodeHdl)), contractName);
                     }                    
                 } else {
-                    LOGGER.log(Level.SEVERE, "Found a ghost contract: {0}", getBlkName(contractNode));
+                    LOGGER.log(Level.WARNING, "Found a ghost contract: {0}", getBlkName(contractNode));
                 }
             }
         }
@@ -903,6 +925,7 @@ public class J2LTranslator {
             String srcBlkType = propBlk.get(BLOCKTYPE).asText();
 
             if(srcBlkType.equals(SUBSYSTEM)) {
+                String                  subsystemHdl            = getBlkHandle(subsystemNode);
                 // Handle to outport variable mapping
                 Map<String, VarIdExpr>  hdlToOutportVarExpr     = new HashMap<>();
                 
@@ -923,7 +946,7 @@ public class J2LTranslator {
                 
                 // Translate the actual input of the propety block
                 for(int j = 0; j < inHdls.size(); j++) {
-                    actualInputExpr.add(translateBlock(true, inHdls.get(j), propBlk, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap, new HashSet<String>(), null, inPorts.get(j)));
+                    actualInputExpr.add(translateBlock(true, inHdls.get(j), subsystemHdl, propBlk, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap, new HashSet<String>(), null, inPorts.get(j)));
                 }             
                 
                 // For each property block node, translate it
@@ -998,12 +1021,13 @@ public class J2LTranslator {
         // Assume outports of an observer block can only be Boolean type
         for(JsonNode outportNode : outportNodes) {
             if(blkNodeToSrcBlkHdlsMap.containsKey(outportNode)) {
-                List<String> inHdls     = blkNodeToSrcBlkHdlsMap.get(outportNode);
-                List<Integer> inPorts   = blkNodeToSrcBlkPortsMap.get(outportNode);
+                String          outportHdl  = getBlkHandle(outportNode);
+                List<String>    inHdls      = blkNodeToSrcBlkHdlsMap.get(outportNode);
+                List<Integer>   inPorts     = blkNodeToSrcBlkPortsMap.get(outportNode);
                 
                 // Translate each in-handle
                 for(int j = 0 ; j < inHdls.size(); j++) {
-                    hdlToPropExpr.put(getBlkHandle(outportNode), translateBlock(false, inHdls.get(j), outportNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, new HashSet<String>(), hdlToActualInputExpr, inPorts.get(j)));
+                    hdlToPropExpr.put(getBlkHandle(outportNode), translateBlock(false, inHdls.get(j), outportHdl, outportNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, new HashSet<String>(), hdlToActualInputExpr, inPorts.get(j)));
                 }
             } else {
                 LOGGER.log(Level.WARNING, "A ghost outport in an observer block: {0}", getBlkName(outportNode));
@@ -1031,13 +1055,14 @@ public class J2LTranslator {
                 // The only outport node
                 JsonNode outportNode = outportNodes.get(0);       
 
-                if(blkNodeToSrcBlkHdlsMap.containsKey(outportNode)) {                    
+                if(blkNodeToSrcBlkHdlsMap.containsKey(outportNode)) {  
+                    String          outportHdl      = getBlkHandle(outportNode);
                     LustreExpr       varIdExpr      = new VarIdExpr(getBlkName(outportNode));                 
                     List<String>    srcBlkHandles   = blkNodeToSrcBlkHdlsMap.get(outportNode);
                     List<Integer>   srcBlkPorts     = blkNodeToSrcBlkPortsMap.get(outportNode);
 
                     if(srcBlkHandles.size() == 1 && !srcBlkHandles.get(0).equals("-1")) {
-                        eqs.add(new LustreEq(varIdExpr, translateBlock(false, srcBlkHandles.get(0), subsystemNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, handleToBlkNodeMap, new HashSet<String>(), null, srcBlkPorts.get(0))));
+                        eqs.add(new LustreEq(varIdExpr, translateBlock(false, srcBlkHandles.get(0), outportHdl, subsystemNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, handleToBlkNodeMap, new HashSet<String>(), null, srcBlkPorts.get(0))));
                     } else {
                         LOGGER.log(Level.SEVERE, "Unexpected: No src blocks connect to the outport: {0}!", getBlkName(outportNode));
                     }
@@ -1047,14 +1072,16 @@ public class J2LTranslator {
             } else if(outportNodes.size() > 1) {
                 // Need to make sure the order of outports is correct
                 List<LustreExpr>    orderedOutportVars      = new ArrayList<>();
-                List<String>        srcBlkHdls              = blkNodeToSrcBlkHdlsMap.get(outportNodes.get(0));
-                List<Integer>       srcBlkPorts             = blkNodeToSrcBlkPortsMap.get(outportNodes.get(0));
+                JsonNode            outportNode             = outportNodes.get(0); 
+                String              outportHdl              = getBlkHandle(outportNode);
+                List<String>        srcBlkHdls              = blkNodeToSrcBlkHdlsMap.get(outportNode);
+                List<Integer>       srcBlkPorts             = blkNodeToSrcBlkPortsMap.get(outportNode);
                 JsonNode            srcBlk                  = handleToBlkNodeMap.get(srcBlkHdls.get(0));
                 List<String>        dstBlkHdls              = blkNodeToDstBlkHdlsMap.get(srcBlk);
-                LustreExpr          rhs                     = translateBlock(false, srcBlkHdls.get(0), subsystemNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, handleToBlkNodeMap, new HashSet<String>(), null, srcBlkPorts.get(0));
+                LustreExpr          rhs                     = translateBlock(false, srcBlkHdls.get(0), outportHdl, subsystemNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, handleToBlkNodeMap, new HashSet<String>(), null, srcBlkPorts.get(0));
 
-                for(JsonNode outportNode : outportNodes) {
-                    orderedOutportVars.add(new VarIdExpr(getBlkName(outportNode)));
+                for(JsonNode outportBlk : outportNodes) {
+                    orderedOutportVars.add(new VarIdExpr(getBlkName(outportBlk)));
                 }                
                 if(isSubsystemBlock(srcBlk) && getBlksFromSubSystemByType(srcBlk, OUTPORT).size()>1) {
                     eqs.add(new LustreEq(orderedOutportVars, rhs));
@@ -1073,6 +1100,7 @@ public class J2LTranslator {
      * 
      * @param isPropBlk
      * @param blkHdl
+     * @param dstHdl
      * @param parentSubsystemNode
      * @param blkNodeToSrcBlkHdlsMap
      * @param blkNodeToSrcBlkPortsMap
@@ -1084,7 +1112,7 @@ public class J2LTranslator {
      * @return The Lustre expression corresponding to the input JSON block node
      */
 
-    protected LustreExpr translateBlock(boolean isPropBlk, String blkHdl, JsonNode parentSubsystemNode, Map<JsonNode, List<String>> blkNodeToSrcBlkHdlsMap, Map<JsonNode, List<Integer>> blkNodeToSrcBlkPortsMap, Map<JsonNode, List<String>> blkNodeToDstBlkHdlsMap, Map<String, JsonNode> hdlToBlkNodeMap, Set<String> visitedHdls, Map<String, LustreExpr> hdlToActualInputExpr, int portNum) {        
+    protected LustreExpr translateBlock(boolean isPropBlk, String blkHdl, String dstHdl, JsonNode parentSubsystemNode, Map<JsonNode, List<String>> blkNodeToSrcBlkHdlsMap, Map<JsonNode, List<Integer>> blkNodeToSrcBlkPortsMap, Map<JsonNode, List<String>> blkNodeToDstBlkHdlsMap, Map<String, JsonNode> hdlToBlkNodeMap, Set<String> visitedHdls, Map<String, LustreExpr> hdlToActualInputExpr, int portNum) {        
         // The block node corresponding to blkHdl
         JsonNode    blkNode     = null;
         // The Lustre expreesion for blkNode
@@ -1151,7 +1179,7 @@ public class J2LTranslator {
             // Inputs to Merge, Memory, UnitDelay, IFACTIONBLOCK, and Subsystem are translated separately
             if(!blkType.equals(MERGE) && !blkType.equals(MEMORY) && !blkType.equals(UNITDELAY) && !blkType.equals(IFACTIONBLK) && !blkType.equals(SUBSYSTEM)) {              
                 for(int i = 0; i < inHdls.size(); i++) {
-                    inExprs.add(translateBlock(isPropBlk, inHdls.get(i), parentSubsystemNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, visitedHdls, hdlToActualInputExpr, inPorts.get(i)));
+                    inExprs.add(translateBlock(isPropBlk, inHdls.get(i), blkHdl, parentSubsystemNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, visitedHdls, hdlToActualInputExpr, inPorts.get(i)));
                 }               
             }                         
             switch(blkType) {
@@ -1341,7 +1369,11 @@ public class J2LTranslator {
                 case CONCATE: {
                     blkExpr = mkConcateExpr(blkNode, inExprs);
                     break;
-                }                
+                } 
+                case SELECTOR: {
+                    blkExpr = mkSelectorExpr(blkNode, inExprs);
+                    break;
+                }                 
                 case DEMUX: {
                     List<LustreExpr> outVarIdExprs;
                     if(this.auxHdlToExprMap.containsKey(blkHdl)) {
@@ -1350,7 +1382,7 @@ public class J2LTranslator {
                         outVarIdExprs = mkDemuxExpr(blkNode, inExprs);
                         this.auxHdlToExprMap.put(blkHdl, outVarIdExprs);
                     }   
-                    outVarIdExprs.get(portNum);
+                    blkExpr = outVarIdExprs.get(portNum);
                     break;
                 }                
                 case SUM: {
@@ -1407,7 +1439,7 @@ public class J2LTranslator {
                         // Create local variables for outputs
                         for(LustreType type : outportTypes) {
                             LustreExpr fstInstExpr  = null;
-                            String nxtOutVarName    = J2LUtils.getFreshVarName(blkName + "_" + OUT);
+                            String nxtOutVarName    = J2LUtils.mkFreshVarName(blkName + "_" + OUT);
                             String curOutVarName    = J2LUtils.getFreshVarAtInst(nxtOutVarName, 1);
                             VarIdExpr curOutVarId   = new VarIdExpr(curOutVarName);
                             VarIdExpr nxtOutVarId   = new VarIdExpr(nxtOutVarName);
@@ -1436,26 +1468,25 @@ public class J2LTranslator {
                         
                         // Create input expressions
                         for(int j = 0; j < inHdls.size(); j++) {
-                            inExprs.add(translateBlock(isPropBlk, inHdls.get(j), parentSubsystemNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, visitedHdls, hdlToActualInputExpr, inPorts.get(j)));                             
+                            inExprs.add(translateBlock(isPropBlk, inHdls.get(j), blkHdl, parentSubsystemNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, visitedHdls, hdlToActualInputExpr, inPorts.get(j)));                             
                         }
                         
                         // Create the node call expression
-                        this.auxNodeEqs.add(new LustreEq(outVarIdExprs, new NodeCallExpr(qualifiedName, inExprs)));
-                        
                         blkExpr = outVarIdExprs.get(portNum);
+                        this.auxNodeEqs.add(new LustreEq(outVarIdExprs, new NodeCallExpr(qualifiedName, inExprs)));                                                
                         this.auxHdlToExprMap.put(blkHdl, outVarIdExprs);
                     } else {            
                         
-                        List<LustreExpr>        vars        = new ArrayList<>();
-                        List<LustreExpr>        inputs      = new ArrayList<>();
-                        List<LustreVar>         inputVars   = new ArrayList<>();
-                        List<LustreVar>         outputVars  = new ArrayList<>();
-                        Map<Integer, String>    portNameMap = getBlkOutportNameAndPort(blkNode);
+                        List<LustreExpr>        outVarIdExprs   = new ArrayList<>();
+                        List<LustreExpr>        inputs          = new ArrayList<>();
+                        List<LustreVar>         inputVars       = new ArrayList<>();
+                        List<LustreVar>         outputVars      = new ArrayList<>();
+                        Map<Integer, String>    portNameMap     = getBlkOutportNameAndPort(blkNode);
                         
                         if(visitedHdls != null && !visitedHdls.contains(blkHdl)) { 
                             visitedHdls.add(blkHdl);
                             for(int j = 0; j < inHdls.size(); j++) {
-                                inExprs.add(translateBlock(isPropBlk, inHdls.get(j), parentSubsystemNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, visitedHdls, hdlToActualInputExpr, inPorts.get(j)));
+                                inExprs.add(translateBlock(isPropBlk, inHdls.get(j), blkHdl, parentSubsystemNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, visitedHdls, hdlToActualInputExpr, inPorts.get(j)));
                                 
                                 // If the blkNode is a contract block, we need to treat it specially for the case
                                 // where the subsystem returns multiple outputs
@@ -1471,27 +1502,27 @@ public class J2LTranslator {
                             for(int i = 0; i < types.size(); i++) {
                                 LustreVar var = new LustreVar(blkName+"_"+J2LUtils.sanitizeName(portNameMap.get(i+1)), types.get(i));
                                 
-                                vars.add(new VarIdExpr(blkName+"_"+J2LUtils.sanitizeName(portNameMap.get(i+1))));
+                                outVarIdExprs.add(new VarIdExpr(blkName+"_"+J2LUtils.sanitizeName(portNameMap.get(i+1))));
                                 this.auxNodeLocalVars.add(var);  
                                 
                                 if(isContractBlk(parentSubsystemNode)) {
-                                    addMappingInfo(getPath(blkNode), null, getBlkName(parentSubsystemNode), null, null, null, var.name);
+                                    addMappingInfo(getPath(blkNode), null, qualifiedName, null, null, null, var.name);
                                 } else {
-                                    addMappingInfo(getPath(blkNode), getBlkName(parentSubsystemNode), null, null, null, null, var.name);
+                                    addMappingInfo(getPath(blkNode), qualifiedName, null, null, null, null, var.name);
                                 }                                
                                 outputVars.add(var);
                             }   
                             // This is to create auxiliary nodes for node calls in contract that returns multiple output
-                            if(vars.size() >= 2 && isContractBlk(parentSubsystemNode)) {
+                            if(outVarIdExprs.size() >= 2 && isContractBlk(parentSubsystemNode)) {
                                 int n = 1;
                                 String              nodeName = getQualifiedBlkName(blkNode);
                                 List<LustreExpr>    newVars = new ArrayList<>();
                                 
-                                for(int m = 0; m < vars.size(); ++m) {                                    
+                                for(int m = 0; m < outVarIdExprs.size(); ++m) {                                    
                                     List<LustreEq>      eqs         = new ArrayList<>();                                     
                                     List<LustreExpr>    elements    = new ArrayList<>();
                                     
-                                    for(int l = 0; l < vars.size(); ++l) {
+                                    for(int l = 0; l < outVarIdExprs.size(); ++l) {
                                         if(m==l) {
                                             elements.add(new VarIdExpr(outputVars.get(m).name));
                                         } else {
@@ -1505,20 +1536,20 @@ public class J2LTranslator {
                                 }
                                 this.auxHdlToExprMap.put(blkHdl, newVars);
                                 blkExpr = newVars.get(portNum);   
-                            } else if(vars.size() >= 2){                                                         
-                                this.auxHdlToExprMap.put(blkHdl, vars);
-                                this.auxNodeEqs.add(new LustreEq(vars, nodeCall));
-                                blkExpr = new TupleExpr(vars);
+                            } else if(outVarIdExprs.size() >= 2){                                                         
+                                this.auxHdlToExprMap.put(blkHdl, outVarIdExprs);
+                                this.auxNodeEqs.add(new LustreEq(outVarIdExprs, nodeCall));
+                                blkExpr = outVarIdExprs.get(portNum);                                   
                             } else {
-                                this.auxHdlToExprMap.put(blkHdl, vars);
-                                this.auxNodeEqs.add(new LustreEq(vars, nodeCall));
-                                blkExpr = vars.get(portNum);                                   
+                                this.auxHdlToExprMap.put(blkHdl, outVarIdExprs);
+                                this.auxNodeEqs.add(new LustreEq(outVarIdExprs, nodeCall));
+                                blkExpr = outVarIdExprs.get(portNum);                                   
                             }
                         } else {                                                        
                             for(int k = 0; k < portNameMap.size(); k++) {
-                                vars.add(new VarIdExpr(blkName+"_"+J2LUtils.sanitizeName(portNameMap.get(k+1))));
+                                outVarIdExprs.add(new VarIdExpr(blkName+"_"+J2LUtils.sanitizeName(portNameMap.get(k+1))));
                             }
-                            blkExpr = vars.get(portNum);
+                            blkExpr = outVarIdExprs.get(portNum);
                         }                       
                     }                                     
                     break;
@@ -1528,28 +1559,8 @@ public class J2LTranslator {
                     break;
                 }
                 case CONSTANT: {
-                    List<Integer>   blkDims = getBlkOutportDimensions(blkNode);
-                    LustreType      type    = getBlkOutportType(blkNode);
-                    String          value   = blkNode.get(VALUE).asText().trim();
-                    
-                    if(isOneValConst(blkDims)) {                        
-                        if(isValidConst(value)) {
-                            blkExpr = getLustreConst(value, type);
-                        //The value of the constant field of CompareToConstant block refers to the "value" of its parent node
-                        } else if(parentSubsystemNode.has(value)) {
-                            blkExpr = getLustreConst(parentSubsystemNode.get(value).asText().trim(), type);
-                        } else {
-                            LOGGER.log(Level.SEVERE, "Unexpected constant value in JSON node: {0}", blkNode);
-                        }                        
-                    } else {
-                        blkDims.remove(0);
-                        String      matrixName  = J2LUtils.getFreshVarName(MATRIXCONST);
-                        VarIdExpr   matrixId    = new VarIdExpr(matrixName);
-                        
-                        this.auxNodeLocalVars.add(new LustreVar(matrixName, new ArrayType(type, blkDims)));
-                        this.auxNodeEqs.add(new LustreEq(matrixId, mkArrayConst(value)));
-                        blkExpr = matrixId;
-                    }                    
+                    String dstBlkType = getBlkType(hdlToBlkNodeMap.get(dstHdl));
+                    blkExpr = mkConstantExpr(blkNode, parentSubsystemNode, dstBlkType);                   
                     break;
                 }
                 case PRODUCT: {
@@ -1594,7 +1605,7 @@ public class J2LTranslator {
                         
                         if(visitedHdls != null && !visitedHdls.contains(blkHdl)) { 
                             visitedHdls.add(blkHdl);
-                            LustreExpr  inExpr      = translateBlock(isPropBlk, inHdls.get(0), parentSubsystemNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, visitedHdls, hdlToActualInputExpr, inPorts.get(0));
+                            LustreExpr  inExpr      = translateBlock(isPropBlk, inHdls.get(0), blkHdl, parentSubsystemNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, visitedHdls, hdlToActualInputExpr, inPorts.get(0));
                             String      init        = blkType.equals(MEMORY) ? blkNode.get(X0).asText() : blkNode.get(INITCOND).asText();                                        
                             LustreType  blkOutType  = getBlkOutportType(blkNode); 
                             LustreExpr  initExpr    = getLustreConst(init, blkOutType);                        
@@ -1606,9 +1617,9 @@ public class J2LTranslator {
                                 LOGGER.log(Level.SEVERE, "UNEXPECTED init value : {0} for memory or unit delay block", init);
                             }       
                             if(isContractBlk(parentSubsystemNode)) {
-                                addMappingInfo(getPath(blkNode), null, getBlkName(parentSubsystemNode), null, null, null, varName);
+                                addMappingInfo(getPath(blkNode), null, getQualifiedBlkName(parentSubsystemNode), null, null, null, varName);
                             } else {
-                                addMappingInfo(getPath(blkNode), getBlkName(parentSubsystemNode), null, null, null, null, varName);
+                                addMappingInfo(getPath(blkNode), getQualifiedBlkName(parentSubsystemNode), null, null, null, null, varName);
                             }                            
                             this.auxNodeLocalVars.add(new LustreVar(varName, blkOutType));
                             this.auxNodeEqs.add(new LustreEq(preVarId, preBlkExpr));
@@ -1627,7 +1638,7 @@ public class J2LTranslator {
                         if(isIfBlock(inBlk)) {
                             ifBlk = inBlk;
                         } else {
-                            inExprs.add(translateBlock(isPropBlk, inHdls.get(i), parentSubsystemNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, visitedHdls, hdlToActualInputExpr, inPorts.get(i)));                   
+                            inExprs.add(translateBlock(isPropBlk, inHdls.get(i), blkHdl, parentSubsystemNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, visitedHdls, hdlToActualInputExpr, inPorts.get(i)));                   
                         }                        
                     } 
                     if(ifBlk != null) {
@@ -1706,7 +1717,7 @@ public class J2LTranslator {
                                             LOGGER.log(Level.SEVERE, "UNEXPECTED: IF-ACTION-SUBSYSTEMs to the same MERGE block connects with different IF blocks", srcHandles.get(i));
                                         }
                                     } else {
-                                        srcExprs.add(translateBlock(isPropBlk, srcHandles.get(i), parentSubsystemNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, visitedHdls, hdlToActualInputExpr, inPorts.get(i)));
+                                        srcExprs.add(translateBlock(isPropBlk, srcHandles.get(i), blkHdl, parentSubsystemNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, visitedHdls, hdlToActualInputExpr, inPorts.get(i)));
                                     }                                    
                                 }
                                 hdlActSysExprMap.put(entry.getKey(), new NodeCallExpr(getQualifiedBlkName(actSubsystemNode), srcExprs));
@@ -1724,6 +1735,90 @@ public class J2LTranslator {
             }
         }                       
         
+        return blkExpr;
+    }
+    
+    
+    /**
+     * The Constant block generates a real or complex constant value. 
+     * The block generates scalar, vector, or matrix output, depending on:
+     * 1. The dimensionality of the Constant value parameter
+     * 2. The setting of the Interpret vector parameters as 1-D parameter
+     * 
+     * @param blkNode
+     * @param parentSubsystemNode
+     * @param dstBlkType
+     * @return 
+     */
+    protected LustreExpr mkConstantExpr(JsonNode blkNode, JsonNode parentSubsystemNode, String dstBlkType) {        
+        LustreExpr      blkExpr     = null;
+        String          blkName     = getBlkName(blkNode);
+        List<Integer>   blkDims     = getBlkOutportDimensions(blkNode);
+        LustreType      baseType    = getBlkOutportType(blkNode);
+        String          value       = blkNode.get(VALUE).asText().trim();
+
+        if(isScalarConst(blkDims)) {
+            if(isValidConst(value)) {
+                blkExpr = getLustreConst(value, baseType);
+            //The value of the constant field of CompareToConstant block refers to the "value" of its parent node
+            } else if(parentSubsystemNode.has(VALUE)) {
+                blkExpr = getLustreConst(parentSubsystemNode.get(VALUE).asText().trim(), baseType);
+            } else {
+                LOGGER.log(Level.SEVERE, "Unexpected constant value in JSON node: {0}", blkNode);
+            }                        
+        } else {
+            // Remove the dimension number
+            int blkDim = blkDims.get(0);
+            blkDims.remove(0);
+            String      matrixName          = J2LUtils.mkFreshVarName(blkName + "_" +MATRIXCONST);
+            VarIdExpr   matrixIdExpr        = new VarIdExpr(matrixName);
+            List<LustreExpr> exprs          = new ArrayList<>();
+            List<LustreExpr> finalExprs     = new ArrayList<>();
+            
+            for(LustreAst ast : J2LUtils.parseAndTranslateStrExpr(value)) {
+                exprs.add((LustreExpr)ast);
+            }              
+            
+            // Convert expression types
+            for(LustreExpr expr : exprs) {
+                if(baseType == PrimitiveType.REAL) {
+                    if(expr instanceof IntExpr) {
+                        String strVal = ((IntExpr) expr).value.toString();
+                        RealExpr realExpr = new RealExpr(new BigDecimal(strVal + ".0"));
+                        finalExprs.add(realExpr);
+                    } else {
+                        finalExprs.add(expr);
+                    }
+                } else if(baseType == PrimitiveType.INT) {
+                    finalExprs.add(expr);
+                } else {
+                    if(expr instanceof IntExpr) {
+                        if(((IntExpr) expr).value == new BigInteger("0")) {
+                            finalExprs.add(new BooleanExpr(false));
+                        } else {
+                            finalExprs.add(new BooleanExpr(true));
+                        }
+                    } else if(expr instanceof RealExpr) {
+                        if(((RealExpr) expr).value == BigDecimal.ZERO) {
+                            finalExprs.add(new BooleanExpr(false));
+                        } else {
+                            finalExprs.add(new BooleanExpr(true));
+                        }
+                    } else {
+                        finalExprs.add(expr);
+                    }
+                }
+            }                
+            // If the dst block is a selector and it is a 1-dimensional array, 
+            // we return the constant expression directly
+            if(dstBlkType.equals(SELECTOR) && blkDim <= 1) {
+                blkExpr = new ArrayExpr(blkDims, finalExprs);
+            } else {
+                this.auxNodeLocalVars.add(new LustreVar(matrixName, new ArrayType(baseType, blkDims)));
+                this.auxNodeEqs.add(new LustreEq(matrixIdExpr, new ArrayExpr(blkDims, finalExprs)));
+                blkExpr = matrixIdExpr;                
+            }
+        }  
         return blkExpr;
     }
     
@@ -1829,19 +1924,282 @@ public class J2LTranslator {
      * Specify a vector signal as a 1-D signal and a matrix signal as a 2-D signal. 
      * When you configure the Selector block for multidimensional signal operations, 
      * the block icon changes.
-     * For example, assume a 6-D signal with a one-based index mode. 
-     * The table of the Selector block dialog changes to include one row for each 
-     * dimension. 
+
+     * Defines, by dimension, how the elements of the signal are to be indexed. 
+     * From the list, select:
+     * 1. Select all
+     * No further configuration is required. All elements are selected.
+     * 2. Index vector (dialog)
+     * Enables the Index column. Enter the vector of indices of the elements.
+     * 3. Index vector (port)
+     * No further configuration is required.
+     * 4. Starting index (dialog)
+     * Enables the Index and Output Size columns. Enter the starting index of 
+     * the range of elements to select in the Index column and the number of 
+     * elements to select in the Output Size column.
+     * 5. Starting index (port)
+     * Enables the Output Size column. Enter the number of elements to be selected 
+     * in the Output Size column.
+     * 6. Starting and ending indices (port)
+     * No further configuration is required.
+     * Using this option results in a variable-size output signal. When you update, 
+     * the output dimension is set to be the same as the input signal dimension. 
+     * During execution, the output dimension is updated based on the signal feeding the index.
+     * When logging output signal data, signals not selected are padded with NaN values.
      * 
      * @param blkNode
      * @param inExprs
      * @return 
      */
-    protected LustreExpr mkSelectorExpr(JsonNode blkNode, List<LustreExpr> inExprs) {
+    protected LustreExpr mkSelectorExpr(JsonNode blkNode, List<LustreExpr> inExprs) {        
+        String          blkName         = getBlkName(blkNode);
+        String          outVarName      = J2LUtils.mkFreshVarName(blkName + "_" + OUTPUT);        
+        VarIdExpr       blkExpr         = new VarIdExpr(outVarName);
+        int             numOfDims       = blkNode.get(NUMOFDIM).asInt();
+        String          indexMode       = blkNode.get(INDEXMODE).asText();
+        LustreType      baseType        = getBlkOutportType(blkNode);
+        List<String>    indexOpts       = getIndexOpts(blkNode);
+        List<Integer>   inVarDims       = new ArrayList<>();
+        List<Integer>   inDimensions    = getBlkInportDimensions(blkNode);
+        List<Integer>   outDimensions   = getBlkOutportDimensions(blkNode);
+        List<List<Integer>>     indices     = new ArrayList<>();
         
+        // Get the dimensions for the input matrix
+        for(int i = 1; i < inDimensions.get(0)+1; ++i) {
+            inVarDims.add(inDimensions.get(i));
+        }
+        // Remove the dimension number
+        inDimensions.remove(0);
+        outDimensions.remove(0);
+                
+        if(numOfDims != indexOpts.size()) {
+            LOGGER.log(Level.SEVERE, "The number of dimensions is not equal to the number of index options!");
+            return null;
+        } else {
+            // Index for getting the input constant blocks
+            int j = 1;
+                        
+            for(int i = 0; i < numOfDims; ++i) {
+                String          indexOpt    = indexOpts.get(i);
+                List<Integer>   optIndices  = new ArrayList<>();
+                
+                switch(indexOpt) {
+                    case SELECTALL: {
+                        optIndices.addAll(getIndexFromParamArray(indexMode.equals(ONEBASED), blkNode, inDimensions.get(i), 0, i));
+                        break;
+                    }
+                    case INDVECD: {
+                        optIndices.addAll(getIndexFromParamArray(indexMode.equals(ONEBASED), blkNode, -1, -1, i));
+                        break;
+                    }
+                    case STARTINDD: {                                         
+                        optIndices.addAll(getIndexFromParamArray(indexMode.equals(ONEBASED), blkNode, inDimensions.get(i), -1, i));
+                        break;
+                    }                    
+                    case INDVECP: 
+                    case STARTINDP:
+                    case STARTENDINDP: {
+                        if(j < inExprs.size()) {
+                            optIndices.addAll(getIndexFromConstantBlk(indexMode.equals(ONEBASED), inExprs.get(j), inDimensions.get(i), indexOpt));
+                            ++j;
+                        } else {
+                            LOGGER.log(Level.SEVERE, "Unexpected case: no input expression to choose for index vector port!");
+                        }
+                        break;
+                    } 
+                    default:
+                        break;
+                } 
+                indices.add(optIndices);
+            }
+        }
         
-        return null;
+        if(!indices.isEmpty()) {
+            LustreExpr          inExpr      = inExprs.get(0);
+            List<LustreExpr>    allExprs    = new ArrayList<>();
+            
+            if(inExpr instanceof ArrayExpr) {
+                String      varIdName   = J2LUtils.mkFreshVarName(MATRIXCONST + "_" + OUTPUT);
+                VarIdExpr   inVarIdExpr = new VarIdExpr(varIdName);
+                this.auxNodeLocalVars.add(new LustreVar(varIdName, (inVarDims.size()==1&&inVarDims.get(0)==1)?baseType:new ArrayType(baseType, inVarDims)));
+                this.auxNodeEqs.add(new LustreEq(inVarIdExpr, inExpr));
+                mkSelectorExpr(inVarIdExpr, allExprs, indices, new ArrayList<Integer>(), 0);
+            } else if(inExpr instanceof VarIdExpr) {
+                mkSelectorExpr(inExpr, allExprs, indices, new ArrayList<Integer>(), 0);
+            } else {
+                LOGGER.log(Level.SEVERE, "Unhandled case for in expression: {0} in mkSelectorExpr", inExpr.toString());
+            }            
+            
+            this.auxNodeEqs.add(new LustreEq(blkExpr, new ArrayExpr(outDimensions, allExprs)));
+            this.auxNodeLocalVars.add(new LustreVar(outVarName, new ArrayType(baseType, outDimensions)));
+        }
+        return blkExpr;
     }
+    
+    protected void mkSelectorExpr(LustreExpr expr, List<LustreExpr> allExprs, List<List<Integer>> indices, List<Integer> allIndices, int i) {                
+        if(i == (indices.size()-1)) {
+            List<Integer> index = indices.get(i);
+            for(int j = 0; j < index.size(); ++j) {
+                List<Integer> finalIndices = new ArrayList<>();
+                
+                finalIndices.addAll(allIndices);
+                finalIndices.add(index.get(j));
+                allExprs.add(new ArrayExpr(finalIndices, expr));
+            }
+        } else {            
+            List<Integer> index = indices.get(i);
+            for(int j = 0; j < index.size(); ++j) {
+                List<Integer> curIndices = new ArrayList<>();
+                
+                curIndices.addAll(allIndices);
+                curIndices.add(index.get(j));
+                mkSelectorExpr(expr, allExprs, indices, curIndices, i+1);
+            }            
+        }        
+    }    
+    
+    protected List<Integer> getIndexFromConstantBlk(boolean isOneBased, LustreExpr indexVarExpr, int inDim, String indexOpt) {
+        List<Integer> indices = new ArrayList<>();        
+        
+        if(indexVarExpr instanceof ArrayExpr) {
+            ArrayExpr arrayExpr = ((ArrayExpr)indexVarExpr);
+
+            for(int k = 0; k < arrayExpr.exprs.size(); ++k) {
+                LustreExpr indExpr = arrayExpr.exprs.get(k);
+
+                if(indExpr instanceof RealExpr) {
+                    String index = ((RealExpr)indExpr).value.toString().trim();
+
+                    if(index.contains(".")) {
+                        index = index.substring(0, index.indexOf("."));
+                    }
+                    int intIndex = Integer.parseInt(index);
+                    
+                    if(isOneBased) {
+                        intIndex -= 1;
+                    }
+                    indices.add(intIndex);
+                } else if(indExpr instanceof IntExpr) {
+                    int intIndex = ((IntExpr)indExpr).value.intValueExact();
+                    if(isOneBased) {
+                        intIndex -= 1;
+                    }                    
+                    indices.add(intIndex);
+                } else {
+                    LOGGER.log(Level.SEVERE, "Unexpected case: the expression is not a real or integer type!");
+                }
+            } 
+        } else if(indexVarExpr instanceof IntExpr) {            
+            int intIndex = ((IntExpr)indexVarExpr).value.intValueExact();
+            if(isOneBased) {
+                intIndex -= 1;
+            }
+            indices.add(intIndex);
+        } else if(indexVarExpr instanceof RealExpr) {    
+            String index = ((RealExpr)indexVarExpr).value.toString().trim();            
+            if(index.contains(".")) {
+                index = index.substring(0, index.indexOf("."));
+            } 
+            int intIndex = Integer.parseInt(index);
+
+            if(isOneBased) {
+                intIndex -= 1;
+            } 
+            indices.add(intIndex);
+        } else {
+            LOGGER.log(Level.SEVERE, "Unexpected expression type: it is not an array expression!");
+        }  
+        if(!indices.isEmpty()) {
+            if(indexOpt.equals(STARTENDINDP) || indexOpt.equals(STARTINDP)) {
+                int startIndex  = indices.get(0);
+                int endIndex    = indexOpt.equals(STARTENDINDP) ? indices.get(1) : inDim;
+
+                for(; startIndex < endIndex; ++startIndex) {
+                    indices.add(startIndex);
+                }
+            }              
+        }     
+        return indices;
+    }
+    
+    protected List<String> getIndexOpts(JsonNode blkNode) {
+        List<String> indexOpts = new ArrayList<>();
+        JsonNode indexOptsNode = blkNode.get(INDOPTARR);
+        
+        if(indexOptsNode.isArray()) {
+            Iterator<JsonNode> indexOptsIt = indexOptsNode.elements();
+            
+            while(indexOptsIt.hasNext()) {
+                indexOpts.add(indexOptsIt.next().asText());
+            }
+        } else {
+            LOGGER.log(Level.SEVERE, "Do not know what it is: {0}", blkNode);
+        }
+        return indexOpts;
+    }
+    
+    protected List<Integer> getIndexFromParamArray(boolean isOneBased, JsonNode blkNode, int inDim, int startIndex, int index) {
+        List<Integer>   indexOpts = new ArrayList<>();
+        JsonNode        indexNode = blkNode.get(INDEXPARAMARRAY);
+        
+        if(indexNode.isArray()) {
+            int i = 0;
+            Iterator<JsonNode> indexOptsIt = indexNode.elements();
+            
+            while(indexOptsIt.hasNext()) {
+                if(i == index) {
+                    // Select all
+                    // Start index
+                    if(inDim >= 0) {
+                        if(startIndex == 0) {
+                            for(int j = startIndex; j < inDim; ++j) {
+                                indexOpts.add(j);
+                            }                            
+                        } else {
+                            int sIndex = Integer.parseInt(indexOptsIt.next().asText().trim());
+                            
+                            if(isOneBased) {
+                                sIndex -= 1;
+                            }
+                            
+                            for(int j = sIndex; j < inDim; ++j) {
+                                indexOpts.add(j);
+                            }
+                        }
+                    // Index vector dialogue
+                    } else {
+                        String indices = indexOptsIt.next().asText();
+
+                        if(indices.contains("[") && indices.contains("]")) {
+                            indices = indices.trim().replace("[", "").replace("]", "").trim();
+                            String[] tokens = indices.split("\\s+");
+
+                            for(String t : tokens) {
+                                int tIndex = Integer.parseInt(t.trim());
+                                if(isOneBased) {
+                                    tIndex -= 1;
+                                }
+                                indexOpts.add(tIndex);
+                            }
+                        } else {
+                            int tIndex = Integer.parseInt(indices.trim());
+                            if(isOneBased) {
+                                tIndex -= 1;
+                            }                            
+                            indexOpts.add(tIndex);
+                        }                          
+                    }
+                    break;
+                } else {
+                    ++i;
+                    indexOptsIt.next();
+                }
+            }
+        } else {
+            LOGGER.log(Level.SEVERE, "Do not know what it is: {0}", blkNode);
+        }
+        return indexOpts;
+    }    
 
     /**
      * The Concatenate block concatenates the input signals to create an output signal whose 
@@ -1868,12 +2226,13 @@ public class J2LTranslator {
         if(isScalar) {
             return inExprs.get(0);
         }
-                
+        String blkName = getBlkName(blkNode);
         String mode = blkNode.get(MODE).asText();
         LustreType baseType = getBlkOutportType(blkNode);
         List<Integer>   inDimensions    = getBlkInportDimensions(blkNode);        
+        // Remove the out dimension number
         outDimensions.remove(0);
-        String          outVarName      = J2LUtils.getFreshVarName(CONCATEOUT);
+        String          outVarName      = J2LUtils.mkFreshVarName(blkName + "_" + OUTPUT);
         LustreVar       outVar          = isScalar ? new LustreVar(outVarName, baseType) : new LustreVar(outVarName, new ArrayType(baseType, outDimensions));
         VarIdExpr       outVarIdExpr    = new VarIdExpr(outVarName);
         List<List<Integer>>     inDims          = new ArrayList<>();
@@ -1892,72 +2251,100 @@ public class J2LTranslator {
             i += (j+1);
         }     
         
-        List<List<LustreExpr>> outExprs = new ArrayList<>();
-        getConcateExprs(inDims, inExprs, outExprs);   
+        // Get all expressions for concatenating based on inputs
+        List<List<LustreExpr>> concateExprs = new ArrayList<>();
+        getConcateExprs(inDims, inExprs, concateExprs);   
             
         if(mode.equals(MULTARRAY)) {
             int concateDim = blkNode.get(CONCATEDIM).asInt();
             
             switch (concateDim) {
+                // Vertical matrix concatenation and stacks the input matrices 
+                // on top of each other to create the output matrix.
                 case 1: {       
-                    for(int i = 0; i < outExprs.size(); ++i) {                       
-                        finalOutExprs.addAll(outExprs.get(i));                        
+                    for(int i = 0; i < concateExprs.size(); ++i) {                       
+                        finalOutExprs.addAll(concateExprs.get(i));                        
                     }               
                     break;
                 }
+                // Horizontal matrix concatenation and places the input matrices 
+                // side-by-side to create the output matrix
                 case 2: {
-                    for(int i = 0; i < outDimensions.size(); ++i) {
-                        int curInDim  = 0;                        
-                        int curOutDim = outDimensions.get(i);
-
-                        for(int j = 0; j < outExprs.size(); ++j) {
-                            List<Integer> inDim = inDims.get(j);
-                            curInDim += inDim.get(i);
-                            for(int k = 0; k < inDim.get(i); ++k) {
-                                finalOutExprs.add(outExprs.get(j).get(k));
-                            }
-                        }
-                        // Append 1(1.0) if the dimensions of inputs are lower
-                        if(curInDim < curOutDim) {
-                            for(int l = 0; l < (curOutDim-curInDim); ++l) {
-                                if(baseType == PrimitiveType.INT) {
-                                    finalOutExprs.add(new IntExpr(1));
-                                } else if(baseType == PrimitiveType.REAL) {
-                                    finalOutExprs.add(new RealExpr(new BigDecimal("1.0")));
-                                } else {
-                                    LOGGER.log(Level.SEVERE, "Unhandled case for type: {0}", baseType);
-                                }
-                            }
-                        }
-                    }                         
+                    mkConcateExpr(0, outDimensions, new ArrayList<Integer>(), finalOutExprs, inDims, concateExprs);                      
                     break;
                 }             
-                default:
-                    LOGGER.log(Level.SEVERE, "Unhandled case for multi-dimensional concatenation for {0}", concateDim);
+                default: {
+                    // Not sure if this is correct
+                    for(int i = 0; i < concateExprs.size(); ++i) {                       
+                        finalOutExprs.addAll(concateExprs.get(i));                        
+                    }                       
                     break;
+                }
             }            
         } else {
-            for(int i = 0; i < outExprs.size(); ++i) {
-                finalOutExprs.addAll(outExprs.get(i));
+            for(int i = 0; i < concateExprs.size(); ++i) {
+                finalOutExprs.addAll(concateExprs.get(i));
             }
         }
         this.auxNodeLocalVars.add(outVar);        
         this.auxNodeEqs.add(new LustreEq(outVarIdExpr, new ArrayExpr(outDimensions, finalOutExprs)));
         return outVarIdExpr;
-    }    
+    }   
     
-    protected void getConcateExprs(List<List<Integer>> inDims, List<LustreExpr> inExprs, List<List<LustreExpr>> outExprs) {
+    protected void mkConcateExpr(int curDim, List<Integer> outDims, List<Integer> allDims, List<LustreExpr> finalOutputs, List<List<Integer>> inDims, List<List<LustreExpr>> concateExprs) {        
+        if(curDim == outDims.size()-1) {
+            int lastOutDim = outDims.get(curDim);
+            
+            for(int i = 0; i < lastOutDim;) {
+                for(int j = 0; j < inDims.size(); ++j) {
+                    List<Integer>       inDim   = inDims.get(j);
+                    List<LustreExpr>    concateExpr = concateExprs.get(j);
+                    int lastColumnDim = inDim.get(inDim.size()-1);
+                    mkConcateExpr(inDim.size()==1, lastColumnDim, finalOutputs, concateExpr);
+                    i += lastColumnDim;
+                }
+            }
+        } else if(curDim < outDims.size()-1) {
+            int d = outDims.get(curDim);
+            
+            for(int i = 0; i < d; ++i) {
+                List<Integer> tempAllDims = new ArrayList<>();
+                tempAllDims.addAll(allDims);
+                allDims.add(i);
+                mkConcateExpr(curDim+1, outDims, tempAllDims, finalOutputs, inDims, concateExprs);
+            }
+        }
+    }
+    
+    protected void mkConcateExpr(boolean isOneDim, int lastColumnDim, List<LustreExpr> finalOutputs, List<LustreExpr> concateExpr) {
+        if(isOneDim) {
+            finalOutputs.add(concateExpr.get(0));
+            concateExpr.remove(0);            
+        } else {
+            for(int j = 0; j < lastColumnDim; ++j) {
+                finalOutputs.add(concateExpr.get(0));
+                concateExpr.remove(0);
+            }                   
+        }    
+    }
+    
+    protected void getConcateExprs(List<List<Integer>> inDims, List<LustreExpr> inExprs, List<List<LustreExpr>> concateExprs) {
         for(int i = 0; i < inExprs.size(); ++i) {
             List<LustreExpr> exprs = new ArrayList<>();
             getConcateExprs(0, new ArrayList<Integer>(), inDims.get(i), inExprs.get(i), exprs);
-            outExprs.add(exprs);
+            concateExprs.add(exprs);
         }
     }
     
     protected void getConcateExprs(int curIndex, List<Integer> allDims, List<Integer> inDims, LustreExpr inExpr, List<LustreExpr> outExprs) {
         if(curIndex == inDims.size()-1) {
-            outExprs.add(new ArrayExpr(allDims, inExpr));
-        } else {
+            for(int i = 0; i < inDims.get(curIndex); ++i) {
+                List<Integer> newAllDims = new ArrayList<>();
+                newAllDims.addAll(allDims);
+                newAllDims.add(i);
+                outExprs.add(new ArrayExpr(newAllDims, inExpr));
+            }            
+        } else if(curIndex < inDims.size()-1) {
             for(int i = 0; i < inDims.get(curIndex); ++i) {
                 List<Integer> newAllDims = new ArrayList<>();
                 newAllDims.addAll(allDims);
@@ -1977,35 +2364,33 @@ public class J2LTranslator {
      * @return a Lustre expression for blkNode
      */    
     protected LustreExpr mkMuxExpr(JsonNode blkNode, List<LustreExpr> inExprs) {
-        LustreType      baseType        = getBlkInportType(blkNode);
+        List<List<Integer>>   inDims          = new ArrayList<>();
+        LustreType      baseType        = getBlkOutportType(blkNode);
         List<Integer>   inDimensions    = getBlkInportDimensions(blkNode);
         List<Integer>   outDimensions   = getBlkOutportDimensions(blkNode);
-        String          muxOutputName   = J2LUtils.getFreshVarName(MUXOUT);
-        List<Integer>   newOutDims      = new ArrayList<>();
+        String          muxOutputName   = J2LUtils.mkFreshVarName(getBlkName(blkNode)+"_"+OUTPUT);
         LustreExpr      lhs             = new VarIdExpr(muxOutputName);
-        List<LustreExpr> rhs            = new ArrayList<>();
-        
-        int outDim = outDimensions.get(1);
-        
-        newOutDims.add(outDim);
-        LustreVar muxVar = (outDim > 1) ? new LustreVar(muxOutputName, new ArrayType(baseType, newOutDims)): new LustreVar(muxOutputName, baseType);                
+        List<LustreExpr> rhs            = new ArrayList<>();       
+        LustreVar muxVar = new LustreVar(muxOutputName, baseType);                              
         
         // If the output dimension is an array
-        if(outDim > 1) {
-            List<Integer> newInDims = new ArrayList<>();
+        if(outDimensions.get(1) > 1) {
+            outDimensions.remove(0);
+            muxVar = new LustreVar(muxOutputName, new ArrayType(baseType, outDimensions));
+            // Get all the values of in-dimensions
+            for(int i = 0; i < inDimensions.size();) {
+                int             j       = inDimensions.get(i);
+                List<Integer> dimension = new ArrayList<>();         
+
+                for(int k = i+1; k <= i+j; ++k) {
+                    dimension.add(inDimensions.get(k));
+                }
+                inDims.add(dimension);
+                i += (j+1);
+            }              
             
-            for(int i = 1; i < inDimensions.size();) {
-                newInDims.add(inDimensions.get(i));
-                i += 2;
-            }
-            for(int j = 0; j < inExprs.size(); ++j) {
-                if(newInDims.get(j) == 1) {
-                    rhs.add(inExprs.get(j));
-                } else {
-                    for(int k = 0; k < newInDims.get(j); ++k) {
-                        rhs.add(new ArrayExpr(inExprs.get(j), k));
-                    }                        
-                }                 
+            for(int i = 0; i < inExprs.size(); ++i) {
+                mkMuxExpr(0, inExprs.get(i), inDims.get(i), new ArrayList<Integer>(), rhs);
             }
         } else {
             this.auxNodeEqs.add(new LustreEq(lhs, inExprs.get(0)));
@@ -2013,6 +2398,30 @@ public class J2LTranslator {
         this.auxNodeEqs.add(new LustreEq(lhs, new ArrayConst(rhs)));
         this.auxNodeLocalVars.add(muxVar);
         return new VarIdExpr(muxOutputName);
+    }
+    
+    protected void mkMuxExpr(int curDim, LustreExpr inExpr, List<Integer> inDim, List<Integer> allDims, List<LustreExpr> rhs) {
+        if(curDim == inDim.size()-1) {
+            int dim = inDim.get(curDim);
+            
+            if(dim == 1 && curDim == 0) {
+                rhs.add(inExpr);
+            } else {
+                for(int i = 0; i < inDim.get(curDim); ++i) {
+                    List<Integer> tempAllDims = new ArrayList<>();
+                    tempAllDims.addAll(allDims);
+                    tempAllDims.add(i);
+                    rhs.add(new ArrayExpr(tempAllDims, inExpr));
+                }                 
+            }           
+        } else if(curDim < inDim.size()-1) {            
+            for(int i = 0; i < inDim.get(curDim); ++i) {
+                List<Integer> tempAllDims = new ArrayList<>();
+                tempAllDims.addAll(allDims);
+                tempAllDims.add(i);
+                mkMuxExpr(curDim+1, inExpr, inDim, tempAllDims, rhs);
+            }
+        }
     }
     
     /**
@@ -2024,51 +2433,100 @@ public class J2LTranslator {
      * @return 
      */    
     protected List<LustreExpr> mkDemuxExpr(JsonNode blkNode, List<LustreExpr> inExprs) {
-        List<LustreExpr> demuxExprs     = new ArrayList<>();
-        LustreType      baseType        = getBlkOutportType(blkNode);
+        String blkName = getBlkName(blkNode);
+        LustreType      baseType        = getBlkInportType(blkNode);
+        List<List<Integer>>   outDims   = new ArrayList<>();
         List<Integer>   inDimensions    = getBlkInportDimensions(blkNode);
         List<Integer>   outDimensions   = getBlkOutportDimensions(blkNode);
         int             numOfOutputs    = getDemuxBlkNumOfOutputs(blkNode);        
-        List<Integer>   newOutDims      = new ArrayList<>();     
         List<LustreExpr> outVarIds          = new ArrayList<>();
+        List<LustreExpr> finalOutVarIds          = new ArrayList<>();
         
+        // Get all the values of in-dimensions
         for(int i = 0; i < outDimensions.size();) {
-            String          varName = J2LUtils.getFreshVarName(DEMUXOUT);
-            int             outDim  = outDimensions.get(i);
-            List<Integer>   varDims = new ArrayList<>();
-            
-            for(int j = i+1; j < i+outDim+1 && j < outDimensions.size(); ++j) {
-                varDims.add(outDimensions.get(j));
+            int             j       = outDimensions.get(i);
+            List<Integer> dimension = new ArrayList<>();         
+
+            for(int k = i+1; k <= i+j; ++k) {
+                dimension.add(outDimensions.get(k));
             }
-            outVarIds.add(new VarIdExpr(varName));
-            this.auxNodeLocalVars.add(new LustreVar(varName, (outDim == 1 && varDims.get(0) == 1)? baseType : new ArrayType(baseType, varDims)));            
-            i = i+outDim+1;
+            outDims.add(dimension);
+            i += (j+1);
+        }           
+        for(int i = 0; i < numOfOutputs; ++i) {
+            String  varName = J2LUtils.mkFreshVarName(blkName + "_" + OUTPUT);
+            VarIdExpr outVarId = new VarIdExpr(varName);
+            outVarIds.add(outVarId);
+            finalOutVarIds.add(outVarId);
+            
+            List<Integer> outDim = outDims.get(i);
+            
+            if(outDim.size()==1 && outDim.get(0)==1) {
+                this.auxNodeLocalVars.add(new LustreVar(varName, baseType));
+            } else {
+                this.auxNodeLocalVars.add(new LustreVar(varName, new ArrayType(baseType, outDim)));
+            }
         }
-        int inDim = inDimensions.get(0);
         inDimensions.remove(0);
-        mkDemuxExpr(0, inDim, 0, inExprs.get(0), outVarIds, new ArrayList<Integer>(), inDimensions);
-        return outVarIds;
+        mkDemuxExpr(0, new ArrayList<Integer>(), outVarIds, inExprs.get(0), inDimensions);
+//        for(int i = 0; i < outDimensions.size();) {
+//            String          varName = J2LUtils.getFreshVarName(DEMUXOUT);
+//            int             outDim  = outDimensions.get(i);
+//            List<Integer>   varDims = new ArrayList<>();
+//            
+//            for(int j = i+1; j < i+outDim+1 && j < outDimensions.size(); ++j) {
+//                varDims.add(outDimensions.get(j));
+//            }
+//            outVarIds.add(new VarIdExpr(varName));
+//            this.auxNodeLocalVars.add(new LustreVar(varName, (outDim == 1 && varDims.get(0) == 1)? baseType : new ArrayType(baseType, varDims)));            
+//            i = i+outDim+1;
+//        }
+//        int inDim = inDimensions.get(0);
+//        inDimensions.remove(0);
+//        mkDemuxExpr(0, inDim, 0, inExprs.get(0), outVarIds, new ArrayList<Integer>(), inDimensions);
+        return finalOutVarIds;
     } 
     
-    protected void mkDemuxExpr(int curIndex, int inDim, int outVarIndex, LustreExpr inExpr, List<LustreExpr> outVarIds, List<Integer> indices, List<Integer> inDimensions) {
-        if(curIndex+1 == inDim) {
-            for(int i = 0; i < inDimensions.get(curIndex); ++i) {
-                List<Integer> finalIndices = new ArrayList<>();
-                
-                finalIndices.addAll(indices);
-                this.auxNodeEqs.add(new LustreEq(outVarIds.get(outVarIndex), new ArrayExpr(finalIndices, inExpr)));
-                outVarIndex++;
+    protected void mkDemuxExpr(int curDim, List<Integer> allInDims, List<LustreExpr> outVarIds, LustreExpr inExpr, List<Integer> inDims) {
+        if(curDim == inDims.size()-1) {
+            int inDim = inDims.get(curDim);
+            for(int i = 0; i < inDim; ++i) {
+                List<Integer> tempAllDims = new ArrayList<>();
+                tempAllDims.addAll(allInDims);
+                tempAllDims.add(i);
+                this.auxNodeEqs.add(new LustreEq(outVarIds.get(0), new ArrayExpr(tempAllDims, inExpr)));
+                outVarIds.remove(0);
             }
-        } else {
-            for(int i = 0; i < inDimensions.get(curIndex); ++i) {
-                int nxtIndex = curIndex+1;
-                List<Integer> finalIndices = new ArrayList<>();
-                finalIndices.addAll(indices);
-                finalIndices.add(i);
-                mkDemuxExpr(nxtIndex, inDim, outVarIndex, inExpr, outVarIds, finalIndices, inDimensions);
-            }            
+        } else if(curDim < inDims.size()-1) {
+            int inDim = inDims.get(curDim);
+            for(int i = 0; i < inDim;++i) {
+                List<Integer> tempAllDims = new ArrayList<>();
+                tempAllDims.addAll(allInDims);
+                tempAllDims.add(i);
+                mkDemuxExpr(curDim+1, tempAllDims, outVarIds, inExpr, inDims);
+            }
         }
     }
+    
+//    protected void mkDemuxExpr(int curIndex, int inDim, int outVarIndex, LustreExpr inExpr, List<LustreExpr> outVarIds, List<Integer> indices, List<Integer> inDimensions) {
+//        if(curIndex+1 == inDim) {
+//            for(int i = 0; i < inDimensions.get(curIndex); ++i) {
+//                List<Integer> finalIndices = new ArrayList<>();
+//                
+//                finalIndices.addAll(indices);
+//                this.auxNodeEqs.add(new LustreEq(outVarIds.get(outVarIndex), new ArrayExpr(finalIndices, inExpr)));
+//                outVarIndex++;
+//            }
+//        } else {
+//            for(int i = 0; i < inDimensions.get(curIndex); ++i) {
+//                int nxtIndex = curIndex+1;
+//                List<Integer> finalIndices = new ArrayList<>();
+//                finalIndices.addAll(indices);
+//                finalIndices.add(i);
+//                mkDemuxExpr(nxtIndex, inDim, outVarIndex, inExpr, outVarIds, finalIndices, inDimensions);
+//            }            
+//        }
+//    }
     
     /**
      * The Product block outputs the result of multiplying two inputs: two scalars, a scalar and a nonscalar, 
@@ -2867,7 +3325,7 @@ public class J2LTranslator {
                 List<Integer>   inPorts = blkNodeToSrcBlkPortsMap.get(ifBlkNode);
                 
                 for(int i = 0; i < inHdls.size(); i++) {
-                    inExprs.add(translateBlock(isPropBlk, inHdls.get(i), parentSubsystemNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap, new HashSet<String>(), null, inPorts.get(i)));
+                    inExprs.add(translateBlock(isPropBlk, inHdls.get(i), ifActionBlkHdl, parentSubsystemNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap, new HashSet<String>(), null, inPorts.get(i)));
                 } 
             }
             // If the number of conditional expressions is equal to the number of destination blocks, 
@@ -2895,6 +3353,7 @@ public class J2LTranslator {
         
         if(ifBlkNode != null) {            
             //Since Simulink checks the validity of ifCondExpr and elseIfCondExpr, we assume the input are valid.
+            String              ifBlkHdl        = getBlkHandle(ifBlkNode);
             List<LustreExpr>    inExprs         = new ArrayList<>();
             List<LustreExpr>    condExprs       = new ArrayList<>();
             List<String>        condStrExprs    = new ArrayList<>();            
@@ -2913,7 +3372,7 @@ public class J2LTranslator {
                 List<Integer>   inPorts = blkNodeToSrcBlkPortsMap.get(ifBlkNode);
                 
                 for(int i = 0; i < inHdls.size(); i++) {
-                    inExprs.add(translateBlock(isPropBlk, inHdls.get(i), parentSubsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap, new HashSet<String>(), null, inPorts.get(i)));
+                    inExprs.add(translateBlock(isPropBlk, inHdls.get(i), ifBlkHdl, parentSubsystemNode, blkNodeToSrcBlkHandlesMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap, new HashSet<String>(), null, inPorts.get(i)));
                 } 
             }            
             // The number of condition expressions is one less than the number of branches
@@ -3873,7 +4332,7 @@ public class J2LTranslator {
         return results;
     }        
     
-    protected boolean isOneValConst(List<Integer> dims) {
+    protected boolean isScalarConst(List<Integer> dims) {
         boolean isOneVal = true;
         
         for(int dim : dims) {

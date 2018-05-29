@@ -221,17 +221,21 @@ public interface StateflowVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitExprList(StateflowParser.ExprListContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code hcat}
-	 * labeled alternative in {@link StateflowParser#exprArrayList}.
+	 * Visit a parse tree produced by {@link StateflowParser#exprArrayList}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitHcat(StateflowParser.HcatContext ctx);
+	T visitExprArrayList(StateflowParser.ExprArrayListContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code vcat}
-	 * labeled alternative in {@link StateflowParser#exprArrayList}.
+	 * Visit a parse tree produced by {@link StateflowParser#verticalArrayExpr}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitVcat(StateflowParser.VcatContext ctx);
+	T visitVerticalArrayExpr(StateflowParser.VerticalArrayExprContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link StateflowParser#horizontalArrayExpr}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitHorizontalArrayExpr(StateflowParser.HorizontalArrayExprContext ctx);
 }

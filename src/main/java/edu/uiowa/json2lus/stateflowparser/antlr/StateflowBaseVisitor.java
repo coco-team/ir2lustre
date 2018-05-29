@@ -262,12 +262,19 @@ public class StateflowBaseVisitor<T> extends AbstractParseTreeVisitor<T> impleme
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitHcat(StateflowParser.HcatContext ctx) { return visitChildren(ctx); }
+	@Override public T visitExprArrayList(StateflowParser.ExprArrayListContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitVcat(StateflowParser.VcatContext ctx) { return visitChildren(ctx); }
+	@Override public T visitVerticalArrayExpr(StateflowParser.VerticalArrayExprContext ctx) { return visitChildren(ctx); }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation returns the result of calling
+	 * {@link #visitChildren} on {@code ctx}.</p>
+	 */
+	@Override public T visitHorizontalArrayExpr(StateflowParser.HorizontalArrayExprContext ctx) { return visitChildren(ctx); }
 }

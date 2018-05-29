@@ -97,7 +97,7 @@ stat
     | ifStat
     | whileStat
     | caseStat
-    | expr 
+    | expr
     | NL
     ;
 
@@ -183,10 +183,16 @@ exprList
     ;
 
 exprArrayList
-    : expr (COMMA? exprArrayList)*    #hcat
-    | expr ((SEMI|NL) exprArrayList)* #vcat
+    : verticalArrayExpr     // #vcat
     ;
 
+verticalArrayExpr
+    : horizontalArrayExpr ((SEMI|NL) horizontalArrayExpr)* // #vcat
+    ;
+
+horizontalArrayExpr
+    : expr (COMMA? exprArrayList)*    // #hcat
+    ;
 
 
 /*

@@ -19,13 +19,16 @@ import edu.uiowa.json2lus.stateflowparser.antlr.StateflowBaseVisitor;
 import edu.uiowa.json2lus.stateflowparser.antlr.StateflowParser.AdditiveExprContext;
 import edu.uiowa.json2lus.stateflowparser.antlr.StateflowParser.AndExprContext;
 import edu.uiowa.json2lus.stateflowparser.antlr.StateflowParser.ArithExprContext;
+import edu.uiowa.json2lus.stateflowparser.antlr.StateflowParser.ArrayExprContext;
 import edu.uiowa.json2lus.stateflowparser.antlr.StateflowParser.AssignmentExprContext;
 import edu.uiowa.json2lus.stateflowparser.antlr.StateflowParser.BooleanExprContext;
 import edu.uiowa.json2lus.stateflowparser.antlr.StateflowParser.DotRefContext;
 import edu.uiowa.json2lus.stateflowparser.antlr.StateflowParser.EqualityExprContext;
+import edu.uiowa.json2lus.stateflowparser.antlr.StateflowParser.ExprArrayListContext;
 import edu.uiowa.json2lus.stateflowparser.antlr.StateflowParser.ExprContext;
 import edu.uiowa.json2lus.stateflowparser.antlr.StateflowParser.FileDeclContext;
 import edu.uiowa.json2lus.stateflowparser.antlr.StateflowParser.FunctionDeclContext;
+import edu.uiowa.json2lus.stateflowparser.antlr.StateflowParser.HorizontalArrayExprContext;
 import edu.uiowa.json2lus.stateflowparser.antlr.StateflowParser.IfStatContext;
 import edu.uiowa.json2lus.stateflowparser.antlr.StateflowParser.MExprContext;
 import edu.uiowa.json2lus.stateflowparser.antlr.StateflowParser.MultExprContext;
@@ -36,6 +39,7 @@ import edu.uiowa.json2lus.stateflowparser.antlr.StateflowParser.StatContext;
 import edu.uiowa.json2lus.stateflowparser.antlr.StateflowParser.UExprContext;
 import edu.uiowa.json2lus.stateflowparser.antlr.StateflowParser.UnaryExprContext;
 import edu.uiowa.json2lus.stateflowparser.antlr.StateflowParser.ValueContext;
+import edu.uiowa.json2lus.stateflowparser.antlr.StateflowParser.VerticalArrayExprContext;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -61,7 +65,7 @@ public class StateflowVisitor extends StateflowBaseVisitor {
         } else if(ctx.statBlock() != null && ctx.statBlock().size() > 0) {
             for(StatBlockContext sb : ctx.statBlock()) {
                 if(visitStatBlock(sb) != null) {
-                    asts.add(visitStatBlock(sb));
+                    asts.addAll(visitStatBlock(sb));
                 } else {
                     LOGGER.log(Level.WARNING, "Generated a null expression but it might not be a big deal!");
                 }          
@@ -71,36 +75,44 @@ public class StateflowVisitor extends StateflowBaseVisitor {
     }  
     
     @Override
-    public LustreAst visitStatBlock(StatBlockContext sb) {
+    public List<LustreAst> visitStatBlock(StatBlockContext sb) {
         return visitStat(sb.stat());
     }
 
     @Override
-    public LustreAst visitStat(StatContext ctx) {
-        LustreAst ast = null;
+    public List<LustreAst> visitStat(StatContext ctx) {
+        List<LustreAst> asts = new ArrayList<>();
 
         if(ctx.ifStat() != null) {
-            ast = visitIfStat(ctx.ifStat());
+            asts = visitIfStat(ctx.ifStat());
         } else if(ctx.dotRef() != null) {
-            ast = new LustreEq(visitDotRef(ctx.dotRef()), (LustreExpr)visitExpr(ctx.expr()));
+            LustreExpr      rhsExpr = null;
+            List<LustreAst> rhsAsts = visitExpr(ctx.expr());
+            
+            if(rhsAsts.size() == 1) {
+                rhsExpr = (LustreExpr)rhsAsts.get(0);
+            } else {
+                LOGGER.log(Level.SEVERE, "Unhandled case for multiple expressions returned from calling visit expressions: {0}", ctx.expr());
+            }
+            asts.add(new LustreEq(visitDotRef(ctx.dotRef()), rhsExpr));
         } else if(ctx.expr() != null) {
-            ast = visitExpr(ctx.expr());
+            asts = visitExpr(ctx.expr());
         } else {
             LOGGER.log(Level.SEVERE, "Unsupported state flow statement: {0}", ctx.toString());
         }
-        return ast;
+        return asts;
     } 
     
     @Override
-    public LustreExpr visitIfStat(IfStatContext ifStat) {
+    public List<LustreAst> visitIfStat(IfStatContext ifStat) {
         List<LustreAst> ifExprs     = new ArrayList<>();
         List<LustreAst> statExprs   = new ArrayList<>();
         
         for(ExprContext expr : ifStat.expr()) {
-            ifExprs.add(visitExpr(expr));
+            ifExprs.addAll(visitExpr(expr));
         }
         for(StatBlockContext statBlockExpr : ifStat.statBlock()) {
-            statExprs.add(visitStatBlock(statBlockExpr));
+//            statExprs.addAll(visitStatBlock(statBlockExpr));
         }
         
         return null;
@@ -119,25 +131,75 @@ public class StateflowVisitor extends StateflowBaseVisitor {
     }
     
     @Override
-    public LustreAst visitExpr(ExprContext ctx) {
-        LustreAst ast = null;
+    public List<LustreAst> visitExpr(ExprContext ctx) {
+        List<LustreAst> asts = new ArrayList<>();
         
         if(ctx.assignmentExpr() != null) {
-            ast = visitAssignmentExpr(ctx.assignmentExpr());
+            asts.add(visitAssignmentExpr(ctx.assignmentExpr()));
         } else if(ctx.booleanExpr() != null) {
-            ast = visitBooleanExpr(ctx.booleanExpr());
+            asts.add(visitBooleanExpr(ctx.booleanExpr()));
         } else if(ctx.arithExpr() != null) {
-            ast = visitArithExpr(ctx.arithExpr());
+            asts.add(visitArithExpr(ctx.arithExpr()));
         } else if(ctx.dotRef() != null) {
             if(ctx.dotRef().ID().size() == 1) {
-                ast = new VarIdExpr(ctx.dotRef().ID().get(0).getSymbol().getText());
+                asts.add(new VarIdExpr(ctx.dotRef().ID().get(0).getSymbol().getText()));
             } else {
                 
             }
+        } else if(ctx.arrayExpr() != null) {
+            asts = visitArrayExpr(ctx.arrayExpr());
+        } else {
+            LOGGER.log(Level.SEVERE, "Unhandled expression type: {0}", ctx);
         }
-        return ast;
+        return asts;
+    }
+    
+    @Override
+    public List<LustreAst> visitArrayExpr(ArrayExprContext arrayExpr) {
+        List<LustreAst> asts = new ArrayList<>();
+        if(arrayExpr.exprArrayList() != null) {
+            asts.addAll(visitExprArrayList(arrayExpr.exprArrayList()));
+        }
+        return asts;
+    } 
+
+    @Override
+    public List<LustreAst> visitExprArrayList(ExprArrayListContext arrayListExpr) {
+        List<LustreAst> asts = new ArrayList<>();
+        
+        if(arrayListExpr.verticalArrayExpr() != null) {
+            asts = visitVerticalArrayExpr(arrayListExpr.verticalArrayExpr());
+        }
+        
+        return asts;
+    }     
+
+    @Override
+    public List<LustreAst> visitVerticalArrayExpr(VerticalArrayExprContext verticalArrayExprCtx) {
+        List<LustreAst> asts = new ArrayList<>();
+        
+        if(verticalArrayExprCtx.horizontalArrayExpr() != null && verticalArrayExprCtx.horizontalArrayExpr().size() > 0) {
+            for(HorizontalArrayExprContext hCtx : verticalArrayExprCtx.horizontalArrayExpr()) {
+                asts.addAll(visitHorizontalArrayExpr(hCtx));
+            }
+        }
+        return asts;
     }
 
+    @Override
+    public List<LustreAst> visitHorizontalArrayExpr(HorizontalArrayExprContext horizontalArrayExprContext) {
+        List<LustreAst> asts = new ArrayList<>();  
+        if(horizontalArrayExprContext.expr() != null) {
+            asts.addAll(visitExpr(horizontalArrayExprContext.expr()));
+        }
+        if(horizontalArrayExprContext.exprArrayList() != null && horizontalArrayExprContext.exprArrayList().size() > 0) {
+            for(ExprArrayListContext eCtx : horizontalArrayExprContext.exprArrayList()) {
+                asts.addAll(visitExprArrayList(eCtx));
+            }
+        }
+        return asts;
+    }
+    
     @Override
     public LustreAst visitAssignmentExpr(AssignmentExprContext assignmentExpr) {        
         LustreAst equation = null;
@@ -163,16 +225,23 @@ public class StateflowVisitor extends StateflowBaseVisitor {
                 } else if(assignmentExpr.DIVIDEASSIGN() != null) {
                     op = BinaryExpr.Op.DIVIDE;
                 }
-                if(op != null) {
-                    LustreExpr  rhsExpr = null;
-                    LustreAst   rhsAst = visitExpr(assignmentExpr.expr(0));
+                LustreExpr  rhsExpr = null;
 
+                List<LustreAst>   rhsAsts = visitExpr(assignmentExpr.expr(0));         
+                
+                if(rhsAsts.size()==1) {
+                    LustreAst   rhsAst  = rhsAsts.get(0);                    
                     if(rhsAst instanceof LustreExpr) {
                         rhsExpr = (LustreExpr)rhsAst;
-                    }
+                    }                    
+                } else {
+                    LOGGER.log(Level.SEVERE, "Unhandled case: multiple expressions returned from ANTLR parsing expression!");
+                }
+              
+                if(op != null) {                    
                     equation = new LustreEq(varId, new BinaryExpr(varId, op, rhsExpr));                        
                 } else {
-                    equation = new LustreEq(varId, (LustreExpr)visitExpr(assignmentExpr.expr(0)));
+                    equation = new LustreEq(varId, rhsExpr);
                 }            
             }
         } else {            
@@ -184,7 +253,14 @@ public class StateflowVisitor extends StateflowBaseVisitor {
                 ids.add(new VarIdExpr(assignmentExpr.ID(i).getSymbol().getText()));
             }
             for(ExprContext expr : assignmentExpr.expr()) {
-                LustreAst ast = visitExpr(expr);
+                LustreAst ast = null;
+                List<LustreAst> asts = visitExpr(expr);
+                
+                if(asts.size() == 1) {
+                    ast = asts.get(0);
+                } else {
+                    LOGGER.log(Level.SEVERE, "Unhandled case for multiple asts returned from visiting expressions!");
+                }
                 
                 if(ast instanceof LustreExpr) {
                     inExprs.add((LustreExpr)ast);
@@ -200,7 +276,7 @@ public class StateflowVisitor extends StateflowBaseVisitor {
                 LOGGER.log(Level.SEVERE, "Unexpected lhsExpr is empty!");
             }
             equation = new LustreEq(lhsExpr, new NodeCallExpr(nodeName, inExprs));
-        }      
+        }    
         return equation;
     }      
     
@@ -298,16 +374,21 @@ public class StateflowVisitor extends StateflowBaseVisitor {
             exprs.add(visitMultExpr(multExpr));
         }
         if(exprs.size() > 1) {
-            BinaryExpr.Op op = null;
+            List<BinaryExpr.Op> ops = new ArrayList<>();
             
-            if(addExpr.PLUS() != null) {
-                op = BinaryExpr.Op.PLUS;
-            } else if(addExpr.MINUS() != null) {
-                op = BinaryExpr.Op.MINUS;
+            if(addExpr.PLUS().size() > 1) {
+                for(int i = 0; i < addExpr.PLUS().size(); ++i) {
+                    ops.add(BinaryExpr.Op.PLUS);
+                }
+            } 
+            if(addExpr.MINUS().size() > 1) {
+                for(int i = 0; i < addExpr.MINUS().size(); ++i) {
+                    ops.add(BinaryExpr.Op.MINUS);
+                }                
             }        
             expr = exprs.get(0);
             for(int i = 1; i < exprs.size(); ++i) {
-                expr = new BinaryExpr(expr, op, exprs.get(i));
+                expr = new BinaryExpr(expr, ops.get(i-1), exprs.get(i));
             }
         } else if(exprs.size() == 1){
             expr = exprs.get(0);
@@ -325,16 +406,23 @@ public class StateflowVisitor extends StateflowBaseVisitor {
             exprs.add(visitUnaryExpr(unaryExpr));
         }
         if(exprs.size() > 1) {
-            BinaryExpr.Op op = null;
-            
-            if(multExpr.MTIMES()!= null) {
-                op = BinaryExpr.Op.MULTIPLY;
-            } else if(multExpr.RDIVIDE() != null) {
-                op = BinaryExpr.Op.DIVIDE;
-            }        
+            List<BinaryExpr.Op> ops = new ArrayList<>();
+                        
+            if(multExpr.RDIVIDE().size() > 0) {                
+                for(int i = 0; i < multExpr.RDIVIDE().size(); ++i) {
+                    ops.add(BinaryExpr.Op.DIVIDE);
+                }
+            }
+            if(multExpr.MTIMES().size() > 0) {
+                for(int i = 0; i < multExpr.MTIMES().size(); ++i) {
+                    ops.add(BinaryExpr.Op.MULTIPLY);
+                }                
+            } else {
+                LOGGER.log(Level.SEVERE, "Unsupported visitMultExpr operator!");
+            }       
             expr = exprs.get(0);
             for(int i = 1; i < exprs.size(); ++i) {
-                expr = new BinaryExpr(expr, op, exprs.get(i));
+                expr = new BinaryExpr(expr, ops.get(i-1), exprs.get(i));
             }
         } else if(exprs.size() == 1){
             expr = exprs.get(0);

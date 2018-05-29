@@ -17,14 +17,14 @@ public class LustreContract extends LustreAst{
     public final String                             name;
     public List<LustreVar>                          inputs; 
     public List<LustreVar>                          outputs;     
-    public final List<LustreExpr>                   assumptions;
-    public final List<LustreExpr>                   guarantees;
+    public final Map<String, LustreExpr>            assumptions;
+    public final Map<String, LustreExpr>            guarantees;
     public List<LustreVar>                          localVars;  
     public List<LustreEq>                           localEqs; 
     public final Map<String, List<LustreExpr>>      modeToRequires;
-    public final Map<String, List<LustreExpr>>      modeToEnsures;    
+    public final Map<String, Map<String, LustreExpr>>      modeToEnsures;    
     
-    public LustreContract(String name, List<LustreExpr> assumptions, List<LustreExpr> guarantees, List<LustreVar> inputs, List<LustreVar> outputs, List<LustreVar> localVars, List<LustreEq> localEqs, Map<String, List<LustreExpr>> modeToRequires, Map<String, List<LustreExpr>> modeToEnsures) {
+    public LustreContract(String name, Map<String, LustreExpr> assumptions, Map<String, LustreExpr> guarantees, List<LustreVar> inputs, List<LustreVar> outputs, List<LustreVar> localVars, List<LustreEq> localEqs, Map<String, List<LustreExpr>> modeToRequires, Map<String, Map<String, LustreExpr>> modeToEnsures) {
         this.name           = name;
         this.inputs         = inputs;
         this.outputs        = outputs;
@@ -43,7 +43,7 @@ public class LustreContract extends LustreAst{
         }        
     }
     
-    public LustreContract(String name, List<LustreExpr> assumptions, List<LustreExpr> guarantees, List<LustreVar> inputs, List<LustreVar> outputs, List<LustreVar> localVars, Map<String, List<LustreExpr>> modeToRequires, Map<String, List<LustreExpr>> modeToEnsures) {
+    public LustreContract(String name, Map<String, LustreExpr> assumptions, Map<String, LustreExpr> guarantees, List<LustreVar> inputs, List<LustreVar> outputs, List<LustreVar> localVars, Map<String, List<LustreExpr>> modeToRequires, Map<String, Map<String, LustreExpr>> modeToEnsures) {
         this.name           = name;
         this.inputs         = inputs;
         this.outputs        = outputs;
@@ -54,7 +54,7 @@ public class LustreContract extends LustreAst{
         this.modeToRequires = modeToRequires;
     }    
     
-    public LustreContract(String name, List<LustreExpr> assumptions, List<LustreExpr> guarantees, List<LustreVar> inputs, List<LustreVar> outputs, Map<String, List<LustreExpr>> modeToRequires, Map<String, List<LustreExpr>> modeToEnsures) {
+    public LustreContract(String name, Map<String, LustreExpr> assumptions, Map<String, LustreExpr> guarantees, List<LustreVar> inputs, List<LustreVar> outputs, Map<String, List<LustreExpr>> modeToRequires, Map<String, Map<String, LustreExpr>> modeToEnsures) {
         this.name           = name;
         this.inputs         = inputs;
         this.outputs        = outputs;

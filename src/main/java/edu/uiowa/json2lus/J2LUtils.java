@@ -5,14 +5,23 @@
  */
 package edu.uiowa.json2lus;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import edu.uiowa.json2lus.lustreAst.BinaryExpr;
 import edu.uiowa.json2lus.lustreAst.BooleanExpr;
+import edu.uiowa.json2lus.lustreAst.LustreAst;
 import edu.uiowa.json2lus.lustreAst.LustreExpr;
 import edu.uiowa.json2lus.lustreAst.LustreType;
 import edu.uiowa.json2lus.lustreAst.PrimitiveType;
+import edu.uiowa.json2lus.stateflowparser.StateflowVisitor;
+import edu.uiowa.json2lus.stateflowparser.antlr.StateflowLexer;
+import edu.uiowa.json2lus.stateflowparser.antlr.StateflowParser;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.antlr.v4.runtime.CharStream;
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.TokenStream;
 
 /**
  *
@@ -20,7 +29,8 @@ import java.util.logging.Logger;
  */
 public class J2LUtils {
     public static int COUNT = 0;
-    private static final Logger LOGGER = Logger.getLogger(J2LUtils.class.getName());    
+    private static final String PATH    = "Path";
+    private static final Logger LOGGER  = Logger.getLogger(J2LUtils.class.getName());    
     
     public static String sanitizeName(String name) {
         return name.trim().replace(" ", "_").replace("\n", "_").replace("=", "_")
@@ -97,9 +107,26 @@ public class J2LUtils {
         }
         return orExpr;
     } 
+
+    public static String getSanitizedBlkPath(JsonNode node) {
+        String path = null;
+        
+        if(node.has(PATH)) {
+            path = sanitizeName(node.get(PATH).asText());
+        }
+        return path;
+    }
     
+    public static String getBlkPath(JsonNode node) {
+        String path = null;
+        
+        if(node.has(PATH)) {
+            path = node.get(PATH).asText();
+        }
+        return path;
+    }    
     
-    public static String getFreshVarName(String varName) {
+    public static String mkFreshVarName(String varName) {
         String newVarName = varName;
         
         if(newVarName == null) {
@@ -120,4 +147,25 @@ public class J2LUtils {
         }
         return newVarName;
     }    
+    
+    public static List<LustreAst> parseAndTranslate(String sf) {
+        CharStream          charStream  = CharStreams.fromString(sf);
+        StateflowLexer      lexer       = new StateflowLexer(charStream);
+        TokenStream         tokens      = new CommonTokenStream(lexer);    
+        StateflowParser     parser      = new StateflowParser(tokens);        
+        StateflowVisitor    visitor     = new StateflowVisitor();
+        
+        return visitor.visitFileDecl(parser.fileDecl());
+    }
+    
+    public static List<LustreAst> parseAndTranslateStrExpr(String sf) {
+        CharStream          charStream  = CharStreams.fromString(sf);
+        StateflowLexer      lexer       = new StateflowLexer(charStream);
+        TokenStream         tokens      = new CommonTokenStream(lexer);    
+        StateflowParser     parser      = new StateflowParser(tokens);
+        
+        StateflowVisitor    visitor     = new StateflowVisitor();
+        List<LustreAst>     asts        = visitor.visitExpr(parser.expr());
+        return asts;
+    }       
 }

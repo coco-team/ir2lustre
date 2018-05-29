@@ -436,25 +436,37 @@ public class StateflowBaseListener implements StateflowListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterHcat(StateflowParser.HcatContext ctx) { }
+	@Override public void enterExprArrayList(StateflowParser.ExprArrayListContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitHcat(StateflowParser.HcatContext ctx) { }
+	@Override public void exitExprArrayList(StateflowParser.ExprArrayListContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterVcat(StateflowParser.VcatContext ctx) { }
+	@Override public void enterVerticalArrayExpr(StateflowParser.VerticalArrayExprContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitVcat(StateflowParser.VcatContext ctx) { }
+	@Override public void exitVerticalArrayExpr(StateflowParser.VerticalArrayExprContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterHorizontalArrayExpr(StateflowParser.HorizontalArrayExprContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitHorizontalArrayExpr(StateflowParser.HorizontalArrayExprContext ctx) { }
 
 	/**
 	 * {@inheritDoc}

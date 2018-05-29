@@ -70,7 +70,9 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
         
         sb.append(NL);                      
               
-        for(LustreNode node : program.nodes) {
+        for(int i = 0; i < program.nodes.size(); ++i) {
+            LustreNode node = program.nodes.get(i);
+            
             if(!nodeContractsMap.containsKey(node.name)) {
                 node.accept(this);sb.append(NL).append(NL);
             } else {
@@ -266,12 +268,16 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
                 sb.append(";").append(NL).append(NL);
             }
         }
-        for(LustreExpr assume : contract.assumptions) {
-            sb.append(TAB).append("assume ");assume.accept(this);sb.append(";").append(NL);
+        for(Map.Entry<String, LustreExpr> assume : contract.assumptions.entrySet()) {
+            sb.append(TAB).append("assume ");
+            sb.append(" \"").append(assume.getKey()).append("\" ");
+            assume.getValue().accept(this);sb.append(";").append(NL);
         }
         sb.append(NL);
-        for(LustreExpr assume : contract.guarantees) {
-            sb.append(TAB).append("guarantee ");assume.accept(this);sb.append(";").append(NL);
+        for(Map.Entry<String, LustreExpr> gurantee : contract.guarantees.entrySet()) {
+            sb.append(TAB).append("guarantee ");
+            sb.append(" \"").append(gurantee.getKey()).append("\" ");
+            gurantee.getValue().accept(this);sb.append(";").append(NL);
         }
         sb.append(NL);
         
@@ -289,9 +295,10 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
                 }
             }
             if(contract.modeToEnsures.containsKey(mode)) {
-                for(LustreExpr ensure : contract.modeToEnsures.get(mode)) {
+                for(Map.Entry<String, LustreExpr> ensure : contract.modeToEnsures.get(mode).entrySet()) {
                     sb.append(TAB).append(TAB).append("ensure ");
-                    ensure.accept(this);
+                    sb.append(" \"").append(ensure.getKey()).append("\" ");
+                    ensure.getValue().accept(this);
                     sb.append(";").append(NL);
                 }
             }            
@@ -423,11 +430,10 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
     }
     
     public void visitArrayExpr(int curDim, List<Integer> intDims, List<LustreExpr> exprs) {
-        if(curDim < intDims.size() - 1) {
-            int i = 0;
+        if(curDim < intDims.size() - 1) {            
             int dim = intDims.get(curDim);
             sb.append("[");
-            for(; i < dim; ++i) {
+            for(int i = 0; i < dim; ++i) {
                 visitArrayExpr(curDim+1, intDims, exprs);
                 if(i != dim-1) {
                     sb.append(", ");
@@ -438,7 +444,7 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
             int dim = intDims.get(curDim);  
             
             sb.append("[");
-            for(int i = 0; i < dim; ++i) {
+            for(int i = 0; i < dim && i < exprs.size(); ++i) {
                 exprs.get(i).accept(this);
                 if(i != dim-1) {
                     sb.append(", ");
@@ -446,7 +452,7 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
             }
             sb.append("]");
             //Remove the ones that have been printed
-            for(int i = 0; i < dim; ++i) {
+            for(int i = 0; i < dim && i < exprs.size(); ++i) {
                 exprs.remove(0);
             }
         }
