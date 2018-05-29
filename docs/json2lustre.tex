@@ -228,7 +228,7 @@ Figure~\ref{basicmapping} shows a mapping from basic CoCoSim blocks to their equ
 \begin{figure}[t]
 \centering
 {
-\begin{tabular}{lp{5cm}}
+\begin{tabular}{lp{6cm}}
 \hline
 \textbf{CoCoSim} & \textbf{Lustre}  \\
 \hline
@@ -283,6 +283,26 @@ $==, <>, <, <=, >, >=$
 
 UnitDelay/Memory &
 pre
+\\
+
+Vector Concatenation &
+Concatenate vectors horizontally and vertically
+\\
+
+Selector &
+Select elements at certain indices
+\\
+
+Demux/Mux &
+Extract and output elements of vector signal/Combine input signals of same data type into vector
+\\
+
+Data Type Conversion &
+Create Lustre library nodes for conversions among Boolean, Integer and Real
+\\
+
+Rounding &
+Create Lustre library nodes for floor, ceiling, round and fix.  
 \\
 
 If &
@@ -368,8 +388,11 @@ Operator CompareToZero/Constant is translated into a node CompareToZero/Constant
 \paragraph{Time Operators}
 Operators Memory and UnitDelay are translated into the same time operator \textsf{pre} with the 
 values of First and X0 as their initial conditions respectively.
-Since Memory and UnitDelay may have the circular dependency issue, we introduce local variables for the 
-portion of expression under \textsf{pre} to break the circular dependency if any. 
+Since Memory and UnitDelay may introduce the circular dependency issue, we create local variables for the portion of expression under \textsf{pre} to break the circular dependency if any. 
+
+\paragraph{Vector/Matrix Related Operators}
+Vector Concatenate
+
 
 \begin{figure}[t]
 \[
