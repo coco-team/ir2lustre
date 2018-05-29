@@ -374,16 +374,21 @@ public class StateflowVisitor extends StateflowBaseVisitor {
             exprs.add(visitMultExpr(multExpr));
         }
         if(exprs.size() > 1) {
-            BinaryExpr.Op op = null;
+            List<BinaryExpr.Op> ops = new ArrayList<>();
             
-            if(addExpr.PLUS() != null) {
-                op = BinaryExpr.Op.PLUS;
-            } else if(addExpr.MINUS() != null) {
-                op = BinaryExpr.Op.MINUS;
+            if(addExpr.PLUS().size() > 1) {
+                for(int i = 0; i < addExpr.PLUS().size(); ++i) {
+                    ops.add(BinaryExpr.Op.PLUS);
+                }
+            } 
+            if(addExpr.MINUS().size() > 1) {
+                for(int i = 0; i < addExpr.MINUS().size(); ++i) {
+                    ops.add(BinaryExpr.Op.MINUS);
+                }                
             }        
             expr = exprs.get(0);
             for(int i = 1; i < exprs.size(); ++i) {
-                expr = new BinaryExpr(expr, op, exprs.get(i));
+                expr = new BinaryExpr(expr, ops.get(i-1), exprs.get(i));
             }
         } else if(exprs.size() == 1){
             expr = exprs.get(0);
@@ -401,18 +406,23 @@ public class StateflowVisitor extends StateflowBaseVisitor {
             exprs.add(visitUnaryExpr(unaryExpr));
         }
         if(exprs.size() > 1) {
-            BinaryExpr.Op op = null;
-            
-            if(multExpr.RDIVIDE().size() > 0) {
-                op = BinaryExpr.Op.DIVIDE;
-            } else if(multExpr.MTIMES().size() > 0) {
-                op = BinaryExpr.Op.MULTIPLY;
+            List<BinaryExpr.Op> ops = new ArrayList<>();
+                        
+            if(multExpr.RDIVIDE().size() > 0) {                
+                for(int i = 0; i < multExpr.RDIVIDE().size(); ++i) {
+                    ops.add(BinaryExpr.Op.DIVIDE);
+                }
+            }
+            if(multExpr.MTIMES().size() > 0) {
+                for(int i = 0; i < multExpr.MTIMES().size(); ++i) {
+                    ops.add(BinaryExpr.Op.MULTIPLY);
+                }                
             } else {
                 LOGGER.log(Level.SEVERE, "Unsupported visitMultExpr operator!");
             }       
             expr = exprs.get(0);
             for(int i = 1; i < exprs.size(); ++i) {
-                expr = new BinaryExpr(expr, op, exprs.get(i));
+                expr = new BinaryExpr(expr, ops.get(i-1), exprs.get(i));
             }
         } else if(exprs.size() == 1){
             expr = exprs.get(0);
