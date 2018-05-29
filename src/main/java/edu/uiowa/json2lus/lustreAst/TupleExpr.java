@@ -12,7 +12,7 @@ import java.util.List;
  * @author Paul Meng
  */
 public class TupleExpr extends LustreExpr {
-    List<LustreExpr> elements;
+    public List<LustreExpr> elements;
     
     public TupleExpr(List<? extends LustreExpr> elements) {
         this.elements = (List<LustreExpr>) elements;

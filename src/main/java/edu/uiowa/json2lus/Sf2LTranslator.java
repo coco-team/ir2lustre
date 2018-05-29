@@ -20,6 +20,7 @@ import edu.uiowa.json2lus.lustreAst.LustreType;
 import edu.uiowa.json2lus.lustreAst.LustreVar;
 import edu.uiowa.json2lus.lustreAst.NodeCallExpr;
 import edu.uiowa.json2lus.lustreAst.PrimitiveType;
+import edu.uiowa.json2lus.lustreAst.TupleExpr;
 import edu.uiowa.json2lus.lustreAst.UnaryExpr;
 import edu.uiowa.json2lus.lustreAst.VarIdExpr;
 import java.math.BigInteger;
@@ -851,10 +852,10 @@ public class Sf2LTranslator {
                     JsonNode actionNode = actionIt.next();
                     List<LustreEq> eqs = new ArrayList<>();
 
-                    if (actionNode.has(INDEX)) {
+                    if (actionNode.has(INDEX) && actionNode.get(INDEX).asText() != null && !actionNode.get(INDEX).asText().equals("")) {
                         index = actionNode.get(INDEX).asText().trim();
                     }
-                    if (actionNode.has(LABEL)) {
+                    if (actionNode.has(LABEL) && actionNode.get(LABEL).asText() != null && !actionNode.get(LABEL).asText().equals("")) {
                         label = actionNode.get(LABEL).asText().trim();
                     }
                     if (actionNode.has(ACTION)) {
@@ -1048,9 +1049,9 @@ public class Sf2LTranslator {
         }
 
         // Split action strings
-        if (decisionNode.has(ACTION)) {
+        if (decisionNode.has(ACTIONS)) {
             List<LustreEq>  exprs       = new ArrayList<>();
-            String          actionStr   = decisionNode.get(ACTION).asText();
+            String          actionStr   = decisionNode.get(ACTIONS).asText();
             String          delimiters  = "[\\t,]";
             String[]        tokens      = actionStr.split(delimiters);
 
@@ -1109,6 +1110,33 @@ public class Sf2LTranslator {
                         ((VarIdExpr) lhsExpr).setVarId(newVarName);
                         varToLastName.put(lhsExprName, newVarName);
                         fcnLocals.add(new LustreVar(newVarName, type));
+                    }
+                } else if(lhsExpr instanceof TupleExpr){
+                    for(int j = 0; j < ((TupleExpr)lhsExpr).elements.size(); ++j) {
+                        LustreExpr tupleElement = ((TupleExpr)lhsExpr).elements.get(j);
+                        
+                        if (tupleElement instanceof VarIdExpr) {
+                            String lhsExprName = ((VarIdExpr) tupleElement).id;
+
+                            if (inputs.containsKey(lhsExprName) || outputs.containsKey(lhsExprName)) {
+                                LustreType type;
+                                String newVarName = J2LUtils.mkFreshVarName(lhsExprName);
+
+                                if (inputs.containsKey(lhsExprName)) {
+                                    type = inputs.get(lhsExprName);
+                                } else if (outputs.containsKey(lhsExprName)) {
+                                    type = outputs.get(lhsExprName);
+                                } else {
+                                    type = locals.get(lhsExprName);
+                                }
+
+                                ((VarIdExpr) tupleElement).setVarId(newVarName);
+                                varToLastName.put(lhsExprName, newVarName);
+                                fcnLocals.add(new LustreVar(newVarName, type));
+                            }
+                        } else {
+                            LOGGER.log(Level.SEVERE, "Unhandled tuple element case: {0}", tupleElement);
+                        }                        
                     }
                 } else {
                     LOGGER.log(Level.SEVERE, "Unhandled left hand side expression case: {0}", lhsExpr);
