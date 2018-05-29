@@ -403,11 +403,13 @@ public class StateflowVisitor extends StateflowBaseVisitor {
         if(exprs.size() > 1) {
             BinaryExpr.Op op = null;
             
-            if(multExpr.MTIMES()!= null) {
-                op = BinaryExpr.Op.MULTIPLY;
-            } else if(multExpr.RDIVIDE() != null) {
+            if(multExpr.RDIVIDE().size() > 0) {
                 op = BinaryExpr.Op.DIVIDE;
-            }        
+            } else if(multExpr.MTIMES().size() > 0) {
+                op = BinaryExpr.Op.MULTIPLY;
+            } else {
+                LOGGER.log(Level.SEVERE, "Unsupported visitMultExpr operator!");
+            }       
             expr = exprs.get(0);
             for(int i = 1; i < exprs.size(); ++i) {
                 expr = new BinaryExpr(expr, op, exprs.get(i));
