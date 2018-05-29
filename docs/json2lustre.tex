@@ -31,7 +31,7 @@
 
 \maketitle
 
-This is to document the translation from the JSON representation of a CoCoSim model to its equivalent representation in Lustre.
+This is to document the translation from the JSON representation of a CoCoSim model to its semantic equivalent representation in Lustre.
 
 
 \section{JSON Representation of CoCoSim Models}
@@ -100,6 +100,7 @@ CoCoSim supports a subset of the blocks provided by the Simulink toolset. Figure
 \State \textbf{Port} := \textit{Unsigned integer}
 \State \textbf{Handle} := \textit{Decimal number}
 \State \textbf{Integer} := \{$-$\}?[0 - 9]+
+\State \textbf{Positive integer} := [1 - 9]+
 \State \textbf{Unsigned integer} := [0 - 9]+
 \State \textbf{Boolean constant} := true $\mid$ false 
 \State \textbf{Decimal number} := [0 - 9]* \{.\} [0 - 9]*
@@ -111,10 +112,14 @@ CoCoSim supports a subset of the blocks provided by the Simulink toolset. Figure
 \State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } $\mid$ ContractEnsureBlock  $\mid$ ContractAssumeBlock $\mid$ ContractAssumeBlock 
 \State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } $\mid$ ContractValidatorBlock
 \State \textbf{BlockType} := Inport $\mid$ Outport $\mid$ Subsystem $\mid$ Constant $\mid$ Memory $\mid$ UnitDelay $\mid$ Switch $\mid$ Product 
-\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } $\mid$ RelationalOperator $\mid$ Logic $\mid$ MinMax $\mid$ Sum $\mid$ Product $\mid$ UnaryMinus
+\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } $\mid$ RelationalOperator $\mid$ Logic $\mid$ MinMax $\mid$ Sum $\mid$ Product $\mid$ UnaryMinus 
+\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } $\mid$ Data Type Conversion $\mid$ Rounding $\mid$ Vector Concatenation $\mid$ Mux $\mid$ Demux
 \State \textbf{Operator} := NOT $\mid$ AND $\mid$ OR $\mid$ XOR $\mid$ NAND $\mid$ NOR $\mid$ NXOR 
-\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } $\mid$ == $\mid$ $>=$ $\mid$ $>$ $\mid$ $<=$ $\mid$ $<$ $\mid$ $\sim$= $\mid -$ 
+\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } $\mid$ == $\mid$ $>=$ $\mid$ $>$ $\mid$ $<=$ $\mid$ $<$ $\mid$ $\sim$= $\mid -$ $\mid$ Floor $\mid$ Ceil $\mid$ Round $\mid$ Fix
+\State \textbf{CompiledPortDimensions} := \textit{Inport, Outport}
 \State \textbf{CompiledPortDataTypes} := \textsf{Inport, Outport}
+\State \textbf{Inport} := \{\textit{Positive integer}\}+
+\State \textbf{Outport} := \{\textit{Positive integer}\}+
 \State \textbf{\textsf{Inport}} := \textit{Data type}*
 \State \textbf{\textsf{Outport}} := \textit{Data type}*
 \State \textbf{Data type} := double $\mid$ single $\mid$ int8 $\mid$ uint8 $\mid$ int16 $\mid$ uint16 $\mid$ int32 $\mid$ uint32 $\mid$ string
@@ -228,7 +233,7 @@ Figure~\ref{basicmapping} shows a mapping from basic CoCoSim blocks to their equ
 \begin{figure}[t]
 \centering
 {
-\begin{tabular}{lp{6cm}}
+\begin{tabular}{lp{7cm}}
 \hline
 \textbf{CoCoSim} & \textbf{Lustre}  \\
 \hline
@@ -391,7 +396,23 @@ values of First and X0 as their initial conditions respectively.
 Since Memory and UnitDelay may introduce the circular dependency issue, we create local variables for the portion of expression under \textsf{pre} to break the circular dependency if any. 
 
 \paragraph{Vector/Matrix Related Operators}
-Vector Concatenate
+Vector Concatenation, Selector, Demux and Mux are translated based on their semantics. 
+We currently supports vector/matrix concatenation horizontally and vertically. 
+Vector selector is represented by using notation for accessing array elements in Lustre.
+Similarly for Demux and Mux. 
+
+\paragraph{Rounding and Data Type Conversion}
+
+Rounding blocks including \textsf{Floor, Ceil, Round}, and \textsf{Fix} are translated as Lustre Nodes. 
+Since currently Kind 2 supports conversion between Real and Integer by using two keywords \textsf{"real"} and \textsf{"int"},
+we can use them create a node to represent the operator \textsf{floor} as $floor = \textsf{real} (\textsf{int}$ $x)$, where $x$ and $floor$ are both real numbers and $floor$ is the result of applying \textsf{floor} on $x$. 
+And the \textsf{ceil} block can be represented calling node \textsf{floor} as $ceil = -\textsf{floor}(-x)$.
+Round block is translated to a node \textsf{round} with its body defined as $round = \textsf{if}$ $x >= 0.0$ $\textsf{then}$ $\textsf{ceil}(\textsf{abs}(x))$ \textsf{else} $-\textsf{ceil}(\textsf{abs}(x))$, where \textsf{abs} is a Lustre library node to compute the absolute value of the input.
+Fix block is translated to a node \textsf{fix} with its body defined as $fix = \textsf{if}$ $x >= 0.0$ $\textsf{then}$ $\textsf{floor}(\textsf{abs}(x))$ \textsf{else} $-\textsf{floor}(\textsf{abs}(x))$, where \textsf{abs} is a Lustre library node to compute the absolute value of the input.
+Data Type Conversion block is translated either using keywords \textsf{real} and \textsf{int} or Lustre library nodes. 
+For data types conversions between integer and real numbers, we use keywords \textsf{real} and \textsf{int} respectively. 
+For data types conversions from bool to integer(real), we use library nodes \textsf{bool\_to\_int, bool\_to\_real, int\_to\_bool} and \textsf{real\_to\_bool} respectively, where \textsf{bool\_to\_int} and \textsf{bool\_to\_real} are defined as $output =$ \textsf{if} $input$ \textsf{then} $1(1.0)$ \textsf{else} $0(0.0)$
+, and \textsf{int\_to\_bool} and \textsf{real\_to\_bool} are defined as $output =$ \textsf{if} $input = 0(0.0)$ \textsf{then} $true$ \textsf{else} $false$.
 
 
 \begin{figure}[t]
@@ -429,8 +450,8 @@ As we traverse the abstract syntax tree, the variables will be substituted by th
 
 \subsection{Types}
 
-Types in CoCoSim models are loosely defined. 
-They can be mixed compared, i.e., an integer can be compared to a Boolean.
+Types in CoCoSim models are not strictly defined. 
+They can be mixed compared, i.e., an integer can compare to a Boolean.
 However, Lustre language is a strictly typed language.
 To be better handle types in CoCoSim models, we define six auxiliary functions
 for converting typed expressions.
