@@ -4503,7 +4503,7 @@ public class J2LTranslator {
 
     
     String getPath(JsonNode blk) {
-        String path = null;
+        String path;
         if(blk.has(PATH)) {
             path = blk.get(PATH).asText();
         } else {
@@ -4513,7 +4513,7 @@ public class J2LTranslator {
     }
     
     String getOriginPath(JsonNode blk) {
-        String originPath = null;
+        String originPath;
         if(blk.has(ORIGIN)) {
             originPath = blk.get(ORIGIN).asText();
         } else {
