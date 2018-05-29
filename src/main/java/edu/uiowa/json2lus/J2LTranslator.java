@@ -4507,7 +4507,7 @@ public class J2LTranslator {
         if(blk.has(PATH)) {
             path = blk.get(PATH).asText();
         } else {
-            LOGGER.log(Level.SEVERE, "Unexpected: a block does not have path!");
+            path = this.topNodeName;
         }
         return path;
     }
@@ -4517,7 +4517,7 @@ public class J2LTranslator {
         if(blk.has(ORIGIN)) {
             originPath = blk.get(ORIGIN).asText();
         } else {
-            LOGGER.log(Level.SEVERE, "Unexpected: a block does not have origin path!");
+            originPath = this.topNodeName;
         }
         return originPath;        
     }    
