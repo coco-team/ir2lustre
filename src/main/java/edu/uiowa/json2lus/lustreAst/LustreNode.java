@@ -101,6 +101,17 @@ public class LustreNode extends LustreAst {
         this.propExprs  = new ArrayList<>();          
     }
     
+    public LustreNode(String name, LustreAutomaton automata, List<LustreVar> inputVars, List<LustreVar> outputVars, List<LustreVar> localVars, List<LustreEq> bodyEqs) {
+        this.isMain     = false;
+        this.name       = name;
+        this.automata   = automata;
+        this.inputVars  = inputVars;
+        this.outputVars = outputVars;
+        this.localVars  = localVars;
+        this.bodyExprs  = bodyEqs;        
+        this.propExprs  = new ArrayList<>();         
+    }
+    
     public LustreNode(String name, LustreAutomaton automata, List<LustreVar> inputVars, List<LustreVar> outputVars, List<LustreVar> localVars) {
         this.isMain     = false;
         this.name       = name;
@@ -110,7 +121,7 @@ public class LustreNode extends LustreAst {
         this.localVars  = localVars;
         this.bodyExprs  = new ArrayList<>();        
         this.propExprs  = new ArrayList<>();         
-    }
+    }    
 
     @Override
     public void accept(LustreAstVisitor visitor) {

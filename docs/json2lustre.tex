@@ -176,7 +176,7 @@ They all together comprise the expression: \textsf{Safety = Out1 AND (In1 $>=$ I
 
 \begin{figure}[h]
 \begin{center}
-  \includegraphics[scale=0.35]{figures/In1}
+  \includegraphics[scale=0.3]{figures/In1}
 \end{center}  
   \caption{A JSON Representation of the CoCoSim Model}
   \label{jsoninport}
@@ -186,7 +186,7 @@ They all together comprise the expression: \textsf{Safety = Out1 AND (In1 $>=$ I
 \begin{center}
   \includegraphics[scale=0.18]{figures/safety0}
 \end{center}  
-  \caption{A CoCoSim model of the observer block safety}
+  \caption{A CoCoSim model of the observer block -- safety}
   \label{cocosimsafety}
 \end{figure}
 
@@ -195,7 +195,7 @@ They all together comprise the expression: \textsf{Safety = Out1 AND (In1 $>=$ I
 \begin{center}
   \includegraphics[scale=0.3]{figures/safety}
 \end{center}  
-  \caption{A JSON snippet of the observer block safety}
+  \caption{A JSON snippet of the observer block -- safety}
   \label{jsonsafety}
 \end{figure}
 
@@ -213,7 +213,7 @@ They all together comprise the expression: \textsf{Safety = Out1 AND (In1 $>=$ I
   \label{jsonsafetybody}
 \end{figure}
 
-\section{A Mapping from Basic CoCoSim Blocks to Lustre Constructs}
+\section{Mapping from Basic CoCoSim Blocks to Lustre Constructs}
 
 \begin{figure}[h]
 \begin{center}
@@ -222,7 +222,7 @@ They all together comprise the expression: \textsf{Safety = Out1 AND (In1 $>=$ I
   \includegraphics[scale=0.3]{figures/lus2}  
     
 \end{center}  
-  \caption{The translated Lustre programs for the CoCoSim model unsafe\_1\_PP}
+  \caption{The translated Lustre programs for the CoCoSim model \textsf{unsafe\_1\_PP}}
   \label{lus}
 \end{figure}
 
@@ -255,7 +255,7 @@ Multiply and divide scalars and nonscalars ($\times$)
 \\
 
 Abs (in) &
-Use library node Abs(in)
+create library node abs
 \\
 
 AND, OR, NAND, NOR,
@@ -271,7 +271,7 @@ Minmax &
 \\
 
 Switch &
-{if ... then ... else if ... }
+{if ... then ... else ... }
 \\
 
 Sum &
@@ -308,10 +308,6 @@ Create Lustre library nodes for conversions among Boolean, Integer and Real
 
 Rounding &
 Create Lustre library nodes for floor, ceiling, round and fix.  
-\\
-
-If &
-if ... then ... else ...
 \\
 
 Compare To Zero/Constant  &
@@ -355,7 +351,7 @@ as separate nodes.
 \*
 
 
-\noindent The \textsf{property name} is the output variable name corresponding to the property 
+\noindent The \textsf{property name} is the output variable name corresponding to the property, 
 and the property expression is translated by substituting the input and output variables by concrete ones.
 
 The translation is initiated by translating the outports backwardly. 
@@ -388,7 +384,7 @@ Mathematical operators sum, subtract, multiply, divide and mod are translated in
 Operator Gain is translated into \textsf{*}. 
 Operator Abs is translated into a node Abs. 
 Operator Minmax is translated into a node Min or Max depending on the semantics of the subsystem. 
-Operator CompareToZero/Constant is translated into a node CompareToZero/Constant.
+Operator CompareToZero/Constant is translated into a Lustre expression to compare to zero or a constant. 
 
 \paragraph{Time Operators}
 Operators Memory and UnitDelay are translated into the same time operator \textsf{pre} with the 
@@ -405,13 +401,13 @@ Similarly for Demux and Mux.
 
 Rounding blocks including \textsf{Floor, Ceil, Round}, and \textsf{Fix} are translated as Lustre Nodes. 
 Since currently Kind 2 supports conversion between Real and Integer by using two keywords \textsf{"real"} and \textsf{"int"},
-we can use them create a node to represent the operator \textsf{floor} as $floor = \textsf{real} (\textsf{int}$ $x)$, where $x$ and $floor$ are both real numbers and $floor$ is the result of applying \textsf{floor} on $x$. 
-And the \textsf{ceil} block can be represented calling node \textsf{floor} as $ceil = -\textsf{floor}(-x)$.
-Round block is translated to a node \textsf{round} with its body defined as $round = \textsf{if}$ $x >= 0.0$ $\textsf{then}$ $\textsf{ceil}(\textsf{abs}(x))$ \textsf{else} $-\textsf{ceil}(\textsf{abs}(x))$, where \textsf{abs} is a Lustre library node to compute the absolute value of the input.
-Fix block is translated to a node \textsf{fix} with its body defined as $fix = \textsf{if}$ $x >= 0.0$ $\textsf{then}$ $\textsf{floor}(\textsf{abs}(x))$ \textsf{else} $-\textsf{floor}(\textsf{abs}(x))$, where \textsf{abs} is a Lustre library node to compute the absolute value of the input.
+we can use them create a node to represent the operator \textsf{floor} as $floor = \textsf{real} (\textsf{int}$ $x)$, where $x$ and $floor$ are both real numbers and $floor$ is the result of applying operator \textsf{floor} on $x$. 
+And the \textsf{ceil} block is encoded in terms of \textsf{floor} as $ceil = -\textsf{floor}(-x)$.
+Round block is translated to a node \textsf{round} with its body equation defined as $round = \textsf{if}$ $x >= 0.0$ $\textsf{then}$ $\textsf{ceil}(\textsf{abs}(x))$ \textsf{else} $-\textsf{ceil}(\textsf{abs}(x))$, where \textsf{abs} is a Lustre node to compute the absolute value of the input.
+Fix block is translated to a node \textsf{fix} with its body equation defined as $fix = \textsf{if}$ $x >= 0.0$ $\textsf{then}$ $\textsf{floor}(\textsf{abs}(x))$ \textsf{else} $-\textsf{floor}(\textsf{abs}(x))$.
 Data Type Conversion block is translated either using keywords \textsf{real} and \textsf{int} or Lustre library nodes. 
 For data types conversions between integer and real numbers, we use keywords \textsf{real} and \textsf{int} respectively. 
-For data types conversions from bool to integer(real), we use library nodes \textsf{bool\_to\_int, bool\_to\_real, int\_to\_bool} and \textsf{real\_to\_bool} respectively, where \textsf{bool\_to\_int} and \textsf{bool\_to\_real} are defined as $output =$ \textsf{if} $input$ \textsf{then} $1(1.0)$ \textsf{else} $0(0.0)$
+For data types conversions between \textsf{bool} and \textsf{integer(real)}, we use library nodes \textsf{bool\_to\_int, bool\_to\_real, int\_to\_bool} and \textsf{real\_to\_bool} respectively, where \textsf{bool\_to\_int} and \textsf{bool\_to\_real} are defined as $output =$ \textsf{if} $input$ \textsf{then} $1(1.0)$ \textsf{else} $0(0.0)$
 , and \textsf{int\_to\_bool} and \textsf{real\_to\_bool} are defined as $output =$ \textsf{if} $input = 0(0.0)$ \textsf{then} $true$ \textsf{else} $false$.
 
 
@@ -465,7 +461,7 @@ If an expression is typed with Integer or Real and it is used as Boolean in the 
 to a Boolean by calling the function \textsf{int\_to\_bool} or \textsf{real\_to\_bool}.
  
 
-\subsection{The Translation of CoCoSim contracts}
+\subsection{Translation of CoCoSim contracts}
 
 \begin{figure}[h]
 \begin{center}
@@ -532,12 +528,18 @@ The \textsf{validator} block always has an outport \textsf{valid}.
 Figure~\ref{jsoncontract} and Figure~\ref{jsoncontractdef} are the overview of CoCoSim model \textsf{``bacterialPopulation"} and its contract definition in JSON respectively. 
 The Lustre programs translated from the JSON model of the bacterialPopulation are shown Figure~\ref{lusnodecon}~\ref{luscon}.
 
-\subsection{Unsupported Blocks}
+\subsection{Translation of Stateflow Charts}
 
-Currently, we do not support translation for vector-related computations, such as \textsf{Vector Concatenate, Selector, Demux, Mux, vector plus/minus/multiplications} and so on. 
-We also do not support nonlinear blocks, such as \textsf{sqrt, log, exp}, and \textsf{Rounding} blocks. 
-We partially support \textsf{data type conversion} block for converting from Boolean to Integer and Real, and Integer and Real to Boolean. 
-However, we would ignore conversions related to the different bits integer and different precision real numbers and so on.
+
+
+\subsection{Mapping Information}
+
+The translation also yields a JSON file for mapping purpose between the input Simulink model and the output Lustre program. 
+
+%Currently, we do not support translation for vector-related computations, such as \textsf{Vector Concatenate, Selector, Demux, Mux, vector plus/minus/multiplications} and so on. 
+%We also do not support nonlinear blocks, such as \textsf{sqrt, log, exp}, and \textsf{Rounding} blocks. 
+%We partially support \textsf{data type conversion} block for converting from Boolean to Integer and Real, and Integer and Real to Boolean. 
+%However, we would ignore conversions related to the different bits integer and different precision real numbers and so on.
 
 \section{The Translation Algorithms}
 
@@ -709,15 +711,6 @@ Otherwise, it will call \textsf{translateForLusNode}.
 \textbf{CocoSim} & \textbf{Semantics}  \\
 \hline
 
-Mux &
-Combine several input signals into vector
-\\
-
-
-Demux &
-Extract and output elements of vector signal
-\\
-
 Trigonometry &
 Not Support
 \\
@@ -844,14 +837,6 @@ Gain
 
 Assignment &
 Gain
-\\
-
-Selector &
-Select input elements from vector, matrix, or multidimensional signal
-\\
-
-DataTypeConversion &
-Convert input signal to specified data type
 \\
 
 ForIterator &
