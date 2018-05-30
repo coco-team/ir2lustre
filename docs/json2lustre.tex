@@ -534,8 +534,8 @@ The Lustre programs translated from the JSON model of the bacterialPopulation ar
 
 \subsection{Mapping Information}
 
-The translation also yields a JSON file for mapping purpose between the input Simulink model and the output Lustre program. 
-
+The translation yields a JSON file for mapping purpose between the input Simulink model and the output Lustre program. 
+For each subsystem block in the Simulink model, we generate its \textsf{OriginPath} and its Lustre node name \textsf{NodeName}.
 %Currently, we do not support translation for vector-related computations, such as \textsf{Vector Concatenate, Selector, Demux, Mux, vector plus/minus/multiplications} and so on. 
 %We also do not support nonlinear blocks, such as \textsf{sqrt, log, exp}, and \textsf{Rounding} blocks. 
 %We partially support \textsf{data type conversion} block for converting from Boolean to Integer and Real, and Integer and Real to Boolean. 
