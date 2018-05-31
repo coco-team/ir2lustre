@@ -565,17 +565,19 @@ Among those, the translation currently only supports Entry, During and Exit acti
 Stateflow State is translated into an automaton state in Lustre with its during actions as its body equations.
 An initialization state is created with the Entry actions of the first state of the system as its body equations. 
 A center point state is created as the initial state to control the transitions. 
-Transitions in Stateflow charts are encoded as strong transitions in Lustre ``\textsf{unless} condExpr \textsf{restart} stateName".
+A transition in Stateflow charts is encoded as a strong transition in Lustre ``\textsf{unless} condExpr \textsf{restart} stateName".
 
 We create a state id for each original state of the system with 0 being the id for the initialization state.
 We currently support exclusive states with no nested states.
 For each simple transition from a state \textsf{src} to another state \textsf{dest} with a condition \textsf{condExpr}, condition actions \textsf{condActions} and transition actions \textsf{transitActions}, we create a Lustre automaton state  \textsf{src\_to\_dest} with condition actions \textsf{condActions}, transition actions \textsf{transitActions}, the Exit actions of \textsf{src} and the Entry actions of \textsf{dest} being its body equations.
 At each Lustre automaton state, we set the next active state id to the id of the destination state.
 For example, at the state \textsf{src\_to\_dest}, we would set the next active state id to the id of the \textsf{dest} state.
+After executing all the actions, each state will go back to the center point state via weak transition ``\textsf{unless} true \textsf{restart} center\_point\_state".
 
-The execution order of transitions is maintained in the strong transitions of the initial Lustre automaton state by following the 12 o'clock rule in Stateflow chart.
+
+The execution order of transitions in the Stateflow is maintained in the strong transitions of the initial Lustre automaton state by following the 12 o'clock rule in Stateflow chart.
 The transition at 12 o'clock is evaluated first and the rest is evaluated from top to bottom and from left to right. 
-Therefore, we put the transition condition of the transition at 12 o'clock first and the rest is listed from top to bottom and from left to right. 
+Therefore, we put the transition condition of the transition at 12 o'clock at the top and the rest is listed following from top to bottom and from left to right. 
 
 \subsubsection{Translation of Junctions}
 
@@ -602,8 +604,9 @@ A simple transition is defined as a transition from a state to another state bas
 Figure~\ref{sf1} shows a conversion from a stateflow chart with junctions to an equivalent one without junctions.
 Compression of junctions follows the evaluation rule of junctions in stateflow charts.
 Consider the example in Figure~\ref{sf1}, there are 4 states and 1 junction in the original stateflow chart on the left, where S1 is the start state.
-At the beginning of a system clock tick, the system starts evaluating C1 and C2, if C1 and C2 are both valid, it execute S1's exit actions, Ac1, Ac2, At1, At2 and entB() and set the next active state id to the id of S2. 
-If C2 is valid and C3 is invalid, the system execute S1's exit actions, Ac1, Ac3, At1, At3 and entC() and set the next active state id to the id of S3.
+At the beginning of the system clock tick, the system starts evaluating C1 and C2, if C1 and C2 are both valid, it execute S1's exit actions, Ac1, Ac2, At1, At2 and entB() and set the next active state id to the id of S2. 
+In this case, we compress together conditions C1 and C2 on the junction, and create a new state \textsf{S1\_exit\_to\_S2\_entry} with S1's exit actions, Ac1, Ac2, At1, At2 and entB() being its body equations. 
+Similarly, if C2 is valid and C3 is valid, the system execute S1's exit actions, Ac1, Ac3, At1, At3 and entC() and set the next active state id to the id of S3, and we create a new state for the transition from S1 to S3.
 If C2 and C3 are both invalid and C1 is valid, the system execute Ac1 and set the next active state id to the id of S1.
 If C1 is invalid and C4 is valid, the system execute S1's exit actions, Ac4, At4, and entD().  
 Otherwise, it will stay in S1 and execute S1's During actions. 
