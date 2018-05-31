@@ -487,10 +487,10 @@ They are encapsulated in \textsf{Subsystem} blocks and are accessible by using c
 blocks.
 To distinguish different contract blocks, we use the \textsf{``ContractBlockType"} in JSON to indicate whether a block 
 is an \textsf{assume}, \textsf{guarantee}, \textsf{mode}, \textsf{requires}, or \textsf{ensures} block.
-The contract always returns a Boolean variable \textsf{valid}.
-The translation ignores the variable \textsf{valid} and construct the signature 
+The contract block always returns a Boolean variable \textsf{valid}.
+The translation ignores the output variable \textsf{valid} and construct the signature 
 of the contract by identifying with the signature of the calling node.
-The translation of internal expressions of contracts is the same as translating expressions in the subsystem blocks.
+The translation of expressions of contracts is the same as translating expressions in the subsystem blocks.
 
 \begin{figure}[h]
 \begin{center}
@@ -560,10 +560,17 @@ Stateflow is translated into Lustre automaton based on its semantics.
 \subsubsection{Translation of States}
 There are two types of states: exclusive and parallel. 
 State can be nested in another state.
-Each state has nine different actions i.e., Entry, During, Exit, Bind, On, OnAfter, OnBefore, OnAt, OnEvery. 
+Each state has nine different actions i.e., Entry, During, Exit, Bind, On, OnAfter, OnBefore, OnAt, and OnEvery. 
 Among those, the translation currently only supports Entry, During and Exit actions and does not support event. 
-State is translated into an automaton state in Lustre with its during actions as its body equations.
+Stateflow State is translated into an automaton state in Lustre with its during actions as its body equations.
+An initialization state is created with the Entry actions of the first state of the system as its body equations. 
+A center point state is created as the initial state to control the transitions. 
+Transitions in Stateflow charts are encoded as strong transitions in Lustre using the statement ``\textsf{unless} condExpr \textsf{restart} stateName".
+We create a state id for each original state of the system with 0 being the id for the initialization state.
 We currently support exclusive states with no nested states.
+For each simple transition \textsf{src\_to\_dest} from a state \textsf{src} to another state \textsf{dest} with a condition \textsf{condExpr} and condition actions \textsf{condActions}, we create a Lustre automaton state with condition actions \textsf{condActions}, the Exit actions of \textsf{src} and the Entry actions of \textsf{dest} being its body equations.
+At each Lustre automaton state, we set the next active state id.
+For example, at the state \textsf{src\_to\_dest}, we would set the next active state id to the id of the \textsf{dest} state.
 
 \subsubsection{Translation of Junctions}
 
@@ -581,15 +588,6 @@ A simple transition is defined as a transition from a state to another state bas
 Figure~\ref{sf1} shows a conversion from a stateflow chart with junctions to an equivalent one without junctions.
 
 
-\subsection{Mapping Information}
-
-The translation yields a JSON file for mapping purpose between the input Simulink model and the output Lustre program. 
-For each subsystem block except for the observer block in Simulink, the translation generates its origin path in the Simulink model and its node name in Lustre as the values for \textsf{OriginPath} and \textsf{NodeName} in JSON respectively.
-And for each inport and outport of a subsystem block, it also generates its variable name in the Lustre program as the value for \textsf{VariableName} additionally.
-For each contract block, the translation produces its \textsf{OriginPath} in the Simulink model and its contract name \textsf{ContractName} in Lustre with inports and outports names as \textsf{VariableName} in JSON.
-The translation generates a property name and index for each assumption and guarantee as the values of \textsf{PropertyName} and \textsf{Index} in addition to its \textsf{OriginPath} and \textsf{ContractName}.
-For each require and ensure in a mode of a contract, it produces its origin path, contract name, require/ensure name, mode name and index as the values of 
-\textsf{OriginPath}, \textsf{ContractName}, \textsf{PropertyName}, \textsf{Index} and \textsf{ModeName}.
 
 \subsection{Mapping Information}
 
