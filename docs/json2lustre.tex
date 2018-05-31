@@ -402,16 +402,15 @@ values of First and X0 as their initial conditions respectively.
 Since Memory and UnitDelay may introduce the circular dependency issue, we create local variables for the portion of expression under \textsf{pre} to break the circular dependency if any. 
 
 \paragraph{Vector/Matrix Related Operators}
-Vector Concatenation, Selector, Demux and Mux are translated based on their semantics. 
-We currently supports vector/matrix concatenation horizontally and vertically. 
-Vector selector is represented by using notation for accessing array elements in Lustre.
-Similarly for Demux and Mux. 
+Vector Concatenation, Selector, Demux and Mux are translated into array operations in Lustre based on their semantics. 
+The translation currently supports vector/matrix concatenation horizontally and vertically. 
+Vector selector is represented by using access notations for array elements in Lustre, similarly for Demux and Mux. 
 
 \paragraph{Rounding and Data Type Conversion}
 
 Rounding blocks including \textsf{Floor, Ceil, Round}, and \textsf{Fix} are translated as Lustre Nodes. 
-Since currently Kind 2 supports conversion between Real and Integer by using two keywords \textsf{"real"} and \textsf{"int"},
-we can use them create a node to represent the operator \textsf{floor} as $floor = \textsf{real} (\textsf{int}$ $x)$, where $x$ and $floor$ are both real numbers and $floor$ is the result of applying operator \textsf{floor} on $x$. 
+Since Kind 2 supports conversion between Real and Integer by using two keywords \textsf{"real"} and \textsf{"int"},
+we use them to create a node to encode the operator \textsf{floor} as $floor = \textsf{real} (\textsf{int}$ $x)$, where $x$ and $floor$ are both real numbers and $floor$ is the result of applying operator \textsf{floor} on $x$. 
 And the \textsf{ceil} block is encoded in terms of \textsf{floor} as $ceil = -\textsf{floor}(-x)$.
 Round block is translated to a node \textsf{round} with its body equation defined as $round = \textsf{if}$ $x >= 0.0$ $\textsf{then}$ $\textsf{ceil}(\textsf{abs}(x))$ \textsf{else} $-\textsf{ceil}(\textsf{abs}(x))$, where \textsf{abs} is a Lustre node to compute the absolute value of the input.
 Fix block is translated to a node \textsf{fix} with its body equation defined as $fix = \textsf{if}$ $x >= 0.0$ $\textsf{then}$ $\textsf{floor}(\textsf{abs}(x))$ \textsf{else} $-\textsf{floor}(\textsf{abs}(x))$.
