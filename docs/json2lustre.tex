@@ -99,11 +99,13 @@ CoCoSim supports a subset of the blocks provided by the Simulink toolset. Figure
 \State \textbf{sampleTime} := \textit{A decimal number}
 \State \textbf{Top-level model name} := Content\{0, 1\}
 \State \textbf{Content} := Block name*
+\State \textbf{StateflowContent} := Name, Path, Data, States, Junctions, TruthTables
 \State \textbf{Block name} := BlockType, CompiledPortDataTypes, Handle, Name, Origin\_path,  
 \State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }Content\{0, 1\}, PortConnectivity\{0, 1\}, ContractBlockType\{0, 1\}, 
 \State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }X0\{0, 1\}, Criteria\{0, 1\}, Port\{0, 1\}, Operator\{0, 1\}, Inputs\{0, 1\}
 \State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }Value\{0, 1\}, AnnotationType\{0, 1\}
 \State \textbf{X0} := \textit{Constant}
+\State \textbf{Path} := \textit{String}
 \State \textbf{Name} := \textit{String}
 \State \textbf{Value} := \textit{Constant}
 \State \textbf{Origin\_path} := \textit{String}
@@ -128,19 +130,21 @@ CoCoSim supports a subset of the blocks provided by the Simulink toolset. Figure
 \State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } $\mid$ == $\mid$ $>=$ $\mid$ $>$ $\mid$ $<=$ $\mid$ $<$ $\mid$ $\sim$= $\mid -$ $\mid$ Floor $\mid$ Ceil $\mid$ Round $\mid$ Fix
 \State \textbf{CompiledPortDimensions} := \textit{Inport, Outport}
 \State \textbf{CompiledPortDataTypes} := \textsf{Inport, Outport}
-\State \textbf{Inport} := \{\textit{Positive integer}\}+
-\State \textbf{Outport} := \{\textit{Positive integer}\}+
-\State \textbf{\textsf{Inport}} := \textit{Data type}*
-\State \textbf{\textsf{Outport}} := \textit{Data type}*
+\State \textbf{Inport} := \{\textit{Positive integer}\}+  \ \ \ \ \ \ \ \ \ \ \ \ \  \textbf{Outport} := \{\textit{Positive integer}\}+ 
+\State \textbf{\textsf{Inport}} := \textit{Data type}*  \ \ \ \ \ \ \ \ \ \ \ \  \textbf{\textsf{Outport}} := \textit{Data type}*
 \State \textbf{Data type} := double $\mid$ single $\mid$ int8 $\mid$ uint8 $\mid$ int16 $\mid$ uint16 $\mid$ int32 $\mid$ uint32 $\mid$ string
 \State \textbf{Port connectivity} := \{DstBlock\}+, \{SrcBlock\}+
-\State \textbf{DstBlock} := \textit{Handle}*
-\State \textbf{SrcBlock} := \textit{Handle}*
+\State \textbf{DstBlock} := \textit{Handle}*  \ \ \ \ \ \ \ \ \ \ \ \  \textbf{SrcBlock} := \textit{Handle}*
 
 \end{algorithmic}
 \caption{The grammar for the JSON representation of CoCoSim model that the translation supports}
 \label{jsongrammar}
 \end{figure}
+
+
+
+\subsection{CoCoSim Blocks in JSON}
+
 
 A CoCoSim model is a visualization of a set of block declarations and their connectivities.
 The CoCoSim intermediate compiler takes as input a Simulink model and translate it into a JSON representation storing blocks and connectivities information. 
@@ -222,6 +226,41 @@ They all together comprise the expression: \textsf{Safety = Out1 AND (In1 $>=$ I
   \caption{A JSON snippet of the body of the observer block \textsf{safety}}
   \label{jsonsafetybody}
 \end{figure}
+
+\subsection{CoCoSim Stateflow in JSON}
+
+Stateflow can also be used in CoCoSim. 
+They are translated as the value for \textsf{StateflowContent} in JSON.
+Figure~\ref{sfjsongrammar} shows only relevant grammar used for defining Stateflow in JSON.
+
+
+\begin{figure}
+\begin{algorithmic}
+\State \textbf{StateflowContent} := Name, Path, Data, States, Junctions, TruthTables
+\State \textbf{Id} := \textit{String}
+\State \textbf{Path} := \textit{String}
+\State \textbf{Name} := \textit{String}
+\State \textbf{Data} := \{Id, Name, Datatype, CompiledType, Port, InitialValue, Scope, ArraySize\}*
+\State \textbf{States} := \{Path, Id, Name, Actions, InnerTransitions, OuterTransitions, Composition\}*
+\State \textbf{Junctions} := \{Path, Name, Id, Type, OuterTransitions\}*
+\State \textbf{DefaultTransitions} := \{Destination\}*
+\State \textbf{OuterTransitions} := \{Destination\}*
+\State \textbf{Substates} := \{String\}*
+\State \textbf{States} := \{Unsigned integer\}*
+\State \textbf{Destination} := \{Id, DestinationStateJunction, Condition, ConditionAction, TransitionAction\}*
+\State \textbf{Composition} := \{Type, DefaultTransitions, Substates, States\}*
+\State \textbf{Condition} := \{Matlab Expressions in String format\}*
+\State \textbf{ConditionAction} := \{Matlab Expressions in String format\}*
+\State \textbf{TransitionAction} := \{Matlab Expressions in String format\}*
+\State \textbf{DestinationStateJunction} := \{Id, Type, Name\}*
+\State \textbf{Type} := \{EXCLUSIVE\_OR $\mid$ PARALLEL\_AND $\mid$ Junction $\mid$ State\}
+
+
+\end{algorithmic}
+\caption{The grammar for the JSON representation of Stateflow}
+\label{sfjsongrammar}
+\end{figure}
+
 
 \section{Mapping from Basic CoCoSim Blocks to Lustre Constructs}
 
