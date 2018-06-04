@@ -245,7 +245,7 @@ Figure~\ref{sfjsongrammar} shows only relevant grammar used for defining Statefl
 \State \textbf{Junctions} := \{Path, Name, Id, Type, OuterTransitions\}*
 \State \textbf{DefaultTransitions} := \{Destination\}*
 \State \textbf{OuterTransitions} := \{Destination\}*
-\State \textbf{Substates} := \{String\}*
+\State \textbf{Substates} := \{\textit{String}\}*
 \State \textbf{States} := \{Unsigned integer\}*
 \State \textbf{Destination} := \{Id, DestinationStateJunction, Condition, ConditionAction, TransitionAction\}*
 \State \textbf{Composition} := \{Type, DefaultTransitions, Substates, States\}*
@@ -261,6 +261,41 @@ Figure~\ref{sfjsongrammar} shows only relevant grammar used for defining Statefl
 \label{sfjsongrammar}
 \end{figure}
 
+\begin{figure}[h]
+\begingroup\makeatletter\def\@currenvir{verbatim}
+\verbatim
+{
+    "$schema": "http://json-schema.org/draft-06/schema#",
+    "title": "IR Schema",
+    "description": "The JSON representation of a CoCoSim model",
+    "type": "object",
+    "properties": {
+        "meta": {
+            "description": "Meta information about the JSON file",
+            "properties": {
+                "file_path": {
+                    "type": "string"
+                },
+                "sampleTime": {
+                    "type": "integer"
+                },
+                "date": {
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "additionalProperties": { 
+        "type": "object",
+        "properties": {"Content": {"type": "object"}},
+        "minProperties": 0,
+        "maxProperties": 1        
+    },
+    "required": ["meta"]
+}
+\end{verbatim}
+\caption{The Schema for a JSON representation of a CoCoSim model}
+\end{figure}
 
 \section{Mapping from Basic CoCoSim Blocks to Lustre Constructs}
 
