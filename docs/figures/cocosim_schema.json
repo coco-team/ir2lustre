@@ -1,0 +1,29 @@
+{
+    "$schema": "http://json-schema.org/draft-06/schema#",
+    "title": "IR Schema",
+    "description": "The JSON representation of a CoCoSim model",
+    "type": "object",
+    "properties": {
+        "meta": {
+            "description": "Meta information about the JSON file",
+            "properties": {
+                "file_path": {
+                    "type": "string"
+                },
+                "sampleTime": {
+                    "type": "integer"
+                },
+                "date": {
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "additionalProperties": { 
+        "type": "object",
+        "properties": {"Content": {"type": "object"}},
+        "minProperties": 0,
+        "maxProperties": 1        
+    },
+    "required": ["meta"]
+}

@@ -1,0 +1,190 @@
+{
+    "$schema": "http://json-schema.org/draft-06/schema#",
+    "title": "Stateflow Schema",
+    "description": "The JSON representation of a CoCoSim Stateflow block",
+    "type": "object",
+    "properties": {
+        "Name": {
+            "type": "string"
+        },    
+        "Path": {
+            "type": "string"
+        },   
+        "Data": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "Id":{
+                        "type": "string"
+                    }, 
+                    "Name":{
+                        "type": "string"
+                    },
+                    "CompiledType":{
+                        "type": "string",
+                        "enum": ["double", "single", "int8", "uint8", 
+                                 "int16", "uint16", "int32", "uint32"]                    
+                    },
+                    "Port":{
+                        "type": "integer"
+                    },                  
+                    "Scope":{
+                        "type": "string",
+                        "enum": ["Input", "Local", "Output"]                    
+                    }                                                                                 
+                }
+            }
+        },         
+        "States": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "Id":{
+                        "type": "string"
+                    }, 
+                    "Path":{
+                        "type": "string"
+                    },
+                    "Name":{
+                        "type": "string"
+                    },                    
+                    "Actions":{
+                        "type": "object",
+                        "properties": {
+                            "Entry": {
+                                "type": "string"
+                            },
+                            "During": {
+                                "type": "string"
+                            },
+                            "Exit": {
+                                "type": "string"
+                            }                                                        
+                        }                  
+                    },
+                    "OuterTransitions":{
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "Destination":{
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "Id":{
+                                                "type": "string"
+                                            }, 
+                                            "Destination":{
+                                                "properties": {
+                                                    "Id": {
+                                                        "type": "string"
+                                                    },
+                                                    "Type": {
+                                                        "type": "string",
+                                                        "enum": ["State", "Junction"]
+                                                    }
+                                                }
+                                            },
+                                            "Condition":{
+                                                "type": "string"
+                                            },
+                                            "ConditionAction":{
+                                                "type": "string"
+                                            },                  
+                                            "TransitionAction":{
+                                                "type": "string"                   
+                                            }                                                                                 
+                                        }
+                                    }
+                                }                                                                               
+                            }
+                        }
+                    },                  
+                    "Composition":{
+                        "type": "object",
+                        "properties": {
+                            "Type": {
+                                "type": "string",
+                                "enum": ["EXCLUSIVE_OR", "PARALLEL_AND"]
+                            },
+                            "Substates": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            },
+                            "States": {
+                                "type": "number"
+                            },
+                            "DefaultTransitions": {
+                                "type": "object",
+                                "properties": {
+                                    "Id": {
+                                        "type": "string"
+                                    },
+                                    "Destination": {
+                                        "type": "object",
+                                        "properties": {
+                                            "Id": {
+                                                "type": "string"
+                                            },
+                                            "Name": {
+                                                "type": "string"
+                                            },                                            
+                                            "Type": {
+                                                "type": "string",
+                                                "enum": ["State", "Junction"]
+                                            }                                            
+                                        }
+                                    },
+                                    "Condition":{
+                                        "type": "string"
+                                    },
+                                    "ConditionAction":{
+                                        "type": "string"
+                                    },                  
+                                    "TransitionAction":{
+                                        "type": "string"                   
+                                    }                                      
+                                }
+                            }
+                        }                  
+                    }                                                                                 
+                }
+            }
+        },         
+        "CompiledPortDataTypes": {
+            "properties":{
+                "Inport": {
+                    "type": "string",
+                    "enum": ["double", "single", "int8", "uint8", 
+                             "int16", "uint16", "int32", "uint32"]                    
+                },
+                "Outport": {
+                    "type": "string",
+                    "enum": ["double", "single", "int8", "uint8", 
+                             "int16", "uint16", "int32", "uint32"]                                       
+                }
+            }            
+        },
+        "CompiledPortDimensions": {
+            "properties":{
+                "Inport": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }                             
+                },
+                "Outport": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }                             
+                }
+            }             
+        }     
+    }
+}
