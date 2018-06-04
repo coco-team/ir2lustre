@@ -48,12 +48,21 @@ This is to document the translation from the JSON representation of a CoCoSim mo
 
 
 CoCoSim supports a subset of the blocks provided by the Simulink toolset. 
-Figure~\ref{ccsschema} shows the schema for the intermediate representation of a CoCoSim model in JSON.
+A CoCoSim model is a visualization of a set of Simulink blocks declarations, their connectivities and Stateflows.
+The translation supports a subset of CoCoSim functional blocks including Vector Concatenate, Selector, Constant, Data Type Conversion, Demux, Logic, Math, MinMax, Mux, Product, Relational Operator, Rounding, Sum, Switch and UnitDelay. 
+In addition to the list of functional blocks, we extends Simulink with contract blocks to allow modeling \textsf{assume, guarantee, mode, requires} and \textsf{ensures}, which are essentially Subsystem blocks in Simulink. 
+One of the goals of CoCoSim is to verify properties about the model. 
+A property is encoded in \textsf{Observer} block, which is a subsystem block in Simulink. 
+
+The front end of CoCoSim translates a CoCoSim model to its intermediate representation in JSON. 
+The root of the JSON file consists of meta information about the model including the file path, the sample time of the CoCoSim model and the date of the model generated, and the definition of top-level block.
+The top-level block definition is defined as a pair of block identifier and a value, where value stores its content information.
 
 
-\subsection{CoCoSim Blocks in JSON}
+Below shows the JSON schema for the intermediate representation of a CoCoSim model consisting of meta information, block content definition, and Stateflow content definition.
+We will discuss block content and Stateflow content definitions in the following two sections.
 
-\begin{figure}[h]
+\small{
 \begingroup\makeatletter\def\@currenvir{verbatim}
 \verbatim
 {
@@ -79,138 +88,318 @@ Figure~\ref{ccsschema} shows the schema for the intermediate representation of a
     },
     "additionalProperties": { 
         "type": "object",
-        "properties": {"Content": {"type": "object"}},
+        "properties": {
+            "Content": {"$ref": "#/definitions/content"}
+        },
         "minProperties": 0,
         "maxProperties": 1        
+    },
+    "definitions": {
+       "block" : {
+          "description": "The JSON representation of a CoCoSim block",
+          "type": "object",
+          "properties": {
+              "Handle": {
+                  "type": "number"
+              },   
+              "Name": {
+                  "type": "string"
+              },    
+              "Path": {
+                  "type": "string"
+              },   
+              "Port": {
+                  "type": "integer"
+              },         
+              "Origin_path": {
+                  "type": "string"
+              },  
+              "PortConnectivity": {
+                  "properties":{
+                      "SrcBlock": {
+                          "type": "array",
+                          "items": {"type":"number"}
+                      },
+                      "DstBlock": {
+                          "type": "array",
+                          "items": {"type":"number"}
+                      }
+                  }
+              },                                          
+              "Criteria": {
+                  "type": "string",
+                  "enum": ["u2 >= Threshold", "u2 > Threshold", "u2 ~= 0"]
+              },
+              "Value": {
+                  "type": "string"
+              },                
+              "Operator": {
+                  "type": "string",
+                  "enum": ["NOT", "AND", "OR", "XOR", 
+                           "NAND", "NOR", "NXOR",
+                           "==", ">=", ">", "<=", "<", 
+                           "?=", "?", "Floor", "Ceil", 
+                           "Round", "Fix"]
+              },
+              "ContractBlockType": {
+                  "type": "string",
+                  "enum": ["ContractGuaranteeBlock", "ContractModeBlock", 
+                           "ContractAssumeBlock", "ContractRequireBlock", 
+                           "ContractEnsureBlock"]
+              },                
+              "BlockType": {
+                  "type": "string",
+                  "enum": ["Inport", "Outport", "Subsystem", "Constant", 
+                           "Memory", "UnitDelay", "Switch", "Product",
+                           "RelationalOperator", "Logic", "MinMax", "Sum", 
+                           "UnaryMinus", "DataTypeConversion", "Rounding", 
+                           "VectorConcatenation", "Mux", "Demux"]
+              },
+              "CompiledPortDataTypes": {
+                  "properties":{
+                      "Inport": {
+                          "type": "string",
+                          "enum": ["double", "single", "int8", "uint8", 
+                                   "int16", "uint16", "int32", "uint32"]                    
+                      },
+                      "Outport": {
+                          "type": "string",
+                          "enum": ["double", "single", "int8", "uint8", 
+                                   "int16", "uint16", "int32", "uint32"]                                       
+                      }
+                  }            
+              },
+              "CompiledPortDimensions": {
+                  "properties":{
+                      "Inport": {
+                          "type": "array",
+                          "items": {
+                              "type": "integer"
+                          }                             
+                      },
+                      "Outport": {
+                          "type": "array",
+                          "items": {
+                              "type": "integer"
+                          }                             
+                      }
+                  }             
+              },        
+              "Content": {
+                  "$ref": "#/definitions/content"
+              },
+              "StateflowContent": {
+                  "$ref": "#/definitions/stateflowcontent"}
+              }             
+          },
+          "stateflowcontent": {
+            "type": "object",
+            "properties": {
+                "Name": {
+                    "type": "string"
+                },    
+                "Path": {
+                    "type": "string"
+                },   
+                "Data": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "Id":{
+                                "type": "string"
+                            }, 
+                            "Name":{
+                                "type": "string"
+                            },
+                            "CompiledType":{
+                                "type": "string",
+                                "enum": ["double", "single", "int8", "uint8", 
+                                            "int16", "uint16", "int32", "uint32"]                    
+                            },
+                            "Port":{
+                                "type": "integer"
+                            },                  
+                            "Scope":{
+                                "type": "string",
+                                "enum": ["Input", "Local", "Output"]                    
+                            }                                                                                 
+                        }
+                    }
+                },         
+                "States": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "Id":{
+                                "type": "string"
+                            }, 
+                            "Path":{
+                                "type": "string"
+                            },
+                            "Name":{
+                                "type": "string"
+                            },                    
+                            "Actions":{
+                                "type": "object",
+                                "properties": {
+                                    "Entry": {
+                                        "type": "string"
+                                    },
+                                    "During": {
+                                        "type": "string"
+                                    },
+                                    "Exit": {
+                                        "type": "string"
+                                    }                                                        
+                                }                  
+                            },
+                            "OuterTransitions":{
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "Destination":{
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "Id":{
+                                                        "type": "string"
+                                                    }, 
+                                                    "Destination":{
+                                                        "properties": {
+                                                            "Id": {
+                                                                "type": "string"
+                                                            },
+                                                            "Type": {
+                                                                "type": "string",
+                                                                "enum": ["State", "Junction"]
+                                                            }
+                                                        }
+                                                    },
+                                                    "Condition":{
+                                                        "type": "string"
+                                                    },
+                                                    "ConditionAction":{
+                                                        "type": "string"
+                                                    },                  
+                                                    "TransitionAction":{
+                                                        "type": "string"                   
+                                                    }                                                                                 
+                                                }
+                                            }
+                                        }                                                                               
+                                    }
+                                }
+                            },                  
+                            "Composition":{
+                                "type": "object",
+                                "properties": {
+                                    "Type": {
+                                        "type": "string",
+                                        "enum": ["EXCLUSIVE_OR", "PARALLEL_AND"]
+                                    },
+                                    "Substates": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "States": {
+                                        "type": "number"
+                                    },
+                                    "DefaultTransitions": {
+                                        "type": "object",
+                                        "properties": {
+                                            "Id": {
+                                                "type": "string"
+                                            },
+                                            "Destination": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "Id": {
+                                                        "type": "string"
+                                                    },
+                                                    "Name": {
+                                                        "type": "string"
+                                                    },                                            
+                                                    "Type": {
+                                                        "type": "string",
+                                                        "enum": ["State", "Junction"]
+                                                    }                                            
+                                                }
+                                            },
+                                            "Condition":{
+                                                "type": "string"
+                                            },
+                                            "ConditionAction":{
+                                                "type": "string"
+                                            },                  
+                                            "TransitionAction":{
+                                                "type": "string"                   
+                                            }                                      
+                                        }
+                                    }
+                                }                  
+                            }                                                                                 
+                        }
+                    }
+                },         
+                "CompiledPortDataTypes": {
+                    "properties":{
+                        "Inport": {
+                            "type": "string",
+                            "enum": ["double", "single", "int8", "uint8", 
+                                        "int16", "uint16", "int32", "uint32"]                    
+                        },
+                        "Outport": {
+                            "type": "string",
+                            "enum": ["double", "single", "int8", "uint8", 
+                                        "int16", "uint16", "int32", "uint32"]                                       
+                        }
+                    }            
+                },
+                "CompiledPortDimensions": {
+                    "properties":{
+                        "Inport": {
+                            "type": "array",
+                            "items": {
+                                "type": "integer"
+                            }                             
+                        },
+                        "Outport": {
+                            "type": "array",
+                            "items": {
+                                "type": "integer"
+                            }                             
+                        }
+                    }             
+                }     
+            }           
+        },
+        "content" : {
+            "type": "object",
+            "additionalProperties": {"$ref": "#/definitions/block"}
+        }          
     },
     "required": ["meta"]
 }
 \end{verbatim}
-\caption{The Schema for a JSON representation of a CoCoSim model}
-\label{ccsschema}
-\end{figure}
+}
 
+\subsection{CoCoSim Blocks in JSON}
 
-A CoCoSim model is a visualization of a set of block declarations and their connectivities.
-The CoCoSim intermediate compiler takes as input a Simulink model and translate it into a JSON representation storing blocks and connectivities information. 
-The model information is stored as name -- value pairs in a JSON file. 
-The name field specifies the name of the block, and the value stores the actual data about the block such as block handle, block connectivities and so on. 
+%The CoCoSim intermediate compiler takes as input a Simulink model and translate it into a JSON representation storing blocks and connectivities information. 
+%The model information is stored as block name -- value pairs in a JSON file. 
+%The name field specifies the name of the block, and the value stores the actual data about the block such as block handle, block connectivities and so on. 
 Each block is uniquely identified by its block handle.
 The \textsf{``BlockType"} field specifies the type of a block. 
 %For example, an inport block of a CoCoSim model has a ``BlockType" ``Inport".
 The blocks connectivity information is stored in the \textsf{``PortConnectivity"} field, where \textsf{``SrcBlock"} stores the handles of incoming blocks, whereas \textsf{``DstBlock"} stores the handles of destination blocks. 
 The \textsf{``Origin\_path"} is the full path to the block in the CoCoSim model.
 The value of \textsf{``Port"} of inports or outports is the position index in the inputs or outputs. 
-Below shows the JSON schema for a CoCoSim block.
-
-\small{
-\begingroup\makeatletter\def\@currenvir{verbatim}
-\verbatim
-{
-    "$schema": "http://json-schema.org/draft-06/schema#",
-    "title": "Block Schema",
-    "description": "The JSON schema for a CoCoSim block",
-    "type": "object",
-    "properties": {
-        "Handle": {
-            "type": "number"
-        },   
-        "Name": {
-            "type": "string"
-        },    
-        "Path": {
-            "type": "string"
-        },   
-        "Port": {
-            "type": "integer"
-        },         
-        "Origin_path": {
-            "type": "string"
-        },  
-        "PortConnectivity": {
-            "properties":{
-                "SrcBlock": {
-                    "type": "array",
-                    "items": {"type":"number"}
-                },
-                "DstBlock": {
-                    "type": "array",
-                    "items": {"type":"number"}
-                }
-            }
-        },                                          
-        "Criteria": {
-            "type": "string",
-            "enum": ["u2 >= Threshold", "u2 > Threshold", "u2 ~= 0"]
-        },
-        "Value": {
-            "type": "string"
-        },                
-        "Operator": {
-            "type": "string",
-            "enum": ["NOT", "AND", "OR", "XOR", 
-                          "NAND", "NOR", "NXOR",
-                          "==", ">=", ">", "<=", "<", "~=", 
-                          "-", "Floor", "Ceil", "Round", "Fix"]
-        },
-        "ContractBlockType": {
-            "type": "string",
-            "enum": ["ContractGuaranteeBlock", "ContractModeBlock", 
-             	         "ContractAssumeBlock", 
-                          "ContractRequireBlock", "ContractEnsureBlock"]
-        },                
-        "BlockType": {
-            "type": "string",
-            "enum": ["Inport", "Outport", "Subsystem", "Constant", "Memory", 
-                    "UnitDelay", "Switch", "Product", "RelationalOperator", 
-                          "Logic", "MinMax", "Sum", "UnaryMinus", "DataTypeConversion",
-                          "Rounding", "VectorConcatenation", "Mux", "Demux"]
-        },
-        "CompiledPortDataTypes": {
-            "properties":{
-                "Inport": {
-                    "type": "string",
-                    "enum": ["double", "single", "int8", "uint8", "int16", 
-                                  "uint16", "int32", "uint32"]                    
-                },
-                "Outport": {
-                    "type": "string",
-                    "enum": ["double", "single", "int8", "uint8", "int16", 
-                                  "uint16", "int32", "uint32"]                                       
-                }
-            }            
-        },
-        "CompiledPortDimensions": {
-            "properties":{
-                "Inport": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }                             
-                },
-                "Outport": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }                             
-                }
-            }             
-        },        
-        "Content": { 
-            "type": "object",
-            "minProperties": 0,
-            "maxProperties": 1        
-        },
-        "StateflowContent": { 
-            "type": "object",
-            "minProperties": 0,
-            "maxProperties": 1        
-        }             
-    }
-}
-\end{verbatim}
-}
-
 
 Figure~\ref{cocosimmodel} shows an overview of a CoCoSim model ``unsafe\_1\_PP" and Figure~\ref{jsoninport} shows a snippet of its JSON representation. 
 \textsf{``In1"} and \textsf{``In2"} are the names of the inport blocks; \textsf{``Inport"} is the type of block \textsf{``In1"}; and the handle is \textsf{``77.0003662109375"}, which is the unique identifier for \textsf{``In1"}. 
@@ -235,7 +424,7 @@ They all together comprise the expression: \textsf{Safety = Out1 AND (In1 $>=$ I
 
 \begin{figure}[h]
 \begin{center}
-    \includegraphics[scale=0.25]{figures/safety000}
+    \includegraphics[scale=0.2]{figures/safety000}
 \end{center}  
   \caption{A CoCoSim Model}
   \label{cocosimmodel}
@@ -251,7 +440,7 @@ They all together comprise the expression: \textsf{Safety = Out1 AND (In1 $>=$ I
 
 \begin{figure}[h]
 \begin{center}
-  \includegraphics[scale=0.18]{figures/safety0}
+  \includegraphics[scale=0.15]{figures/safety0}
 \end{center}  
   \caption{A CoCoSim model of the observer block -- safety}
   \label{cocosimsafety}
@@ -260,7 +449,7 @@ They all together comprise the expression: \textsf{Safety = Out1 AND (In1 $>=$ I
 
 \begin{figure}[h]
 \begin{center}
-  \includegraphics[scale=0.3]{figures/safety}
+  \includegraphics[scale=0.35]{figures/safety}
 \end{center}  
   \caption{A JSON snippet of the observer block -- safety}
   \label{jsonsafety}
@@ -282,205 +471,22 @@ They all together comprise the expression: \textsf{Safety = Out1 AND (In1 $>=$ I
 
 \subsection{CoCoSim Stateflow in JSON}
 
-A Stateflow is represented as the value for \textsf{StateflowContent} in JSON.
-Below shows only the schema for defining Stateflow in JSON that are relevant for parsing and translation.
+\begin{figure}[h]
+\begin{center}
+\includegraphics[scale=0.4]{figures/stateflow_json}
+\includegraphics[scale=0.4]{figures/data}
+\includegraphics[scale=0.35]{figures/state}
+\includegraphics[scale=0.35]{figures/junction}
+\end{center}  
+\caption{The Stateflow definition in JSON}
+\label{stateflow_json}
+\end{figure}
 
-\small{
-\begingroup\makeatletter\def\@currenvir{verbatim}
-\verbatim
-{
-    "$schema": "http://json-schema.org/draft-06/schema#",
-    "title": "Stateflow Schema",
-    "description": "The JSON schema for a CoCoSim Stateflow block",
-    "type": "object",
-    "properties": {
-        "Name": {
-            "type": "string"
-        },    
-        "Path": {
-            "type": "string"
-        },   
-        "Data": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "Id":{
-                        "type": "string"
-                    }, 
-                    "Name":{
-                        "type": "string"
-                    },
-                    "CompiledType":{
-                        "type": "string",
-                        "enum": ["double", "single", "int8", "uint8", 
-                                 "int16", "uint16", "int32", "uint32"]                    
-                    },
-                    "Port":{
-                        "type": "integer"
-                    },                  
-                    "Scope":{
-                        "type": "string",
-                        "enum": ["Input", "Local", "Output"]                    
-                    }                                                                                 
-                }
-            }
-        },         
-        "States": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "Id":{
-                        "type": "string"
-                    }, 
-                    "Path":{
-                        "type": "string"
-                    },
-                    "Name":{
-                        "type": "string"
-                    },                    
-                    "Actions":{
-                        "type": "object",
-                        "properties": {
-                            "Entry": {
-                                "type": "string"
-                            },
-                            "During": {
-                                "type": "string"
-                            },
-                            "Exit": {
-                                "type": "string"
-                            }                                                        
-                        }                  
-                    },
-                    "OuterTransitions":{
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "Destination":{
-                                    "type": "array",
-                                    "items": {
-                                        "type": "object",
-                                        "properties": {
-                                            "Id":{
-                                                "type": "string"
-                                            }, 
-                                            "Destination":{
-                                                "properties": {
-                                                    "Id": {
-                                                        "type": "string"
-                                                    },
-                                                    "Type": {
-                                                        "type": "string",
-                                                        "enum": ["State", "Junction"]
-                                                    }
-                                                }
-                                            },
-                                            "Condition":{
-                                                "type": "string"
-                                            },
-                                            "ConditionAction":{
-                                                "type": "string"
-                                            },                  
-                                            "TransitionAction":{
-                                                "type": "string"                   
-                                            }                                                                                 
-                                        }
-                                    }
-                                }                                                                               
-                            }
-                        }
-                    },                  
-                    "Composition":{
-                        "type": "object",
-                        "properties": {
-                            "Type": {
-                                "type": "string",
-                                "enum": ["EXCLUSIVE_OR", "PARALLEL_AND"]
-                            },
-                            "Substates": {
-                                "type": "array",
-                                "items": {
-                                    "type": "string"
-                                }
-                            },
-                            "States": {
-                                "type": "number"
-                            },
-                            "DefaultTransitions": {
-                                "type": "object",
-                                "properties": {
-                                    "Id": {
-                                        "type": "string"
-                                    },
-                                    "Destination": {
-                                        "type": "object",
-                                        "properties": {
-                                            "Id": {
-                                                "type": "string"
-                                            },
-                                            "Name": {
-                                                "type": "string"
-                                            },                                            
-                                            "Type": {
-                                                "type": "string",
-                                                "enum": ["State", "Junction"]
-                                            }                                            
-                                        }
-                                    },
-                                    "Condition":{
-                                        "type": "string"
-                                    },
-                                    "ConditionAction":{
-                                        "type": "string"
-                                    },                  
-                                    "TransitionAction":{
-                                        "type": "string"                   
-                                    }                                      
-                                }
-                            }
-                        }                  
-                    }                                                                                 
-                }
-            }
-        },         
-        "CompiledPortDataTypes": {
-            "properties":{
-                "Inport": {
-                    "type": "string",
-                    "enum": ["double", "single", "int8", "uint8", 
-                             "int16", "uint16", "int32", "uint32"]                    
-                },
-                "Outport": {
-                    "type": "string",
-                    "enum": ["double", "single", "int8", "uint8", 
-                             "int16", "uint16", "int32", "uint32"]                                       
-                }
-            }            
-        },
-        "CompiledPortDimensions": {
-            "properties":{
-                "Inport": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }                             
-                },
-                "Outport": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }                             
-                }
-            }             
-        }     
-    }
-}
-\end{verbatim}
-}
-
+A Stateflow is defined as the value of \textsf{StateflowContent} in JSON.
+The translation supports \textsf{Data}, \textsf{States}, \textsf{Junctions}, and \textsf{Truthtables}, where each of them
+is an array of items as shown in the example in Figure~\ref{stateflow_json}.
+\textsf{Data} defines input, output, and local variables used in the Stateflow.
+\textsf{States} defines state information and its composition such as state path, substates inside and transitions out of it, whereas \textsf{Junctions} defines transitions associated with condition, condition actions and transition actions.
 
 
 \section{Mapping from Basic CoCoSim Blocks to Lustre Constructs}
@@ -489,8 +495,7 @@ Below shows only the schema for defining Stateflow in JSON that are relevant for
 \begin{center}
   \includegraphics[scale=0.3]{figures/lus0}
   \includegraphics[scale=0.3]{figures/lus1}
-  \includegraphics[scale=0.3]{figures/lus2}  
-    
+  \includegraphics[scale=0.3]{figures/lus2}      
 \end{center}  
   \caption{The translated Lustre programs for the CoCoSim model \textsf{unsafe\_1\_PP}}
   \label{lus}
