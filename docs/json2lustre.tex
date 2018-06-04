@@ -45,119 +45,172 @@ This is to document the translation from the JSON representation of a CoCoSim mo
 
 
 \section{JSON Representation of CoCoSim Models}
-\begin{figure}
-\begin{algorithmic}
-\State \textit{\textsf{``top-level block name": \{ }}
-\State {\ \ \ \ } \textsf{\textbf{``Content"}: \{
-\State {\ \ \ \ \ \ \ \ } \textit{``block name": \{} 
-\State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``Name"}:  \textit{``block name"} 
-\State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``BlockType"}:  \textit{``Inport, Outport, Subsystem ..."} 
-\State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``ContractBlockType"}:  \textit{``ContractBlock, ContractModeBlock, ..."} 
-\State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``CompiledPortDataTypes"}: \textit{``int, boolean, double ..."} 
-\State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``Origin\_path"}: \textit{``full path to the block"} 
-\State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``Port"}: \textit{``a number"} 
-\State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``Handle"}: \textit{``a number"} 		   
-\State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``PortConnectivity"}: \{ 
-\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``SrcBlock"}:[\textit{block handle, block handle, ...}], 
-\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``DstBlock"}:[\textit{block handle, block handle, ...}]		
-\State {\ \ \ \ \ \ \ \ \ \ \ \ }\}	
-\State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``Content"}: \{ 
-\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }  \textit{``block name": \{...\}} 
-\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }  \textit{``block name": \{...\}} 
-\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }  \textit{...} 
-\State {\ \ \ \ \ \ \ \ \ \ \ \ } \}
-\State {\ \ \ \ \ \ \ \ } \}
-\State {\ \ \ \ \ \ \ \ } \textit{``block name": \{} 
-\State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``Name"}:  \textit{``block name"} 
-\State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``BlockType"}:  \textit{``Inport, Outport, Subsystem ..."} 
-\State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``CompiledPortDataTypes"}: \textit{``int, boolean, double ..."} 
-\State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``Origin\_path"}: \textit{``full path to the block"} 
-\State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``Port"}: \textit{``a number"} 
-\State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``Handle"}: \textit{``a number"} 		   
-\State {\ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``PortConnectivity"}: \{ 
-\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``SrcBlock"}:[\textit{block handle, block handle, ...}], 
-\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } \textbf{``DstBlock"}:[\textit{block handle, block handle, ...}]		
-\State {\ \ \ \ \ \ \ \ \ \ \ \ }\}	
-\State {\ \ \ \ \ \ \ \ } \}
-\State {\ \ \ \ \ \ \ \ } $\ldots$
-\State {\ \ \ \ }\}
-\State \}}
-\end{algorithmic}
-\caption{The core syntax of JSON representation}
-\label{jsonsyntax}
-\end{figure}
 
 
-CoCoSim supports a subset of the blocks provided by the Simulink toolset. Figure~\ref{basicmapping}~\ref{mapping2}~\ref{mapping3}~\ref{mapping4} summarize the supported blocks and the limitations on their semantics if it applies. 
-
-\begin{figure}
-\begin{algorithmic}
-\State \textbf{A JSON model} := Top-level model name, meta
-\State \textbf{meta} := date, file\_path, sampleTime
-\State \textbf{date} := \textit{a date}
-\State \textbf{file\_path} := \textit{full path to the file}
-\State \textbf{sampleTime} := \textit{A decimal number}
-\State \textbf{Top-level model name} := Content\{0, 1\}
-\State \textbf{Content} := Block name*
-\State \textbf{StateflowContent} := Name, Path, Data, States, Junctions, TruthTables
-\State \textbf{Block name} := BlockType, CompiledPortDataTypes, Handle, Name, Origin\_path,  
-\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }Content\{0, 1\}, PortConnectivity\{0, 1\}, ContractBlockType\{0, 1\}, 
-\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }X0\{0, 1\}, Criteria\{0, 1\}, Port\{0, 1\}, Operator\{0, 1\}, Inputs\{0, 1\}
-\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }Value\{0, 1\}, AnnotationType\{0, 1\}
-\State \textbf{X0} := \textit{Constant}
-\State \textbf{Path} := \textit{String}
-\State \textbf{Name} := \textit{String}
-\State \textbf{Value} := \textit{Constant}
-\State \textbf{Origin\_path} := \textit{String}
-\State \textbf{Port} := \textit{Unsigned integer}
-\State \textbf{Handle} := \textit{Decimal number}
-\State \textbf{Integer} := \{$-$\}?[0 - 9]+
-\State \textbf{Positive integer} := [1 - 9]+
-\State \textbf{Unsigned integer} := [0 - 9]+
-\State \textbf{Boolean constant} := true $\mid$ false 
-\State \textbf{Decimal number} := [0 - 9]* \{.\} [0 - 9]*
-\State \textbf{Constant} := \textit{Decimal number $\mid$ Integer $\mid$ Boolean constant}
-\State \textbf{Inputs} := \{$+^*-^*$\}$^*$ $\mid$ \{$\times^* /^*$\}$^*$ $\mid$ \textit{Unsigned integer}
-\State \textbf{Criteria} := u2 ($>=, >$) Threshold $\mid$ u2 $\sim =$ 0
-\State \textbf{AnnotationType} := ensures $\mid$ requires $\mid$ assert $\mid$ observer
-\State \textbf{ContractBlockType} := ContractBlock $\mid$ ContractModeBlock $\mid$ ContractRequireBlock 
-\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } $\mid$ ContractEnsureBlock  $\mid$ ContractAssumeBlock $\mid$ ContractAssumeBlock 
-\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } $\mid$ ContractValidatorBlock
-\State \textbf{BlockType} := Inport $\mid$ Outport $\mid$ Subsystem $\mid$ Constant $\mid$ Memory $\mid$ UnitDelay $\mid$ Switch $\mid$ Product 
-\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } $\mid$ RelationalOperator $\mid$ Logic $\mid$ MinMax $\mid$ Sum $\mid$ Product $\mid$ UnaryMinus 
-\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } $\mid$ Data Type Conversion $\mid$ Rounding $\mid$ Vector Concatenation $\mid$ Mux $\mid$ Demux
-\State \textbf{Operator} := NOT $\mid$ AND $\mid$ OR $\mid$ XOR $\mid$ NAND $\mid$ NOR $\mid$ NXOR 
-\State {\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ } $\mid$ == $\mid$ $>=$ $\mid$ $>$ $\mid$ $<=$ $\mid$ $<$ $\mid$ $\sim$= $\mid -$ $\mid$ Floor $\mid$ Ceil $\mid$ Round $\mid$ Fix
-\State \textbf{CompiledPortDimensions} := \textit{Inport, Outport}
-\State \textbf{CompiledPortDataTypes} := \textsf{Inport, Outport}
-\State \textbf{Inport} := \{\textit{Positive integer}\}+  \ \ \ \ \ \ \ \ \ \ \ \ \  \textbf{Outport} := \{\textit{Positive integer}\}+ 
-\State \textbf{\textsf{Inport}} := \textit{Data type}*  \ \ \ \ \ \ \ \ \ \ \ \  \textbf{\textsf{Outport}} := \textit{Data type}*
-\State \textbf{Data type} := double $\mid$ single $\mid$ int8 $\mid$ uint8 $\mid$ int16 $\mid$ uint16 $\mid$ int32 $\mid$ uint32 $\mid$ string
-\State \textbf{Port connectivity} := \{DstBlock\}+, \{SrcBlock\}+
-\State \textbf{DstBlock} := \textit{Handle}*  \ \ \ \ \ \ \ \ \ \ \ \  \textbf{SrcBlock} := \textit{Handle}*
-
-\end{algorithmic}
-\caption{The grammar for the JSON representation of CoCoSim model that the translation supports}
-\label{jsongrammar}
-\end{figure}
-
+CoCoSim supports a subset of the blocks provided by the Simulink toolset. 
+Figure~\ref{ccsschema} shows the schema for the intermediate representation of a CoCoSim model in JSON.
 
 
 \subsection{CoCoSim Blocks in JSON}
 
+\begin{figure}[h]
+\begingroup\makeatletter\def\@currenvir{verbatim}
+\verbatim
+{
+    "$schema": "http://json-schema.org/draft-06/schema#",
+    "title": "IR Schema",
+    "description": "The JSON representation of a CoCoSim model",
+    "type": "object",
+    "properties": {
+        "meta": {
+            "description": "Meta information about the JSON file",
+            "properties": {
+                "file_path": {
+                    "type": "string"
+                },
+                "sampleTime": {
+                    "type": "integer"
+                },
+                "date": {
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "additionalProperties": { 
+        "type": "object",
+        "properties": {"Content": {"type": "object"}},
+        "minProperties": 0,
+        "maxProperties": 1        
+    },
+    "required": ["meta"]
+}
+\end{verbatim}
+\caption{The Schema for a JSON representation of a CoCoSim model}
+\label{ccsschema}
+\end{figure}
+
 
 A CoCoSim model is a visualization of a set of block declarations and their connectivities.
 The CoCoSim intermediate compiler takes as input a Simulink model and translate it into a JSON representation storing blocks and connectivities information. 
-Figure~\ref{jsonsyntax} shows the core syntax of the JSON representation of CoCoSim models.
 The model information is stored as name -- value pairs in a JSON file. 
-The name attribute specifies the name of the block, and the value stores the actual data about the block such as block handle, block connectivities and so on. 
+The name field specifies the name of the block, and the value stores the actual data about the block such as block handle, block connectivities and so on. 
 Each block is uniquely identified by its block handle.
 The \textsf{``BlockType"} field specifies the type of a block. 
 %For example, an inport block of a CoCoSim model has a ``BlockType" ``Inport".
 The blocks connectivity information is stored in the \textsf{``PortConnectivity"} field, where \textsf{``SrcBlock"} stores the handles of incoming blocks, whereas \textsf{``DstBlock"} stores the handles of destination blocks. 
 The \textsf{``Origin\_path"} is the full path to the block in the CoCoSim model.
 The value of \textsf{``Port"} of inports or outports is the position index in the inputs or outputs. 
-The grammar for the core language used for JSON representation is show in Figure~\ref{jsongrammar}.
+Below shows the JSON schema for a CoCoSim block.
+
+\small{
+\begingroup\makeatletter\def\@currenvir{verbatim}
+\verbatim
+{
+    "$schema": "http://json-schema.org/draft-06/schema#",
+    "title": "Block Schema",
+    "description": "The JSON schema for a CoCoSim block",
+    "type": "object",
+    "properties": {
+        "Handle": {
+            "type": "number"
+        },   
+        "Name": {
+            "type": "string"
+        },    
+        "Path": {
+            "type": "string"
+        },   
+        "Port": {
+            "type": "integer"
+        },         
+        "Origin_path": {
+            "type": "string"
+        },  
+        "PortConnectivity": {
+            "properties":{
+                "SrcBlock": {
+                    "type": "array",
+                    "items": {"type":"number"}
+                },
+                "DstBlock": {
+                    "type": "array",
+                    "items": {"type":"number"}
+                }
+            }
+        },                                          
+        "Criteria": {
+            "type": "string",
+            "enum": ["u2 >= Threshold", "u2 > Threshold", "u2 ~= 0"]
+        },
+        "Value": {
+            "type": "string"
+        },                
+        "Operator": {
+            "type": "string",
+            "enum": ["NOT", "AND", "OR", "XOR", 
+                          "NAND", "NOR", "NXOR",
+                          "==", ">=", ">", "<=", "<", "~=", 
+                          "-", "Floor", "Ceil", "Round", "Fix"]
+        },
+        "ContractBlockType": {
+            "type": "string",
+            "enum": ["ContractGuaranteeBlock", "ContractModeBlock", 
+             	         "ContractAssumeBlock", 
+                          "ContractRequireBlock", "ContractEnsureBlock"]
+        },                
+        "BlockType": {
+            "type": "string",
+            "enum": ["Inport", "Outport", "Subsystem", "Constant", "Memory", 
+                    "UnitDelay", "Switch", "Product", "RelationalOperator", 
+                          "Logic", "MinMax", "Sum", "UnaryMinus", "DataTypeConversion",
+                          "Rounding", "VectorConcatenation", "Mux", "Demux"]
+        },
+        "CompiledPortDataTypes": {
+            "properties":{
+                "Inport": {
+                    "type": "string",
+                    "enum": ["double", "single", "int8", "uint8", "int16", 
+                                  "uint16", "int32", "uint32"]                    
+                },
+                "Outport": {
+                    "type": "string",
+                    "enum": ["double", "single", "int8", "uint8", "int16", 
+                                  "uint16", "int32", "uint32"]                                       
+                }
+            }            
+        },
+        "CompiledPortDimensions": {
+            "properties":{
+                "Inport": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }                             
+                },
+                "Outport": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }                             
+                }
+            }             
+        },        
+        "Content": { 
+            "type": "object",
+            "minProperties": 0,
+            "maxProperties": 1        
+        },
+        "StateflowContent": { 
+            "type": "object",
+            "minProperties": 0,
+            "maxProperties": 1        
+        }             
+    }
+}
+\end{verbatim}
+}
+
 
 Figure~\ref{cocosimmodel} shows an overview of a CoCoSim model ``unsafe\_1\_PP" and Figure~\ref{jsoninport} shows a snippet of its JSON representation. 
 \textsf{``In1"} and \textsf{``In2"} are the names of the inport blocks; \textsf{``Inport"} is the type of block \textsf{``In1"}; and the handle is \textsf{``77.0003662109375"}, which is the unique identifier for \textsf{``In1"}. 
@@ -229,73 +282,206 @@ They all together comprise the expression: \textsf{Safety = Out1 AND (In1 $>=$ I
 
 \subsection{CoCoSim Stateflow in JSON}
 
-Stateflow can also be used in CoCoSim. 
-They are translated as the value for \textsf{StateflowContent} in JSON.
-Figure~\ref{sfjsongrammar} shows only relevant grammar used for defining Stateflow in JSON.
+A Stateflow is represented as the value for \textsf{StateflowContent} in JSON.
+Below shows only the schema for defining Stateflow in JSON that are relevant for parsing and translation.
 
-
-\begin{figure}
-\begin{algorithmic}
-\State \textbf{StateflowContent} := Name, Path, Data, States, Junctions, TruthTables
-\State \textbf{Id} := \textit{String}
-\State \textbf{Path} := \textit{String}
-\State \textbf{Name} := \textit{String}
-\State \textbf{Data} := \{Id, Name, Datatype, CompiledType, Port, InitialValue, Scope, ArraySize\}*
-\State \textbf{States} := \{Path, Id, Name, Actions, InnerTransitions, OuterTransitions, Composition\}*
-\State \textbf{Junctions} := \{Path, Name, Id, Type, OuterTransitions\}*
-\State \textbf{DefaultTransitions} := \{Destination\}*
-\State \textbf{OuterTransitions} := \{Destination\}*
-\State \textbf{Substates} := \{\textit{String}\}*
-\State \textbf{States} := \{Unsigned integer\}*
-\State \textbf{Destination} := \{Id, DestinationStateJunction, Condition, ConditionAction, TransitionAction\}*
-\State \textbf{Composition} := \{Type, DefaultTransitions, Substates, States\}*
-\State \textbf{Condition} := \{Matlab Expressions in String format\}*
-\State \textbf{ConditionAction} := \{Matlab Expressions in String format\}*
-\State \textbf{TransitionAction} := \{Matlab Expressions in String format\}*
-\State \textbf{DestinationStateJunction} := \{Id, Type, Name\}*
-\State \textbf{Type} := \{EXCLUSIVE\_OR $\mid$ PARALLEL\_AND $\mid$ Junction $\mid$ State\}
-
-
-\end{algorithmic}
-\caption{The grammar for the JSON representation of Stateflow}
-\label{sfjsongrammar}
-\end{figure}
-
-\begin{figure}[h]
+\small{
 \begingroup\makeatletter\def\@currenvir{verbatim}
 \verbatim
 {
     "$schema": "http://json-schema.org/draft-06/schema#",
-    "title": "IR Schema",
-    "description": "The JSON representation of a CoCoSim model",
+    "title": "Stateflow Schema",
+    "description": "The JSON schema for a CoCoSim Stateflow block",
     "type": "object",
     "properties": {
-        "meta": {
-            "description": "Meta information about the JSON file",
-            "properties": {
-                "file_path": {
-                    "type": "string"
-                },
-                "sampleTime": {
-                    "type": "integer"
-                },
-                "date": {
-                    "type": "string"
+        "Name": {
+            "type": "string"
+        },    
+        "Path": {
+            "type": "string"
+        },   
+        "Data": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "Id":{
+                        "type": "string"
+                    }, 
+                    "Name":{
+                        "type": "string"
+                    },
+                    "CompiledType":{
+                        "type": "string",
+                        "enum": ["double", "single", "int8", "uint8", 
+                                 "int16", "uint16", "int32", "uint32"]                    
+                    },
+                    "Port":{
+                        "type": "integer"
+                    },                  
+                    "Scope":{
+                        "type": "string",
+                        "enum": ["Input", "Local", "Output"]                    
+                    }                                                                                 
                 }
             }
-        }
-    },
-    "additionalProperties": { 
-        "type": "object",
-        "properties": {"Content": {"type": "object"}},
-        "minProperties": 0,
-        "maxProperties": 1        
-    },
-    "required": ["meta"]
+        },         
+        "States": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "Id":{
+                        "type": "string"
+                    }, 
+                    "Path":{
+                        "type": "string"
+                    },
+                    "Name":{
+                        "type": "string"
+                    },                    
+                    "Actions":{
+                        "type": "object",
+                        "properties": {
+                            "Entry": {
+                                "type": "string"
+                            },
+                            "During": {
+                                "type": "string"
+                            },
+                            "Exit": {
+                                "type": "string"
+                            }                                                        
+                        }                  
+                    },
+                    "OuterTransitions":{
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "Destination":{
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "Id":{
+                                                "type": "string"
+                                            }, 
+                                            "Destination":{
+                                                "properties": {
+                                                    "Id": {
+                                                        "type": "string"
+                                                    },
+                                                    "Type": {
+                                                        "type": "string",
+                                                        "enum": ["State", "Junction"]
+                                                    }
+                                                }
+                                            },
+                                            "Condition":{
+                                                "type": "string"
+                                            },
+                                            "ConditionAction":{
+                                                "type": "string"
+                                            },                  
+                                            "TransitionAction":{
+                                                "type": "string"                   
+                                            }                                                                                 
+                                        }
+                                    }
+                                }                                                                               
+                            }
+                        }
+                    },                  
+                    "Composition":{
+                        "type": "object",
+                        "properties": {
+                            "Type": {
+                                "type": "string",
+                                "enum": ["EXCLUSIVE_OR", "PARALLEL_AND"]
+                            },
+                            "Substates": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            },
+                            "States": {
+                                "type": "number"
+                            },
+                            "DefaultTransitions": {
+                                "type": "object",
+                                "properties": {
+                                    "Id": {
+                                        "type": "string"
+                                    },
+                                    "Destination": {
+                                        "type": "object",
+                                        "properties": {
+                                            "Id": {
+                                                "type": "string"
+                                            },
+                                            "Name": {
+                                                "type": "string"
+                                            },                                            
+                                            "Type": {
+                                                "type": "string",
+                                                "enum": ["State", "Junction"]
+                                            }                                            
+                                        }
+                                    },
+                                    "Condition":{
+                                        "type": "string"
+                                    },
+                                    "ConditionAction":{
+                                        "type": "string"
+                                    },                  
+                                    "TransitionAction":{
+                                        "type": "string"                   
+                                    }                                      
+                                }
+                            }
+                        }                  
+                    }                                                                                 
+                }
+            }
+        },         
+        "CompiledPortDataTypes": {
+            "properties":{
+                "Inport": {
+                    "type": "string",
+                    "enum": ["double", "single", "int8", "uint8", 
+                             "int16", "uint16", "int32", "uint32"]                    
+                },
+                "Outport": {
+                    "type": "string",
+                    "enum": ["double", "single", "int8", "uint8", 
+                             "int16", "uint16", "int32", "uint32"]                                       
+                }
+            }            
+        },
+        "CompiledPortDimensions": {
+            "properties":{
+                "Inport": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }                             
+                },
+                "Outport": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }                             
+                }
+            }             
+        }     
+    }
 }
 \end{verbatim}
-\caption{The Schema for a JSON representation of a CoCoSim model}
-\end{figure}
+}
+
+
 
 \section{Mapping from Basic CoCoSim Blocks to Lustre Constructs}
 
@@ -855,6 +1041,8 @@ otherwise, it will call \textsf{translateForLusNode}.
 \end{figure}
 
 \section{Semantics of Complex CoCoSim Blocks}
+
+Figure~\ref{mapping2}~\ref{mapping3}~\ref{mapping4} summarize the supported blocks and the limitations on their semantics if it applies. 
 
 \begin{figure}[t]
 \centering
