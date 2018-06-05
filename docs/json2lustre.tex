@@ -432,7 +432,7 @@ They all together comprise the expression: \textsf{Safety = Out1 AND (In1 $>=$ I
 
 \begin{figure}[h]
 \begin{center}
-  \includegraphics[scale=0.3]{figures/In1}
+  \includegraphics[scale=0.4]{figures/In1}
 \end{center}  
   \caption{A JSON Representation of the CoCoSim Model}
   \label{jsoninport}
@@ -875,6 +875,8 @@ If C2 and C3 are both invalid and C1 is valid, the system execute Ac1 and set th
 If C1 is invalid and C4 is valid, the system execute S1's exit actions, Ac4, At4, and entD().  
 Otherwise, it will stay in S1 and execute S1's During actions. 
 Figure~\ref{automaton} shows the Lustre automaton for the stateflow in Figure~\ref{sf1}.
+
+
 \subsection{Mapping Information}
 
 The translation yields a JSON file for mapping purpose between the input Simulink model and the output Lustre program. 
