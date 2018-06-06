@@ -14,16 +14,6 @@ Dependency: [Maven](https://maven.apache.org/install.html)
 
 # Usage
 
-To run the tool, you need to issue the command: 
+You can run the tool by issuing the following command: 
 
 `java -jar CocoSim_IR_Compiler-0.1-jar-with-dependencies.jar -i \path\to\your\simulink_model`
-
-
-Below shows the usage information about the tool.
-
-`usage: CocoSim_IR_Compiler-0.1-jar-with-dependencies.jar [-h] [-i <arg>] [-m] [-o <arg>] [-v]`
- `-i, --json-file <arg>     Input json file path`   
- `-h, --help                Print this help information`   
- `-m                        Print multiple properties in one node!`
- `-o, --lustre-file <arg>   Output lustre file path`
- `-v, --version             Print tool version information`
