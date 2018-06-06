@@ -3,7 +3,7 @@ Ir2Lustre is a translator from the intermediate representation (JSON) of CoCoSim
 
 # Installation
 
-###Install from source
+### Install from source
 Dependency: [Maven](https://maven.apache.org/install.html)
 
 1. Download and install Maven
