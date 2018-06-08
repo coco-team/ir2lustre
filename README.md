@@ -16,4 +16,4 @@ Dependency: [Maven](https://maven.apache.org/install.html)
 
 You can run the tool by issuing the following command: 
 
-`java -jar CocoSim_IR_Compiler-0.1-jar-with-dependencies.jar -i \path\to\your\simulink_model`
+`java -jar CocoSim_IR_Compiler-0.1-jar-with-dependencies.jar -i /path/to/your/simulink_model`
