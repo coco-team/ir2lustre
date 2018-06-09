@@ -336,9 +336,9 @@ public class Sf2LTranslator {
             LustreExpr      strongExpr  = new BinaryExpr(curActStateVarId, BinaryExpr.Op.EQ, new IntExpr(new BigInteger(String.valueOf(this.stateIdToActId.get(stateId)))));
             JsonNode        actionNode  = stateNode.get(ACTIONS);
 
-            String entryStr = getActionStrEntryExpr(actionNode);
-            String durStr   = getActionStrDuringExpr(actionNode);
-            String exitStr  = getActionStrExitExpr(actionNode);
+            String entryStr = getEntryActionInStr(actionNode);
+            String durStr   = getDuringActionInStr(actionNode);
+            String exitStr  = getExitActionInStr(actionNode);
 
             // Add entry expressions
             if (this.stateIdToActId.get(stateId) == this.initStateActiveId) {
@@ -382,13 +382,13 @@ public class Sf2LTranslator {
                 JsonNode    stateOutTransitNode = stateOuterTransits.get(i);
                 String      transitionType      = getStateTransitionType(stateOutTransitNode);
                 String      junctOrStateId      = getStateTransitDestId(stateOutTransitNode);
-                String      conditionStr        = getCondForTransition(stateOutTransitNode);
-                String      condActStrs         = getCondActForTransition(stateOutTransitNode);
-                String      transitActStrs      = getTransitActForTransition(stateOutTransitNode);
+                String      conditionStr        = getCondForStateTransition(stateOutTransitNode);
+                String      condActStrs         = getCondActForStateTransition(stateOutTransitNode);
+                String      transitActStrs      = getTransitActForStateTransition(stateOutTransitNode);
 
                 // Parse the condition expression
                 if (conditionStr != null) {
-                    condExprs.add((LustreExpr) J2LUtils.parseAndTranslateStrExpr(conditionStr));
+                    parseAndAddToExprList(conditionStr, condExprs);                    
                 }
                 // Parse the condition action expression             
                 if (condActStrs != null) {
@@ -434,7 +434,7 @@ public class Sf2LTranslator {
 
                             // Get the entry expression of the destination state
                             if (destNode.has(ACTIONS) && destNode.get(ACTIONS).has(ENTRY)) {
-                                String entryExprStr = getActionStrEntryExpr(destNode.get(ACTIONS));
+                                String entryExprStr = getEntryActionInStr(destNode.get(ACTIONS));
 
                                 if (entryExprStr != null) {
                                     parseAndAddToEqList(entryExprStr, transitEqs);
@@ -561,9 +561,9 @@ public class Sf2LTranslator {
 
                 if (transNode.has(DEST)) {
                     String destName         = getJunctionTransitDestName(transNode);
-                    String conditionStr     = getCondForTransition(transNode);
-                    String condActStrs      = getCondActForTransition(transNode);
-                    String transitActStrs   = getTransitActForTransition(transNode);
+                    String conditionStr     = getCondForStateTransition(transNode);
+                    String condActStrs      = getCondActForStateTransition(transNode);
+                    String transitActStrs   = getTransitActForStateTransition(transNode);
 
                     List<LustreExpr>    newCondExprs        = new ArrayList<>();
                     List<LustreEq>      newTransitActEqs    = new ArrayList<>();
@@ -645,9 +645,9 @@ public class Sf2LTranslator {
                         JsonNode outerTransitNode = outerTransitions.get(i);
 
                         String destJunctName    = getJunctionTransitDestName(outerTransitNode);
-                        String condStr          = getCondForTransition(outerTransitNode);
-                        String condActStrs      = getCondActForTransition(outerTransitNode);
-                        String transitActStrs   = getTransitActForTransition(outerTransitNode);
+                        String condStr          = getCondForStateTransition(outerTransitNode);
+                        String condActStrs      = getCondActForStateTransition(outerTransitNode);
+                        String transitActStrs   = getTransitActForStateTransition(outerTransitNode);
 
                         List<LustreEq>      newTransitActEqs    = new ArrayList<>();
                         List<LustreEq>      newCondActEqs       = new ArrayList<>();
@@ -717,7 +717,7 @@ public class Sf2LTranslator {
                     }
                     // Add the entry expression of the destination state
                     if (destStateNode.has(ACTIONS) && destStateNode.get(ACTIONS).has(ENTRY)) {
-                        String entryExprStr = getActionStrEntryExpr(destStateNode.get(ACTIONS));
+                        String entryExprStr = getEntryActionInStr(destStateNode.get(ACTIONS));
 
                         if (entryExprStr != null) {
                             parseAndAddToEqList(entryExprStr, allActEqs);
@@ -1213,8 +1213,8 @@ public class Sf2LTranslator {
         String              destJunctionId  = defaultTransitNode.get(DEST).get(ID).asText();
         List<LustreExpr>    condExprs       = new ArrayList<>();
         List<LustreEq>      condActExprs    = new ArrayList<>();
-        String              strCond         = getJunctionDefaultTransitStrCondExpr(defaultTransitNode);
-        List<String>        strCondActs     = getJunctionDefaultTransitStrCondActExpr(defaultTransitNode);
+        String              strCond         = getJunctionDefaultTransitCondExprInStr(defaultTransitNode);
+        List<String>        strCondActs     = getJunctionDefaultTransitCondActExprInStr(defaultTransitNode);
 
         // Get condition in string format
         if (strCond != null) {
@@ -1281,8 +1281,8 @@ public class Sf2LTranslator {
 
             // Add the previous junction's conditions, condition actions, and transition actions
             // newCondExprs.addAll(condExprs);
-            String strCond = getJunctionOutTransitStrCondExpr(outTransitNode);
-            String strCondAct = getJunctionOutTransitStrCondActExpr(outTransitNode);
+            String strCond = getJunctionOutTransitCondExprInStr(outTransitNode);
+            String strCondAct = getJunctionOutTransitCondActExprInStr(outTransitNode);
 
             if (strCond != null) {
                 newCondExprs.add((LustreExpr) J2LUtils.parseAndTranslateStrExpr(strCond));
@@ -1366,49 +1366,42 @@ public class Sf2LTranslator {
         return type;
     }
 
-    protected String getCondForTransition(JsonNode transitNode) {
+    protected String getCondForStateTransition(JsonNode transitNode) {
         String cond = null;
-        if (transitNode.has(DEST)) {
-            if (transitNode.get(DEST).has(CONDITION)) {
-                String strCond = transitNode.get(DEST).get(CONDITION).asText();
-                if (strCond != null && !strCond.equals("")) {
-                    cond = strCond;
-                }
+        if (transitNode.has(CONDITION)) {
+            String strCond = transitNode.get(CONDITION).asText();
+            if (strCond != null && !strCond.equals("")) {
+                cond = strCond;
             }
         }
         return cond;
     }
 
-    protected String getCondActForTransition(JsonNode transitNode) {
+    protected String getCondActForStateTransition(JsonNode transitNode) {
         String condActs = null;
-        if (transitNode.has(DEST)) {
-            if (transitNode.get(DEST).has(CONDITIONACT)) {
-                String strCondAct = transitNode.get(DEST).get(CONDITIONACT).asText();
+        if (transitNode.has(CONDITIONACT)) {
+            String strCondAct = transitNode.get(CONDITIONACT).asText();
 
-                if (strCondAct != null && !strCondAct.equals("")) {
-                    condActs = strCondAct;
-                }
-            }
-
+            if (strCondAct != null && !strCondAct.equals("")) {
+                condActs = strCondAct;
+            }            
         }
         return condActs;
     }
 
-    protected String getTransitActForTransition(JsonNode transitNode) {
+    protected String getTransitActForStateTransition(JsonNode transitNode) {
         String transitActs = null;
-        if (transitNode.has(DEST)) {
-            if (transitNode.get(DEST).has(TRANSITACT)) {
-                String strTransitActs = transitNode.get(DEST).get(TRANSITACT).asText();
+        if (transitNode.has(TRANSITACT)) {
+            String strTransitActs = transitNode.get(TRANSITACT).asText();
 
-                if (strTransitActs != null && !strTransitActs.equals("")) {
-                    transitActs = strTransitActs;
-                }
-            }
+            if (strTransitActs != null && !strTransitActs.equals("")) {
+                transitActs = strTransitActs;
+            }            
         }
         return transitActs;
     }
 
-    protected String getActionStrExitExpr(JsonNode node) {
+    protected String getExitActionInStr(JsonNode node) {
         String strExpr = null;
         if (node.has(EXIT)) {
             String strExit = node.get(EXIT).asText();
@@ -1419,7 +1412,7 @@ public class Sf2LTranslator {
         return strExpr;
     }
 
-    protected String getActionStrEntryExpr(JsonNode node) {
+    protected String getEntryActionInStr(JsonNode node) {
         String strExpr = null;
         if (node.has(ENTRY)) {
             String strEntry = node.get(ENTRY).asText();
@@ -1430,7 +1423,7 @@ public class Sf2LTranslator {
         return strExpr;
     }
 
-    protected String getActionStrDuringExpr(JsonNode node) {
+    protected String getDuringActionInStr(JsonNode node) {
         String strExpr = null;
         if (node.has(DURING)) {
             String strDuring = node.get(DURING).asText();
@@ -1441,7 +1434,7 @@ public class Sf2LTranslator {
         return strExpr;
     }
 
-    protected String getStateStrCondExpr(JsonNode node) {
+    protected String getStateCondExprInStr(JsonNode node) {
         String strExpr = null;
         if (node.has(CONDITION)) {
             String strCond = node.get(CONDITION).asText();
@@ -1452,7 +1445,7 @@ public class Sf2LTranslator {
         return strExpr;
     }
 
-    protected String getStateStrCondActExpr(JsonNode node) {
+    protected String getStateCondActExprInStr(JsonNode node) {
         String strExpr = null;
         if (node.has(CONDITIONACT)) {
             String strCondAct = node.get(CONDITIONACT).asText();
@@ -1463,7 +1456,7 @@ public class Sf2LTranslator {
         return strExpr;
     }
 
-    protected String getStateStrTranActExpr(JsonNode node) {
+    protected String getStateTranActExprInStr(JsonNode node) {
         String strExpr = null;
         if (node.has(TRANSITACT)) {
             String strTransAct = node.get(TRANSITACT).asText();
@@ -1474,7 +1467,7 @@ public class Sf2LTranslator {
         return strExpr;
     }
 
-    protected String getJunctionDefaultTransitStrCondExpr(JsonNode node) {
+    protected String getJunctionDefaultTransitCondExprInStr(JsonNode node) {
         String strExpr = null;
         if (node.has(CONDITION)) {
             String strCond = node.get(CONDITION).asText();
@@ -1485,7 +1478,7 @@ public class Sf2LTranslator {
         return strExpr;
     }
 
-    protected List<String> getJunctionDefaultTransitStrCondActExpr(JsonNode node) {
+    protected List<String> getJunctionDefaultTransitCondActExprInStr(JsonNode node) {
         List<String> strExprs = new ArrayList<>();
 
         if (node.has(CONDITIONACT)) {
@@ -1498,7 +1491,7 @@ public class Sf2LTranslator {
                     while (actIt.hasNext()) {
                         strExprs.add(actIt.next().asText());
                     }
-                } else if (!strCondActNode.equals("")) {
+                } else if (!strCondActNode.asText().equals("")) {
                     strExprs.add(strCondActNode.asText());
                 }
             }
@@ -1506,7 +1499,7 @@ public class Sf2LTranslator {
         return strExprs;
     }
 
-    protected String getJunctionDefaultTransitStrTranActExpr(JsonNode node) {
+    protected String getJunctionDefaultTransitTranActExprInStr(JsonNode node) {
         String strExpr = null;
         if (node.has(TRANSITACT)) {
             String strTransAct = node.get(TRANSITACT).asText();
@@ -1517,7 +1510,7 @@ public class Sf2LTranslator {
         return strExpr;
     }
 
-    protected String getJunctionOutTransitStrCondExpr(JsonNode node) {
+    protected String getJunctionOutTransitCondExprInStr(JsonNode node) {
         String strExpr = null;
         if (node.has(DEST) && node.get(DEST).has(CONDITION)) {
             String strCond = node.get(DEST).get(CONDITION).asText();
@@ -1528,7 +1521,7 @@ public class Sf2LTranslator {
         return strExpr;
     }
 
-    protected String getJunctionOutTransitStrCondActExpr(JsonNode node) {
+    protected String getJunctionOutTransitCondActExprInStr(JsonNode node) {
         String strExpr = null;
         if (node.has(DEST) && node.get(DEST).has(CONDITIONACT)) {
             String strCondAct = node.get(DEST).get(CONDITIONACT).asText();
@@ -1539,7 +1532,7 @@ public class Sf2LTranslator {
         return strExpr;
     }
 
-    protected String getJunctionOutTransitStrTranActExpr(JsonNode node) {
+    protected String getJunctionOutTransitTranActExprInStr(JsonNode node) {
         String strExpr = null;
         if (node.has(DEST) && node.get(DEST).has(TRANSITACT)) {
             String strTransAct = node.get(DEST).get(TRANSITACT).asText();
