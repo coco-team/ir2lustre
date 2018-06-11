@@ -13,8 +13,8 @@ import java.util.List;
  * @author Paul Meng
  */
 public class LustreEq extends LustreAst {
-    List<LustreExpr> lhs;
-    LustreExpr      rhs;
+    List<LustreExpr>    lhs;
+    LustreExpr          rhs;
     
     
     public LustreEq(List<LustreExpr> lhs, LustreExpr rhs) {

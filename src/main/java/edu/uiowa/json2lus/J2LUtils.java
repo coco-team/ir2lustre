@@ -8,13 +8,16 @@ package edu.uiowa.json2lus;
 import com.fasterxml.jackson.databind.JsonNode;
 import edu.uiowa.json2lus.lustreAst.BinaryExpr;
 import edu.uiowa.json2lus.lustreAst.BooleanExpr;
+import edu.uiowa.json2lus.lustreAst.IntExpr;
 import edu.uiowa.json2lus.lustreAst.LustreAst;
 import edu.uiowa.json2lus.lustreAst.LustreExpr;
 import edu.uiowa.json2lus.lustreAst.LustreType;
 import edu.uiowa.json2lus.lustreAst.PrimitiveType;
+import edu.uiowa.json2lus.lustreAst.RealExpr;
 import edu.uiowa.json2lus.stateflowparser.StateflowVisitor;
 import edu.uiowa.json2lus.stateflowparser.antlr.StateflowLexer;
 import edu.uiowa.json2lus.stateflowparser.antlr.StateflowParser;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -136,6 +139,21 @@ public class J2LUtils {
         }
         return newVarName;
     }
+    
+    public static LustreExpr getInitValueForType(LustreType type) {
+        LustreExpr initValue = null;
+        
+        if(type == PrimitiveType.INT) {
+            initValue = new IntExpr(0);
+        } else if(type == PrimitiveType.REAL) {
+            initValue = new RealExpr(new BigDecimal("0.0"));
+        } else if(type == PrimitiveType.BOOL) {
+            initValue = new BooleanExpr(true);
+        } else {
+            LOGGER.log(Level.SEVERE, "Unsupported output type: {0}", type.toString());
+        }
+        return initValue;
+    }    
     
     public static String getFreshVarAtInst(String varName, int instance) {
         String newVarName = varName;
