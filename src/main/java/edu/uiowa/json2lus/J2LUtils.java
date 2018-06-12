@@ -140,7 +140,7 @@ public class J2LUtils {
         return newVarName;
     }
     
-    public static LustreExpr getInitValueForType(LustreType type) {
+    public static LustreExpr getDefaultInitValueForType(LustreType type) {
         LustreExpr initValue = null;
         
         if(type == PrimitiveType.INT) {

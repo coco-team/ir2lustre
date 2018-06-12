@@ -308,7 +308,7 @@ public class Sf2LTranslator {
             String      preOutVarName   = preOutVarToType.getKey();
             LustreExpr  preOutVarExpr   = new VarIdExpr(preOutVarName);
             LustreType  type            = preOutVarToType.getValue();
-            LustreExpr  initValue       = J2LUtils.getInitValueForType(type);
+            LustreExpr  initValue       = J2LUtils.getDefaultInitValueForType(type);
             
             finalLocals.add(new LustreVar(preOutVarName, type));
             varToPreVarExprMap.put(preOutVarToOutVarMap.get(preOutVarName), preOutVarExpr);
@@ -320,7 +320,7 @@ public class Sf2LTranslator {
             String      preLocalVarName = preLocalVarToType.getKey();
             LustreExpr  preLocalVarExpr = new VarIdExpr(preLocalVarName);
             LustreType  type            = preLocalVarToType.getValue();
-            LustreExpr  initValue       = J2LUtils.getInitValueForType(type);
+            LustreExpr  initValue       = J2LUtils.getDefaultInitValueForType(type);
             
             finalLocals.add(new LustreVar(preLocalVarName, type));       
             varToPreVarExprMap.put(preLocalVarToLocalVarMap.get(preLocalVarName), preLocalVarExpr);
