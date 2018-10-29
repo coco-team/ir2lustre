@@ -371,7 +371,7 @@ public class Sf2LTranslator {
                         LustreEq eq = (LustreEq) ast;
 
                         if (eq.getLhs().size() == 1) {
-                            this.varToInitVal.put(((VarIdExpr) eq.getLhs().get(0)).id, eq.getRhs());
+//                            this.varToInitVal.put(((VarIdExpr) eq.getLhs().get(0)).id, eq.getRhs());
                         } else {
                             LOGGER.log(Level.SEVERE, "Unhandled case: the left-hand side expression has multiple variables");
                         }
@@ -1077,7 +1077,7 @@ public class Sf2LTranslator {
             if(lhsExprs.size() == 1) {
                 if(lhsExprs.get(0) instanceof VarIdExpr) {
                     if(varName.equals(((VarIdExpr)lhsExprs.get(0)).id)) {
-                        assignmentExpr = eq.getRhs();
+//                        assignmentExpr = eq.getRhs();
                         break;
                     }
                 }
@@ -1193,7 +1193,8 @@ public class Sf2LTranslator {
         Map<String, String> varToLastName = new HashMap<>();
 
         for (int i = 0; i < equations.size(); ++i) {
-            LustreExpr          rhs = equations.get(i).getRhs();
+//            LustreExpr          rhs = equations.get(i).getRhs();
+            LustreExpr          rhs = equations.get(i).getRhs().get(i);
             List<LustreExpr>    lhs = equations.get(i).getLhs();
 
             // Replace the right hand side expression variables            

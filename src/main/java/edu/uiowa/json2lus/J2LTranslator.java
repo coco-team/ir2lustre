@@ -902,7 +902,10 @@ public class J2LTranslator {
         
         // For each groupped outputs, translate their equations
         for(List<JsonNode> gOutports : grouppedOutports) {
-            eqs.addAll(translateOutportEquation(gOutports, subsystemNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap));                                                
+            for(JsonNode outportNode : gOutports)
+            {
+                eqs.add(translateSingleOutportEquation(outportNode, subsystemNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHandlesMap, handleToBlkNodeMap));                                                
+            }            
         }        
         return eqs;
     }
@@ -1075,15 +1078,17 @@ public class J2LTranslator {
                 List<LustreExpr>    orderedOutportVars      = new ArrayList<>();
                 JsonNode            outportNode             = outportNodes.get(0); 
                 String              outportHdl              = getBlkHandle(outportNode);
-                List<String>        srcBlkHdls              = blkNodeToSrcBlkHdlsMap.get(outportNode);
+                List<String>        srcBlkHdls              = blkNodeToSrcBlkHdlsMap.get(outportNode);                
+                
                 List<Integer>       srcBlkPorts             = blkNodeToSrcBlkPortsMap.get(outportNode);
                 JsonNode            srcBlk                  = handleToBlkNodeMap.get(srcBlkHdls.get(0));
                 List<String>        dstBlkHdls              = blkNodeToDstBlkHdlsMap.get(srcBlk);
-                LustreExpr          rhs                     = translateBlock(false, srcBlkHdls.get(0), outportHdl, subsystemNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, handleToBlkNodeMap, new HashSet<String>(), null, srcBlkPorts.get(0));
-
+                LustreExpr          rhs                     = translateBlock(false, srcBlkHdls.get(0), outportHdl, subsystemNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, handleToBlkNodeMap, new HashSet<String>(), null, srcBlkPorts.get(0));;
+                
                 for(JsonNode outportBlk : outportNodes) {
                     orderedOutportVars.add(new VarIdExpr(getBlkName(outportBlk)));
-                }                
+                }
+//                eqs.add(new LustreEq(rhsExprs, rhsExprs));
                 if(isSubsystemBlock(srcBlk) && getBlksFromSubSystemByType(srcBlk, OUTPORT).size()>1) {
                     eqs.add(new LustreEq(orderedOutportVars, rhs));
                 } else {
@@ -1096,6 +1101,38 @@ public class J2LTranslator {
         }      
         return eqs;
     }         
+    
+    /**
+     * 
+     * @param outportNode
+     * @param subsystemNode
+     * @param blkNodeToSrcBlkHdlsMap
+     * @param blkNodeToSrcBlkPortsMap
+     * @param blkNodeToDstBlkHdlsMap
+     * @param handleToBlkNodeMap
+     * @return The Lustre expression correspond to the outports
+     */
+    protected LustreEq translateSingleOutportEquation(JsonNode outportNode, JsonNode subsystemNode, Map<JsonNode, List<String>> blkNodeToSrcBlkHdlsMap, Map<JsonNode, List<Integer>> blkNodeToSrcBlkPortsMap, Map<JsonNode, List<String>> blkNodeToDstBlkHdlsMap, Map<String, JsonNode> handleToBlkNodeMap) {
+        // The final equations
+        LustreEq eq = null;
+
+        if(blkNodeToSrcBlkHdlsMap.containsKey(outportNode)) {  
+            String          outportHdl      = getBlkHandle(outportNode);
+            LustreExpr       varIdExpr      = new VarIdExpr(getBlkName(outportNode));                 
+            List<String>    srcBlkHandles   = blkNodeToSrcBlkHdlsMap.get(outportNode);
+            List<Integer>   srcBlkPorts     = blkNodeToSrcBlkPortsMap.get(outportNode);
+
+            if(srcBlkHandles.size() == 1 && !srcBlkHandles.get(0).equals("-1")) {
+                eq = new LustreEq(varIdExpr, translateBlock(false, srcBlkHandles.get(0), outportHdl, subsystemNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, handleToBlkNodeMap, new HashSet<String>(), null, srcBlkPorts.get(0)));
+            } else {
+                LOGGER.log(Level.SEVERE, "Unexpected: No src blocks connect to the outport: {0}!", getBlkName(outportNode));
+            }
+        } else {
+            LOGGER.log(Level.WARNING, "Unexpected: No src blocks connect to the outport: {0}!", getBlkName(outportNode));
+        }          
+   
+        return eq;
+    }             
 
     /**
      * 
@@ -1416,68 +1453,18 @@ public class J2LTranslator {
                         List<LustreExpr> exprs = this.auxHdlToExprMap.get(blkHdl);
                         
                         if(exprs != null) {
-                            blkExpr = exprs.get(portNum);
+                            if(portNum == -1)
+                            {
+                                blkExpr = new TupleExpr(exprs);
+                            }
+                            else
+                            {
+                                blkExpr = exprs.get(portNum);                                
+                            }                            
                         } else {
                             LOGGER.log(Level.SEVERE, "Unexpected null expressions with handle: {0}", blkHdl);
                         }
-//                    } else if(blkNode.has(SFCONTENT)) {
-//                        String      curActStateVarName  = ID + "_" + blkName;
-//                        String      nxtActStateVarName  = NEXT + "_" + ID + "_" + blkName;                        
-//                        VarIdExpr   curActStateVarId    = new VarIdExpr(curActStateVarName);
-//                        VarIdExpr   nxtActStateVarId    = new VarIdExpr(nxtActStateVarName);
-//                        List<LustreExpr> outVarIdExprs  = new ArrayList<>();
-//                        List<LustreType> outportTypes   = getBlkOutportTypes(blkNode);
-//                        
-//                        // Create variables for current and next active state
-//                        this.auxNodeLocalVars.add(new LustreVar(curActStateVarName, PrimitiveType.INT));
-//                        this.auxNodeLocalVars.add(new LustreVar(nxtActStateVarName, PrimitiveType.INT));                        
-//                        // Add the equation between the current active state id and next active state id
-//                        this.auxNodeEqs.add(new LustreEq(curActStateVarId, new BinaryExpr(new IntExpr(0), BinaryExpr.Op.ARROW, new UnaryExpr(UnaryExpr.Op.PRE, nxtActStateVarId))));                                                                                    
-//                        
-//                        // Add the current active state id as an input
-//                        inExprs.add(curActStateVarId);                                                
-//                        
-//                        // Create local variables for outputs
-//                        for(LustreType type : outportTypes) {
-//                            LustreExpr fstInstExpr  = null;
-//                            String nxtOutVarName    = J2LUtils.mkFreshVarName(blkName + "_" + OUT);
-//                            String curOutVarName    = J2LUtils.getFreshVarAtInst(nxtOutVarName, 1);
-//                            VarIdExpr curOutVarId   = new VarIdExpr(curOutVarName);
-//                            VarIdExpr nxtOutVarId   = new VarIdExpr(nxtOutVarName);
-//                            
-//                            // Add the first instance of output variable to the inputs
-//                            inExprs.add(curOutVarId);
-//                            outVarIdExprs.add(nxtOutVarId);
-//                            
-//                            // Create the default expression at instance 1
-//                            if(type == PrimitiveType.INT) {
-//                                fstInstExpr = new IntExpr(0);
-//                            } else if(type == PrimitiveType.REAL) {
-//                                fstInstExpr = new RealExpr(new BigDecimal("0.0"));
-//                            } else if(type == PrimitiveType.BOOL) {
-//                                fstInstExpr = new BooleanExpr(true);
-//                            } else {
-//                                LOGGER.log(Level.SEVERE, "Unsupported type for creating current and next state variable equation: {0}", type);
-//                            }                            
-//                            this.auxNodeEqs.add(new LustreEq(curOutVarId, new BinaryExpr(fstInstExpr, BinaryExpr.Op.ARROW, new UnaryExpr(UnaryExpr.Op.PRE, nxtOutVarId))));                                                                                    
-//                            this.auxNodeLocalVars.add(new LustreVar(nxtOutVarName, type));
-//                            this.auxNodeLocalVars.add(new LustreVar(curOutVarName, type));
-//                        }
-//                        
-//                        // Add the next active state id as the last output
-//                        outVarIdExprs.add(nxtActStateVarId);                                                                                                                                                 
-//                        
-//                        // Create input expressions
-//                        for(int j = 0; j < inHdls.size(); j++) {
-//                            inExprs.add(translateBlock(isPropBlk, inHdls.get(j), blkHdl, parentSubsystemNode, blkNodeToSrcBlkHdlsMap, blkNodeToSrcBlkPortsMap, blkNodeToDstBlkHdlsMap, hdlToBlkNodeMap, visitedHdls, hdlToActualInputExpr, inPorts.get(j)));                             
-//                        }
-//                        
-//                        // Create the node call expression
-//                        blkExpr = outVarIdExprs.get(portNum);
-//                        this.auxNodeEqs.add(new LustreEq(outVarIdExprs, new NodeCallExpr(qualifiedName, inExprs)));                                                
-//                        this.auxHdlToExprMap.put(blkHdl, outVarIdExprs);
-                    } else {            
-                        
+                    } else {                                    
                         List<LustreExpr>        outVarIdExprs   = new ArrayList<>();
                         List<LustreExpr>        inputs          = new ArrayList<>();
                         List<LustreVar>         inputVars       = new ArrayList<>();

@@ -14,7 +14,7 @@ import java.util.List;
  */
 public class LustreEq extends LustreAst {
     List<LustreExpr>    lhs;
-    LustreExpr          rhs;
+    List<LustreExpr>    rhs;
     
     
     public LustreEq(List<LustreExpr> lhs, LustreExpr rhs) {
@@ -22,20 +22,29 @@ public class LustreEq extends LustreAst {
         for(LustreExpr var : lhs) {
             this.lhs.add((VarIdExpr)var);
         }
-        this.rhs = rhs;
+        this.rhs = new ArrayList<>();
+        this.rhs.add(rhs);
     } 
+    public LustreEq(List<LustreExpr> lhs, List<LustreExpr> rhs) {
+        this.lhs = new ArrayList<>();
+        for(LustreExpr var : lhs) {
+            this.lhs.add((VarIdExpr)var);
+        }
+        this.rhs = rhs;
+    }     
     
     public LustreEq(LustreExpr lhs, LustreExpr rhs) {
         this.lhs = new ArrayList<>();
+        this.rhs = new ArrayList<>();
         this.lhs.add(lhs);
-        this.rhs = rhs;
+        this.rhs.add(rhs);
     } 
     
     public List<LustreExpr> getLhs() {
         return this.lhs;
     }
     
-    public LustreExpr getRhs() {
+    public List<LustreExpr> getRhs() {
         return this.rhs;
     }    
         

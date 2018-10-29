@@ -156,7 +156,10 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
                 if(propVarId instanceof VarIdExpr) {
                     sb.append("  ");sb.append("--%PROPERTY ")
                       .append(" \"").append(((VarIdExpr)propVarId).id).append("\" ");
-                    prop.rhs.accept(this);
+                    for(LustreExpr expr : prop.rhs)
+                    {
+                        expr.accept(this);
+                    }
                     sb.append(";").append(NL);                    
                 }
             }
@@ -264,7 +267,10 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
                     }
                 }
                 sb.append(" = ");
-                eq.rhs.accept(this);
+                for(LustreExpr expr : eq.rhs)
+                {
+                    expr.accept(this);
+                }                                
                 sb.append(";").append(NL).append(NL);
             }
         }
@@ -322,7 +328,11 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
             equation.lhs.get(0).accept(this);
         }
         sb.append(" = ");
-        equation.rhs.accept(this);
+        for(LustreExpr expr : equation.rhs)
+        {
+            expr.accept(this);
+        }
+//        equation.rhs.accept(this);
         sb.append(";");
     }
 
