@@ -9,29 +9,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.uiowa.json2lus.ExprParser.AstNode;
-import edu.uiowa.json2lus.lustreAst.ArrayConst;
-import edu.uiowa.json2lus.lustreAst.ArrayExpr;
-import edu.uiowa.json2lus.lustreAst.ArrayType;
-import edu.uiowa.json2lus.lustreAst.BinaryExpr;
-import edu.uiowa.json2lus.lustreAst.BooleanExpr;
-import edu.uiowa.json2lus.lustreAst.LustreContract;
-import edu.uiowa.json2lus.lustreAst.IntExpr;
-import edu.uiowa.json2lus.lustreAst.IteExpr;
-import edu.uiowa.json2lus.lustreAst.LustreAst;
-import edu.uiowa.json2lus.lustreAst.LustreEnumType;
-import edu.uiowa.json2lus.lustreAst.LustreEq;
-import edu.uiowa.json2lus.lustreAst.LustreExpr;
-import edu.uiowa.json2lus.lustreAst.LustreNode;
-import edu.uiowa.json2lus.lustreAst.LustreProgram;
-import edu.uiowa.json2lus.lustreAst.LustreType;
-import edu.uiowa.json2lus.lustreAst.LustreVar;
-import edu.uiowa.json2lus.lustreAst.MergeExpr;
-import edu.uiowa.json2lus.lustreAst.NodeCallExpr;
-import edu.uiowa.json2lus.lustreAst.PrimitiveType;
-import edu.uiowa.json2lus.lustreAst.RealExpr;
-import edu.uiowa.json2lus.lustreAst.TupleExpr;
-import edu.uiowa.json2lus.lustreAst.UnaryExpr;
-import edu.uiowa.json2lus.lustreAst.VarIdExpr;
+import edu.uiowa.json2lus.lustreAst.*;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -204,10 +183,13 @@ public class J2LTranslator {
     private final String DATATYPECONVERSION = "DataTypeConversion";
     
             
-    /** Blocks information */
+    /** IR information */
     private final String META           = "meta";
+    private final String DECLARATIONS   = "Declarations";
+    private final String ENUMERATIONS   = "Enumerations";
     private final String DATA           = "Data";
     private final String NAME           = "Name";
+    private final String MEMBERS        = "Members";
     private final String PORT           = "Port";
     private final String TYPE           = "Type";
     private final String PATH           = "Path";
@@ -289,7 +271,8 @@ public class J2LTranslator {
     
     private final String DUMMY          = "dummy";
                       
-    private JsonNode                                topLevelNode;  
+    private JsonNode                                topLevelNode;
+    static  final Map<String, LustreEnumType>       enumTypes = new HashMap<>();
     private final List<LustreNode>                  auxLusNode;
     private final List<LustreEq>                    auxNodeEqs;
     private final List<LustreVar>                   auxNodeLocalVars;    
@@ -308,7 +291,7 @@ public class J2LTranslator {
      * @param inputPath
      */
     public J2LTranslator(String inputPath) {          
-        this.inputPath          = inputPath;  
+        this.inputPath          = inputPath;
         this.contractNodes      = new HashSet<>();        
         this.libNodeNameMap     = new HashMap<>();
         this.auxLusNode         = new ArrayList<>();
@@ -413,7 +396,12 @@ public class J2LTranslator {
             while(nodes.hasNext()) {
                 Map.Entry<String, JsonNode> field = nodes.next(); 
                 
-                if(!field.getKey().equals(META)) {
+                if(field.getKey().equals(META)){
+                    JsonNode declarations = field.getValue().get(DECLARATIONS);
+                    JsonNode enumerations = declarations.get(ENUMERATIONS);
+                    collectEnumerations(enumerations);
+                }
+                else{
                     this.topLevelNode   = field.getValue();
                     this.topNodeName    = field.getKey();
                     collectSubsytemBlocks(this.topLevelNode);               
@@ -425,6 +413,48 @@ public class J2LTranslator {
         } else {
             LOGGER.log(Level.SEVERE, "Unexpected: unable to parse the input JSON file!");
         }   
+    }
+
+    private void collectEnumerations(JsonNode enumerationNode)
+    {
+        if(enumerationNode.size() > 0)
+        {
+            if(enumerationNode.isArray())
+            {
+                Iterator<JsonNode>  enumerationTypes = enumerationNode.elements();
+                while(enumerationTypes.hasNext())
+                {
+                    JsonNode        enumNode        = enumerationTypes.next();
+                    LustreEnumType  lustreEnumType  = getLusreEnumType(enumNode);
+
+                    this.enumTypes.put(lustreEnumType.name, lustreEnumType);
+                    this.lustreProgram.addEnumDef(lustreEnumType);
+                }
+            }
+            else
+            {
+                LustreEnumType lustreEnumType   = getLusreEnumType(enumerationNode);
+                this.enumTypes.put(lustreEnumType.name, lustreEnumType);
+                this.lustreProgram.addEnumDef(lustreEnumType);
+            }
+        }
+    }
+
+    private LustreEnumType getLusreEnumType(JsonNode enumerationNode)
+    {
+        String              enumName    = enumerationNode.get(NAME).asText();
+        List<String>        values      = new ArrayList(enumerationNode.get(MEMBERS).size());
+        Iterator<JsonNode>  members  = enumerationNode.get(MEMBERS).elements();
+
+        while(members.hasNext())
+        {
+            JsonNode    member  = members.next();
+            String      name    = member.get(NAME).asText();
+            values.add(name);
+        }
+
+        LustreEnumType enumType = new LustreEnumType(enumName, values);
+        return enumType;
     }
 
     /**
@@ -4234,7 +4264,20 @@ public class J2LTranslator {
 
     protected LustreExpr getLustreConst(String value, LustreType type) {
         LustreExpr constExpr = null;
-        
+
+        if(type instanceof LustreEnumType)
+        {
+            String enumValue = value.substring(value.indexOf(".") + 1);
+            if(((LustreEnumType) type).values.contains(enumValue))
+            {
+                return new EnumConst((LustreEnumType) type, enumValue);
+            }
+            else
+            {
+                LOGGER.log(Level.SEVERE, "Unexpected constant value: {0}", value);
+            }
+        }
+
         if(isValidConst(value)) {
             if(type == PrimitiveType.REAL) {
                 String newVal = value;
@@ -4282,6 +4325,14 @@ public class J2LTranslator {
         
         if(handles != null && handles.size() > 0) {
              highestType = getBlkOutportType(handleToBlkNodeMap.get(handles.get(0)));
+
+             //ToDo: refactor this code for enum types
+             if(highestType instanceof LustreEnumType)
+             {
+                 results[0] = hasDiscrepancy;
+                 results[1] = highestType;
+                 return results;
+             }
              
              for(int i = 1; i < handles.size(); i++) {
                  LustreType hType = getBlkOutportType(handleToBlkNodeMap.get(handles.get(i)));

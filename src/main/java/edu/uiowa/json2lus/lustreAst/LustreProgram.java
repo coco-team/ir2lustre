@@ -19,33 +19,33 @@ import java.util.Set;
 public class LustreProgram extends LustreAst {
     public List<LustreNode>         nodes;
     public List<LustreContract>     contracts;
-    public List<LustreEnumType>     typesDef;
+    public List<LustreEnumType>     enumTypes;
     public Map<String, Set<String>> nodeContractsMap;
     
     public LustreProgram() {        
         this.nodes              = new ArrayList<>();
         this.contracts          = new ArrayList<>();
-        this.typesDef           = new ArrayList<>();
+        this.enumTypes          = new ArrayList<>();
         this.nodeContractsMap   = new HashMap<>();
     }
     
     public LustreProgram(List<LustreNode> nodes) {
         this.nodes              = nodes;  
         this.contracts          = new ArrayList<>();
-        this.typesDef           = new ArrayList<>();   
+        this.enumTypes          = new ArrayList<>();
         this.nodeContractsMap   = new HashMap<>();
     } 
 
     public LustreProgram(List<LustreNode> nodes, List<LustreEnumType> enums) {
         this.nodes              = nodes;
-        this.typesDef           = enums;
+        this.enumTypes          = enums;
         this.contracts          = new ArrayList<>();   
         this.nodeContractsMap   = new HashMap<>();
     }     
     
     public LustreProgram(List<LustreNode> nodes, List<LustreEnumType> enums, List<LustreContract> contracts) {
         this.nodes              = nodes;
-        this.typesDef           = enums;
+        this.enumTypes          = enums;
         this.contracts          = contracts;        
         this.nodeContractsMap   = new HashMap<>();
     }    
@@ -77,7 +77,7 @@ public class LustreProgram extends LustreAst {
     }      
     
     public void addEnumDef(LustreEnumType enumDef) {
-        this.typesDef.add(enumDef);
+        this.enumTypes.add(enumDef);
     }
     
     @Override

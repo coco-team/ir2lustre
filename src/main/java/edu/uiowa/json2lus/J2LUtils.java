@@ -76,6 +76,11 @@ public class J2LUtils {
                 break;                
             }        
             default: {
+                //ToDo: refactor this method to handle all types including enums and structs
+                if(J2LTranslator.enumTypes.containsKey(type))
+                {
+                    return J2LTranslator.enumTypes.get(type);
+                }
                 LOGGER.log(Level.SEVERE, "Unsupported type: {0}", type);
                 break;
             }                

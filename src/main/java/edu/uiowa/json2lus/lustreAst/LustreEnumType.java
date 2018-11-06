@@ -28,6 +28,7 @@ public class LustreEnumType extends LustreType{
     
     @Override
     public int compareTo(LustreType o) {
+        //ToDo: review refactoring comparing types with enums types
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 

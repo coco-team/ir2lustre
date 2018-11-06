@@ -42,4 +42,5 @@ public interface LustreAstVisitor {
 
     public void visit(ArrayConst aThis);
 
+    public void visit(EnumConst enumConst);
 }

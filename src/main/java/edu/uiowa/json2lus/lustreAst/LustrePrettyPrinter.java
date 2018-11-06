@@ -63,7 +63,7 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
         this.nodeContractsMap = program.nodeContractsMap;
         List<LustreNode> cNodes = new ArrayList<>();
         
-        for(LustreEnumType enumType : program.typesDef) {
+        for(LustreEnumType enumType : program.enumTypes) {
             enumType.accept(this);
             sb.append(NL);
         }        
@@ -584,5 +584,10 @@ public class LustrePrettyPrinter implements LustreAstVisitor{
             }
             sb.append("]");
         }
+    }
+
+    @Override
+    public void visit(EnumConst enumConst) {
+        sb.append(enumConst.toString());
     }
 }
