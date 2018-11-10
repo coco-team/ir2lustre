@@ -5,6 +5,11 @@
 
 package edu.uiowa.json2lus.lustreAst;
 
+import edu.uiowa.json2lus.J2LTranslator;
+
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 /**
  *
  * @author Paul Meng
@@ -12,13 +17,18 @@ package edu.uiowa.json2lus.lustreAst;
 public class BooleanExpr extends LustreExpr {
     
     public final boolean value;
-    
+
+    /** Logger */
+    private static final Logger LOGGER = Logger.getLogger(BooleanExpr.class.getName());
+
     public BooleanExpr(boolean value) {
         this.value = value;
     }
     
-    public BooleanExpr(String value) {
-        if(value.contains(".")) {
+    public BooleanExpr(String value)
+    {
+        if(value.contains("."))
+        {
             String rhs = value.substring(value.indexOf(".")+1).trim();
             
             if(Integer.parseInt(rhs) == 0) {
@@ -26,8 +36,30 @@ public class BooleanExpr extends LustreExpr {
             } else {
                 this.value = true;
             }            
-        } else {
-            this.value = value.toLowerCase().equals("true") || Integer.parseInt(value.toLowerCase()) != 0;
+        }
+        else
+        {
+            // value can be "true", "false", "1", "0"
+            //this.value = value.toLowerCase().equals("true") || Integer.parseInt(value.toLowerCase()) != 0;
+            switch (value)
+            {
+                case "true" : this.value = true; break;
+                case "false": this.value = false; break;
+                case "1"    : this.value = true; break;
+                case "0"    : this.value = false; break;
+                default     :
+                {
+                    try
+                    {
+                        this.value = Integer.parseInt(value.toLowerCase()) != 0;
+                    }
+                    catch (NumberFormatException exception)
+                    {
+                        LOGGER.log(Level.SEVERE, exception.getMessage());
+                        throw exception;
+                    }
+                }
+            }
         }
     }    
 
