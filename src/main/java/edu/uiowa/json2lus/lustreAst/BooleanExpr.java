@@ -40,7 +40,6 @@ public class BooleanExpr extends LustreExpr {
         else
         {
             // value can be "true", "false", "1", "0"
-            //this.value = value.toLowerCase().equals("true") || Integer.parseInt(value.toLowerCase()) != 0;
             switch (value)
             {
                 case "true" : this.value = true; break;
